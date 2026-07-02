@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------------------
+# GitHub Actions: scheduled fuzzing campaign.
+#
+# Drop this in your app repo at .github/workflows/sbom-fuzzing.yml.
+#
+# Fuzzing is CPU/time-bound, not something you want blocking every push, so
+# this runs on a schedule with a bounded time budget per target. GitHub-
+# hosted runners have a per-job time ceiling (check your plan's current
+# limit) — if you want multi-hour-per-target campaigns, point this at a
+# self-hosted runner instead by changing `runs-on`.
+#
+# LIMITATION: each scheduled run starts from the seed corpus checked into
+# the repo (fuzzing/corpus/), not from where the last run's corpus ended up
+# — GitHub Actions artifacts aren't a great fit for an ever-growing corpus.
+# For coverage that compounds over weeks, run fuzzing on a persistent box
+# (a dev server, a spare VM) with `findings/` bind-mounted permanently,
+# rather than in ephemeral CI runners.
+# ---------------------------------------------------------------------------
+name: Scheduled Fuzzing
+
+on:
+  schedule:
+    - cron: "0 3 * * 6"   # weekly, Saturday 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      time_budget_seconds:
+        description: "Seconds to fuzz each target"
+        default: "1800"
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build fuzzing image
+        working-directory: fuzzing
+        run: docker build -t sbom-fuzzer .
+
+      - name: Run fuzzing campaign
+        working-directory: fuzzing
+        env:
+          TIME_BUDGET: ${{ github.event.inputs.time_budget_seconds || '1800' }}
+        run: |
+          mkdir -p findings
+          docker run --rm \
+            -e TIME_BUDGET="${TIME_BUDGET}" \
+            -v "$PWD/findings:/fuzz/findings" \
+            sbom-fuzzer
+        continue-on-error: true   # still want the artifact + crash check below to run
+
+      - name: Fail the job if any crash was found
+        working-directory: fuzzing
+        run: |
+          if find findings -name 'crash-*.txt' 2>/dev/null | grep -q .; then
+            echo "::error::Fuzzing found new crashes — see the uploaded artifact."
+            exit 1
+          fi
+          echo "No crashes found this run."
+
+      - name: Upload findings (corpus + any crashes)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzzing-findings
+          path: fuzzing/findings/

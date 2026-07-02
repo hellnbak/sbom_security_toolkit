@@ -1,0 +1,1 @@
+{"message": "Items: {items}", "context": {"items": ["a", "b", "c"]}}

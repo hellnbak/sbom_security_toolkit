@@ -1,0 +1,1 @@
+{"message": "Error: {error.message} at {error.file}:{error.line}", "context": {"error": {"message": "Division by zero", "file": "/app/calc.php", "line": 42}}}

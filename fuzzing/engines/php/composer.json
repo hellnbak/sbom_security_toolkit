@@ -1,0 +1,42 @@
+{
+  "name": "sbom-security-toolkit/fuzzing-harness",
+  "description": "Coverage-guided fuzzing harness for the parser/input-handling libraries shipped by Example Laravel Application. Versions are pinned to the SBOM so we fuzz exactly what is deployed.",
+  "type": "project",
+  "license": "FSL-1.1-ALv2",
+  "require": {
+    "php": ">=8.2",
+    "league/commonmark": "2.6.0",
+    "nikic/php-parser": "5.3.1",
+    "guzzlehttp/psr7": "2.7.0",
+    "league/uri": "7.5.1",
+    "league/uri-interfaces": "7.5.0",
+    "symfony/yaml": "7.2.0",
+    "egulias/email-validator": "4.0.2",
+    "brick/math": "0.12.1",
+    "predis/predis": "2.3.0",
+    "symfony/process": "7.2.0",
+    "laravel/serializable-closure": "2.0.0",
+    "datadog/php-datadogstatsd": "1.6.2",
+    "symfony/finder": "7.2.0",
+    "symfony/mime": "7.2.1",
+    "tijsverkoyen/css-to-inline-styles": "2.2.7",
+    "league/flysystem": "3.29.1",
+    "guzzlehttp/guzzle": "7.9.2",
+    "symfony/translation": "7.2.0",
+    "symfony/http-foundation": "7.2.0",
+    "vlucas/phpdotenv": "5.6.1",
+    "opensearch-project/opensearch-php": "2.3.1",
+    "dragonmantank/cron-expression": "3.4.0",
+    "symfony/routing": "7.2.0"
+  },
+  "config": {
+    "allow-plugins": false,
+    "policy": {
+      "advisories": {
+        "block": false
+      }
+    }
+  },
+  "comment": "php-fuzzer itself is intentionally NOT a composer require. It depends on nikic/php-parser ^5 for its own instrumentation, which would conflict with fuzzing nikic/php-parser as a target. The Dockerfile installs it as a self-contained .phar (the upstream-recommended approach) so there is no dependency clash.",
+  "comment_policy_advisories_block": "Composer 2.9+ blocks installing package versions with known security advisories by default. We deliberately turn that off HERE, in this harness only: the entire point of this composer.json is to install the exact versions pinned in the production SBOM, vulnerabilities included, so we can fuzz what is actually deployed. Do not copy this setting into an application composer.json. As of 2026-06-30 the pinned versions carry these known advisories: league/commonmark 2.6.0 -> CVE-2025-46734 (XSS, Attributes ext, fixed 2.7.0), CVE-2026-30838 (DisallowedRawHtml bypass, fixed 2.8.1, PKSA-2cx9-ynrq-qdk3), CVE-2026-33347 (Embed ext SSRF/XSS, fixed 2.8.1); guzzlehttp/psr7 2.7.0 -> CVE-2026-48998, CVE-2026-49214 (fixed 2.10.2), CVE-2026-55766 (fixed 2.12.1) all in the raw-HTTP-message parse/serialize path; symfony/yaml 7.2.0 -> CVE-2026-45133, CVE-2026-45304, CVE-2026-45305 (stack exhaustion / billion-laughs / ReDoS, fixed only in 7.4.12+ or 8.0.12+, PKSA-b14r-zh1d-vdrc and PKSA-ft77-7h5f-p3r6 confirmed). See ../vuln-scan/triage-2026-06.md for full detail on each."
+}

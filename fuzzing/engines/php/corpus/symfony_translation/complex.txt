@@ -1,0 +1,1 @@
+{gender, select, male {{count, plural, one {He has one item} other {He has # items}}} female {{count, plural, one {She has one item} other {She has # items}}}}

@@ -1,0 +1,5 @@
+GET /path HTTP/1.1
+Host: example.com
+User-Agent: Test
+Content-Length: 0
+

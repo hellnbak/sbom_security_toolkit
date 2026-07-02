@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeClaudeClassicBedrock",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/anthropic.*",
+        "arn:aws:bedrock:*:*:inference-profile/*anthropic*"
+      ]
+    },
+    {
+      "Sid": "InvokeClaudeMantle",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-mantle:Get*",
+        "bedrock-mantle:List*",
+        "bedrock-mantle:CreateInference"
+      ],
+      "Resource": "arn:aws:bedrock-mantle:*:*:project/*"
+    },
+    {
+      "Sid": "InvokeClaudeMantleBearerToken",
+      "Effect": "Allow",
+      "Action": "bedrock-mantle:CallWithBearerToken",
+      "Resource": "*"
+    }
+  ]
+}

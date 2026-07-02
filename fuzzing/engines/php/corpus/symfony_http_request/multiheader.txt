@@ -1,0 +1,6 @@
+GET /search?q=test HTTP/1.1
+Host: search.example.com
+Accept-Language: en-US,en;q=0.9
+X-Forwarded-For: 192.168.1.1
+Authorization: Bearer token123
+

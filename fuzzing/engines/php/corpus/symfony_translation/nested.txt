@@ -1,0 +1,1 @@
+{count, plural, one {{name} has one item} other {{name} has # items}}

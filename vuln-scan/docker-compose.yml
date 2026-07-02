@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# OWASP Dependency-Track for CONTINUOUS monitoring.
+#
+# scan.sh gives a point-in-time answer. Dependency-Track ingests the same
+# CycloneDX SBOM and re-evaluates it automatically as NEW advisories land — a
+# CVE disclosed next month against a version you still ship gets flagged
+# without anyone re-running anything.
+#
+#   Project: https://dependencytrack.org  (Apache-2.0)
+#
+# This uses Postgres, not the embedded H2 database — the project's own docs
+# say H2 is for evaluation only and H2-backed instances have been reported to
+# corrupt over time under real use. Use this file for anything you intend to
+# leave running.
+#
+#   docker compose up -d
+#   UI: http://localhost:8080   API: http://localhost:8081
+#
+# First login is admin/admin and Dependency-Track FORCES a password change
+# immediately — do that before uploading anything. If this host is reachable
+# beyond your own machine, put it behind your VPN/internal network (or at
+# least change the admin password via the API) before you open the port.
+# ---------------------------------------------------------------------------
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dtrack
+      POSTGRES_USER: dtrack
+      # Set this in .env or your shell. Do not commit real passwords.
+      POSTGRES_PASSWORD: ${DTRACK_POSTGRES_PASSWORD:?set DTRACK_POSTGRES_PASSWORD in .env or your shell}
+    volumes:
+      - dtrack-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dtrack -d dtrack"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  dtrack-apiserver:
+    image: dependencytrack/apiserver:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ALPINE_DATABASE_MODE: external
+      ALPINE_DATABASE_URL: jdbc:postgresql://postgres:5432/dtrack
+      ALPINE_DATABASE_DRIVER: org.postgresql.Driver
+      ALPINE_DATABASE_USERNAME: dtrack
+      ALPINE_DATABASE_PASSWORD: ${DTRACK_POSTGRES_PASSWORD:?set DTRACK_POSTGRES_PASSWORD in .env or your shell}
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+    volumes:
+      - dtrack-data:/data
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+
+  dtrack-frontend:
+    image: dependencytrack/frontend:latest
+    environment:
+      - API_BASE_URL=http://localhost:8081
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - dtrack-apiserver
+
+volumes:
+  dtrack-data: {}
+  dtrack-postgres: {}

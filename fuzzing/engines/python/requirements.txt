@@ -1,0 +1,7 @@
+# Example Python libraries for fuzzing targets
+# Claude Code will replace these with actual SBOM versions in Stage 3
+
+pyyaml>=6.0
+jinja2>=3.0
+jsonschema>=4.0
+urllib3>=2.0

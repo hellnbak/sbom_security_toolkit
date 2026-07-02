@@ -1,0 +1,3 @@
+<html><body><p class="test">Hello</p></body></html>
+---
+.test { color: red; }

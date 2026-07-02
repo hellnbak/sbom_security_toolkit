@@ -1,0 +1,1 @@
+{"message": "Data: {data.nested.deep.value}", "context": {"data": {"nested": {"deep": {"value": "test"}}}}}

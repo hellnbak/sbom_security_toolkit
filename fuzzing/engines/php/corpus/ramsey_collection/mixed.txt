@@ -1,0 +1,1 @@
+O:27:"Ramsey\Collection\Collection":2:{s:37:" Ramsey\Collection\Collection data";a:4:{i:0;s:4:"text";i:1;i:42;i:2;b:1;i:3;d:3.14;}s:41:" Ramsey\Collection\Collection collectionType";s:5:"mixed";}

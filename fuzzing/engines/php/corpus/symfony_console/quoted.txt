@@ -1,0 +1,1 @@
+command --message="Hello World" --path="/var/log/app.log"

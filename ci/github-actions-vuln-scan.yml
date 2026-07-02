@@ -1,0 +1,123 @@
+# ---------------------------------------------------------------------------
+# GitHub Actions: known-vulnerability scan of the CycloneDX SBOM.
+#
+# Drop this in your app repo at .github/workflows/sbom-vuln-scan.yml
+# (adjust the `working-directory` / SBOM path to wherever it lives there).
+#
+# SECURITY NOTE ON TOOL INSTALLATION — read before editing:
+# This intentionally installs the osv-scanner and trivy BINARIES directly
+# from their GitHub Releases, rather than using the `aquasecurity/trivy-action`
+# / `aquasecurity/setup-trivy` GitHub Actions.
+#
+# Why: in March 2026, attackers who had retained access from an earlier
+# incident force-pushed malicious commits onto 76 of 77 version tags of
+# aquasecurity/trivy-action and all tags of aquasecurity/setup-trivy, plus
+# published a backdoored trivy binary release (v0.69.4) — a credential
+# stealer ran silently before the real scan, so workflow output looked
+# normal. Aqua remediated within hours and the ecosystem has moved on
+# (trivy is at 0.72.x as of mid-2026), but the incident is *the* live
+# case study for why version-tag references to third-party Actions are
+# risky: a tag can be moved after you've already reviewed and trusted it.
+#
+# Installing the binary straight from a pinned release + verifying its
+# published checksum sidesteps the Action-wrapper trust surface entirely.
+# If you prefer the Action anyway, pin it to a full commit SHA, never a
+# tag — see the commented block at the bottom of this file.
+# ---------------------------------------------------------------------------
+name: SBOM Vulnerability Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly, Monday 06:00 UTC — catches newly-disclosed CVEs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # needed to upload SARIF to the Security tab
+  actions: read
+
+env:
+  # Pin deliberately. Do not track "latest" for a security tool — bump this
+  # on your own schedule after checking the release notes.
+  TRIVY_VERSION: "0.72.0"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OSV-Scanner
+        run: |
+          curl -fsSL -o osv-scanner \
+            "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64"
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Install Trivy (pinned binary, checksum-verified)
+        run: |
+          cd /tmp
+          TRIVY_TARBALL="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          # Local filename must match what checksums.txt lists, or sha256sum -c
+          # fails with "No such file or directory" even on a good download —
+          # confirmed the hard way on the EC2 deployment of this same toolkit.
+          curl -fsSL -o "$TRIVY_TARBALL" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${TRIVY_TARBALL}"
+          curl -fsSL -o checksums.txt \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt"
+          grep "${TRIVY_TARBALL}\$" checksums.txt | sha256sum -c -
+          tar xzf "$TRIVY_TARBALL" trivy
+          sudo mv trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: Run scan
+        working-directory: vuln-scan
+        run: |
+          chmod +x scan.sh
+          ./scan.sh cyclonedx-sbom.xml reports
+
+      - name: AI-assisted triage (optional — needs ANTHROPIC_API_KEY secret)
+        if: always()
+        working-directory: vuln-scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "No ANTHROPIC_API_KEY secret set — skipping AI triage. Add one under Settings > Secrets to enable this step."
+            exit 0
+          fi
+          chmod +x ai-triage.sh
+          ./ai-triage.sh reports/osv.json reports/trivy.json reports/ai-triage.md
+
+      - name: Upload SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: vuln-scan/reports/osv.sarif
+
+      - name: Upload full reports as a build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vuln-scan-reports
+          path: vuln-scan/reports/
+
+# ---------------------------------------------------------------------------
+# If you'd rather use the official Actions instead of raw binaries, pin to a
+# commit SHA, not a tag — tags are exactly what got force-pushed in the
+# incident above. Get the SHA from the repo's commit history for the release
+# you intend to use, e.g.:
+#
+#   - uses: aquasecurity/trivy-action@<full-40-char-sha>   # NOT @v0.35.0
+#     with:
+#       scan-type: sbom
+#       scan-ref: vuln-scan/cyclonedx-sbom.xml
+#
+# The general rule this incident reinforces for ALL third-party Actions in
+# your workflows (not just Trivy's): mutable tags can be silently redirected
+# by anyone with write access to the upstream repo; a commit SHA cannot.
+# ---------------------------------------------------------------------------

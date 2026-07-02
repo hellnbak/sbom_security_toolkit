@@ -1,0 +1,1 @@
+{"message": "User {user} logged in", "context": {"user": "admin"}}

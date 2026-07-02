@@ -1,0 +1,23 @@
+{
+  "name": "sbom-fuzzer-javascript",
+  "version": "1.0.0",
+  "description": "Coverage-guided fuzzing for JavaScript/TypeScript libraries from SBOM",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fuzz": "./run.sh"
+  },
+  "devDependencies": {
+    "@jazzer.js/core": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "nyc": "^15.1.0"
+  },
+  "dependencies": {
+    "marked": "^4.0.0",
+    "ajv": "^8.0.0",
+    "js-yaml": "^4.0.0",
+    "semver": "^7.0.0"
+  }
+}

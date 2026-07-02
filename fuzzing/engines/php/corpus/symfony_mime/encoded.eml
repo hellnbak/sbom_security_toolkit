@@ -1,0 +1,6 @@
+From: =?UTF-8?B?VGVzdCBVc2Vy?= <test@example.com>
+To: user@example.com
+Subject: =?UTF-8?Q?Encoded_Subject_=C3=A9?=
+Content-Transfer-Encoding: quoted-printable
+
+Test message with encoded=20content

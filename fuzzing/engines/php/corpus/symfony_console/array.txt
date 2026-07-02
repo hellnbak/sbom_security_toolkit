@@ -1,0 +1,1 @@
+command --env=prod --env=staging --tag=v1.0 --tag=release

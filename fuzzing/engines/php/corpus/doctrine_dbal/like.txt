@@ -1,0 +1,1 @@
+name LIKE '%admin%' AND email NOT LIKE '%test%'

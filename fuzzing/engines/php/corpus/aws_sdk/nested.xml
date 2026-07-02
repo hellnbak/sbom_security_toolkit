@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestOutput>
+    <Key>parent-key</Key>
+    <Value>
+        <nested>
+            <item>1</item>
+            <item>2</item>
+        </nested>
+    </Value>
+</TestOutput>

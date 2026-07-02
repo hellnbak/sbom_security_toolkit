@@ -1,0 +1,1 @@
+git commit -m "test message" --author='User <user@example.com>'

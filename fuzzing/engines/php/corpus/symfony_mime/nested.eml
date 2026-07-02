@@ -1,0 +1,27 @@
+From: nested@example.com
+To: test@example.com
+Subject: Nested Multipart
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer"
+
+--outer
+Content-Type: multipart/alternative; boundary="inner"
+
+--inner
+Content-Type: text/plain
+
+Plain
+
+--inner
+Content-Type: text/html
+
+<html>HTML</html>
+
+--inner--
+
+--outer
+Content-Type: application/pdf; name="doc.pdf"
+
+Binary data here
+
+--outer--

@@ -1,0 +1,1 @@
+{"aggs":{"group_by_type":{"terms":{"field":"type"}}}}

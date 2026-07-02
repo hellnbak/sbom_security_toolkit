@@ -1,0 +1,1 @@
+O:40:"Symfony\Component\VarDumper\Cloner\Data":3:{s:45:" Symfony\Component\VarDumper\Cloner\Data data";a:3:{i:0;a:1:{i:0;a:2:{i:0;s:3:"foo";i:1;s:3:"bar";}}i:1;a:0:{}i:2;a:0:{}}s:51:" Symfony\Component\VarDumper\Cloner\Data position";i:0;s:49:" Symfony\Component\VarDumper\Cloner\Data key";i:0;}

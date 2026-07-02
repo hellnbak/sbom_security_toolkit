@@ -1,0 +1,1 @@
+{"message": "SQL: {sql}", "context": {"sql": "SELECT * FROM users WHERE id = ?"}}

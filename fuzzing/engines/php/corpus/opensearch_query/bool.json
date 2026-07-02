@@ -1,0 +1,1 @@
+{"query":{"bool":{"must":[{"term":{"status":"active"}}],"filter":[{"range":{"date":{"gte":"2024-01-01"}}}]}}}

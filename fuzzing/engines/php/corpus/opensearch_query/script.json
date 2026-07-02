@@ -1,0 +1,1 @@
+{"query":{"match_all":{}},"script_fields":{"custom":{"script":{"source":"doc['field'].value * 2"}}}}

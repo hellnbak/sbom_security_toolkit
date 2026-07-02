@@ -1,0 +1,19 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: File Attachment
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="attach-boundary"
+
+--attach-boundary
+Content-Type: text/plain
+
+Message with attachment
+
+--attach-boundary
+Content-Type: application/octet-stream; name="file.txt"
+Content-Disposition: attachment; filename="file.txt"
+Content-Transfer-Encoding: base64
+
+SGVsbG8gV29ybGQK
+
+--attach-boundary--
