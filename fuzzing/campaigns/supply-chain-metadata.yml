@@ -1,0 +1,10 @@
+name: supply-chain-metadata
+description: PURL, license-expression, and malicious-package metadata edge cases.
+duration_seconds: 300
+seed_sbom: test-sboms/clean/minimal-cyclonedx.json
+mutations: 100
+steps:
+  - purl-mutate
+  - license-mutate
+  - malicious-metadata
+  - semantic-oracles

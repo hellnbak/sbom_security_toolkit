@@ -5,7 +5,7 @@ TARGET ?=
 CRASH ?=
 SBOM ?= vuln-scan/cyclonedx-sbom.xml
 
-.PHONY: fuzz-smoke fuzz-nightly fuzz-deep fuzz-python fuzz-js fuzz-php fuzz-repro fuzz-scorecard fuzz-corpus fuzz-differential fuzz-clean validate
+.PHONY: fuzz-smoke fuzz-nightly fuzz-deep fuzz-python fuzz-js fuzz-php fuzz-repro fuzz-scorecard fuzz-corpus fuzz-differential fuzz-clean fuzz-structured fuzz-roundtrip fuzz-metamorphic fuzz-oracles fuzz-campaign fuzz-api fuzz-coverage fuzz-dedupe-crashes fuzz-regression fuzz-promote-crash fuzz-malicious-metadata validate
 
 fuzz-smoke:
 	TIME_BUDGET=60 ./fuzzing/run-all.sh --mode smoke --findings $(FUZZ_FINDINGS)
@@ -40,6 +40,46 @@ fuzz-corpus:
 
 fuzz-differential:
 	python3 fuzzing/differential/differential-sbom.py $(SBOM) --out fuzzing/reports/differential-report.json
+
+
+FUZZ_PROFILE ?= fuzzing/campaigns/sbom-parser-hardening.yml
+REGRESSION_CORPUS ?= fuzzing/regression/corpus
+
+fuzz-structured:
+	python3 fuzzing/mutators/sbom_json_mutator.py $(SBOM) --out fuzzing/generated-corpus/structured --count $${COUNT:-50}
+	python3 fuzzing/mutators/purl_mutator.py --out fuzzing/generated-corpus/purl --count $${COUNT:-100}
+	python3 fuzzing/mutators/license_expression_mutator.py --out fuzzing/generated-corpus/licenses --count $${COUNT:-100}
+
+fuzz-roundtrip:
+	python3 fuzzing/roundtrip/roundtrip_sbom.py $(SBOM) --out-dir fuzzing/reports/roundtrip
+
+fuzz-metamorphic:
+	python3 fuzzing/metamorphic/metamorphic_sbom.py $(SBOM) --out-dir fuzzing/reports/metamorphic
+
+fuzz-oracles:
+	python3 fuzzing/oracles/semantic_oracles.py $(SBOM) --out fuzzing/reports/semantic-oracles.json
+
+fuzz-campaign:
+	python3 fuzzing/campaigns/run-campaign.py $(FUZZ_PROFILE)
+
+fuzz-api:
+	python3 fuzzing/api/dependency_track_api_fuzz.py --dry-run --out fuzzing/reports/dependency-track-api.json
+
+fuzz-coverage:
+	python3 fuzzing/coverage/coverage_report.py --out fuzzing/reports/fuzz-coverage.md
+
+fuzz-dedupe-crashes:
+	python3 fuzzing/tools/dedupe-crashes.py $(FUZZ_FINDINGS) --out fuzzing/reports/crash-dedupe.json
+
+fuzz-regression:
+	python3 fuzzing/regression/run-regression.py --corpus $(REGRESSION_CORPUS) --out fuzzing/reports/regression-report.json
+
+fuzz-promote-crash:
+	@if [ -z "$(CRASH)" ]; then echo "Usage: make fuzz-promote-crash CRASH=fuzzing/findings/<target>/crash"; exit 2; fi
+	python3 fuzzing/regression/promote-crash.py $(CRASH) --corpus $(REGRESSION_CORPUS)
+
+fuzz-malicious-metadata:
+	python3 fuzzing/malicious-metadata/generate_scenarios.py --out fuzzing/generated-corpus/malicious-metadata
 
 fuzz-clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
@@ -116,3 +156,7 @@ demo:
 	$(MAKE) scanner-compare SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) report SBOM=test-sboms/clean/minimal-cyclonedx.json VULNS=test-sboms/vulnerable/sample-trivy-report.json
 	$(MAKE) ui
+	$(MAKE) fuzz-structured SBOM=test-sboms/clean/minimal-cyclonedx.json
+	$(MAKE) fuzz-roundtrip SBOM=test-sboms/clean/minimal-cyclonedx.json
+	$(MAKE) fuzz-metamorphic SBOM=test-sboms/clean/minimal-cyclonedx.json
+	$(MAKE) fuzz-coverage

@@ -1,0 +1,33 @@
+syntax = "proto3";
+package sbom_security_toolkit.fuzzing;
+
+message FuzzSbom {
+  string format = 1;
+  repeated FuzzComponent components = 2;
+  repeated FuzzDependency dependencies = 3;
+  repeated FuzzVulnerability vulnerabilities = 4;
+  repeated FuzzVexStatement vex_statements = 5;
+}
+message FuzzComponent {
+  string name = 1;
+  string version = 2;
+  string purl = 3;
+  string cpe = 4;
+  repeated string licenses = 5;
+  string bom_ref = 6;
+}
+message FuzzDependency {
+  string ref = 1;
+  repeated string depends_on = 2;
+}
+message FuzzVulnerability {
+  string id = 1;
+  string component_ref = 2;
+  double score = 3;
+}
+message FuzzVexStatement {
+  string vulnerability_id = 1;
+  string component_ref = 2;
+  string state = 3;
+  string justification = 4;
+}

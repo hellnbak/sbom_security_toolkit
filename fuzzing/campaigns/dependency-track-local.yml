@@ -1,0 +1,9 @@
+name: dependency-track-local
+description: Safe local Dependency-Track API workflow fuzzing scaffold.
+duration_seconds: 120
+base_url: http://localhost:8081
+requires_local_service: true
+steps:
+  - health-check
+  - bom-upload-dry-run
+  - malformed-bom-upload-dry-run

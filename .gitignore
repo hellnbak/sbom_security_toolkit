@@ -16,6 +16,8 @@ findings*/
 fuzzing/findings/
 fuzzing/crashes/
 fuzzing/reports/
+release-evidence/
+fuzzing/generated-corpus/
 fuzzing/**/crash-*
 fuzzing/**/timeout-*
 fuzzing/**/oom-*

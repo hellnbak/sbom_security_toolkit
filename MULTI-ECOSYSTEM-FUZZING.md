@@ -377,3 +377,27 @@ Replay it, minimize it, assess whether the input is attacker-reachable in your a
 
 **Status:** Ready for production use on PHP, JavaScript, Python SBOMs.  
 **Updated:** 2026-07-02
+
+## Advanced fuzzing layer
+
+The toolkit now includes an advanced SBOM fuzzing layer:
+
+- structure-preserving SBOM JSON mutators
+- purl and SPDX license-expression mutators
+- semantic oracles for silent data loss
+- round-trip fuzzing
+- metamorphic fuzzing
+- campaign profiles
+- regression corpus management
+- crash deduplication
+- local-only Dependency-Track API fuzzing scaffold
+- malicious package metadata scenario generation
+- proto scaffold for future libprotobuf-mutator targets
+
+Start with:
+
+```bash
+make fuzz-campaign
+make fuzz-regression
+make fuzz-coverage
+```

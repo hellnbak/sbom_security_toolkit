@@ -449,3 +449,7 @@ Added:
 - Additional demo SBOMs and policies.
 
 The UI remains intentionally static/local for now to avoid introducing authentication, database, and hosting risks before the CLI workflows stabilize.
+
+## Advanced fuzzing expansion
+
+Added a deeper SBOM fuzzing layer with structure-preserving mutators, semantic oracles, round-trip and metamorphic test harnesses, campaign profiles, regression corpus management, crash deduplication, malicious metadata scenario generation, local-only Dependency-Track API fuzzing scaffolding, and a proto model scaffold for future native structured fuzzing.

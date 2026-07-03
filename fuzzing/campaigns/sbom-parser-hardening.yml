@@ -1,0 +1,14 @@
+name: sbom-parser-hardening
+description: Structure-aware SBOM parser hardening campaign.
+duration_seconds: 300
+seed_sbom: test-sboms/clean/minimal-cyclonedx.json
+mutations: 50
+steps:
+  - structured-mutate
+  - semantic-oracles
+  - roundtrip
+  - metamorphic
+oracles:
+  - no-silent-component-drop
+  - unique-component-identity
+  - dependency-ref-exists
