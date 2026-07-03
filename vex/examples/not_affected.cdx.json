@@ -1,0 +1,18 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2099-0001",
+      "source": {"name": "example"},
+      "affects": [{"ref": "pkg:pypi/example@1.0.0"}],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_present",
+        "response": ["will_not_fix"],
+        "detail": "Example only. Replace with evidence from engineering review."
+      }
+    }
+  ]
+}

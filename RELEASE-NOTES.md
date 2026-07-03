@@ -430,3 +430,22 @@ This package now includes an expanded fuzzing subsystem:
 - Added a differential SBOM parser/scanner harness for locally installed tools.
 - Added GitHub Actions templates for PR smoke fuzzing and scheduled nightly fuzzing.
 - Added continuous fuzzing documentation and ClusterFuzzLite starter templates.
+
+## v1.2.0 - SBOM Operations Workbench Additions
+
+Added:
+
+- SBOM quality scoring.
+- Policy-as-code release gates.
+- Supplier SBOM intake mode.
+- CycloneDX VEX helper commands.
+- Vulnerability prioritization reports.
+- Scanner comparison scaffolding.
+- OpenSSF Scorecard wrapper scaffolding.
+- GUAC-friendly graph export scaffold.
+- AI triage prompt templates and guarded deterministic triage summary.
+- Release evidence bundle workflow.
+- Static local dashboard generator.
+- Additional demo SBOMs and policies.
+
+The UI remains intentionally static/local for now to avoid introducing authentication, database, and hosting risks before the CLI workflows stabilize.

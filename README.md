@@ -280,3 +280,45 @@ make fuzz-differential SBOM=vuln-scan/cyclonedx-sbom.xml
 
 See `docs/fuzzing/CONTINUOUS-FUZZING.md` and `fuzzing/README-ENGINES.md` for details.
 
+
+## SBOM Operations Workbench
+
+The toolkit now includes a lightweight SBOM operations layer in addition to vulnerability scanning and fuzzing.
+
+Useful commands:
+
+```bash
+make sbom-score SBOM=vuln-scan/cyclonedx-sbom.xml
+make policy-check SBOM=vuln-scan/cyclonedx-sbom.xml POLICY=policies/default-release-policy.yml
+make supplier-intake SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
+make vex-template CVE=CVE-2099-0001 COMPONENT=pkg:pypi/example-lib@1.0.0 STATE=under_investigation
+make vex-validate VEX=vex/examples/not_affected.cdx.json
+make prioritize VULNS=test-sboms/vulnerable/sample-trivy-report.json
+make scanner-compare SBOM=vuln-scan/cyclonedx-sbom.xml
+make release-evidence SBOM=vuln-scan/cyclonedx-sbom.xml
+make demo
+```
+
+New capabilities include:
+
+- SBOM quality scoring.
+- Policy-as-code release gates.
+- Supplier SBOM intake review.
+- CycloneDX VEX template, validation, merge, and explanation helpers.
+- Vulnerability prioritization using CVSS/EPSS/KEV-style fields when available.
+- Scanner comparison scaffolding for Trivy, Grype, and OSV-Scanner.
+- OpenSSF Scorecard wrapper scaffolding.
+- GUAC-friendly export scaffolding.
+- Static local dashboard generation.
+- Release evidence bundle generation.
+
+### UI direction
+
+The current UI approach is intentionally lightweight: generate a static local dashboard with:
+
+```bash
+make ui
+open reports/ui/index.html
+```
+
+A full multi-user web application is not included yet. The recommended path is to stabilize the CLI/report schemas first, then add a local-only FastAPI UI if needed.

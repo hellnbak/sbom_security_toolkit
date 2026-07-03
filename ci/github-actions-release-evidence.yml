@@ -1,0 +1,28 @@
+name: SBOM Release Evidence
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  release-evidence:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: release-sbom.cdx.json
+      - name: Build evidence bundle
+        run: |
+          SBOM=release-sbom.cdx.json OUT=release-evidence ./scripts/release-evidence.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-release-evidence
+          path: release-evidence/

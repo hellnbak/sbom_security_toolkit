@@ -1,0 +1,17 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2099-0003",
+      "source": {"name": "example"},
+      "affects": [{"ref": "pkg:maven/example/app@1.0.0"}],
+      "analysis": {
+        "state": "fixed",
+        "response": ["update"],
+        "detail": "Example fixed statement. Include fixed version evidence in real use."
+      }
+    }
+  ]
+}

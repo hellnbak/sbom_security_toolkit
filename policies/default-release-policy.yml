@@ -1,0 +1,12 @@
+name: default-release-policy
+description: Baseline release gate for SBOM quality and vulnerability context.
+fail_on:
+  cisa_kev: true
+  critical_without_vex: true
+  missing_license_percent_gt: 20
+  missing_purl_percent_gt: 10
+  unknown_components_gt: 5
+  no_dependency_graph: false
+warn_on:
+  high_cvss_count_gt: 10
+  no_dependency_graph: true

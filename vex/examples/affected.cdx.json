@@ -1,0 +1,17 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2099-0002",
+      "source": {"name": "example"},
+      "affects": [{"ref": "pkg:npm/example@1.0.0"}],
+      "analysis": {
+        "state": "affected",
+        "response": ["update"],
+        "detail": "Example affected statement. Human review required."
+      }
+    }
+  ]
+}
