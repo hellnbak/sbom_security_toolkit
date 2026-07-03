@@ -33,6 +33,9 @@ WORKFLOWS = {
     "redact": "Redact SBOM",
     "scanner-compare": "Scanner comparison",
     "release-evidence": "Release evidence bundle",
+    "ai-fuzz-seeds": "AI fuzz seed suggestions",
+    "ai-mutation-plan": "AI mutation plan",
+    "ai-fuzz-campaign": "AI fuzz campaign draft",
 }
 
 
@@ -178,6 +181,13 @@ def run_job(job_id: str) -> None:
             steps.append(run_step(job_id, "Redact SBOM", module_cmd("sbomops.redact", sbom, "--out", out / "redacted-sbom.json", "--hash-internal-names")))
         if workflow == "scanner-compare":
             steps.append(run_step(job_id, "Scanner compare", module_cmd("sbomops.scanner_compare", sbom, "--out-dir", out / "scanner-compare"), timeout=900))
+
+        if workflow == "ai-fuzz-seeds":
+            steps.append(run_step(job_id, "AI fuzz seeds", module_cmd("ai_fuzz.tools.ai_fuzz", "seeds", "--format", "cyclonedx", "--scenario", "dependency-cycles", "--count", "3")))
+        if workflow == "ai-mutation-plan":
+            steps.append(run_step(job_id, "AI mutation plan", module_cmd("ai_fuzz.tools.ai_fuzz", "mutation-plan", "--sbom", sbom)))
+        if workflow == "ai-fuzz-campaign":
+            steps.append(run_step(job_id, "AI fuzz campaign", module_cmd("ai_fuzz.tools.ai_fuzz", "campaign", "--goal", "sbom-workbench-upload-hardening")))
         if workflow == "release-evidence":
             env = os.environ.copy(); env.update({"SBOM": str(sbom), "POLICY": policy, "OUT": str(out / "release-evidence")})
             cmd = ["bash", "scripts/release-evidence.sh"]

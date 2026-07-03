@@ -14,6 +14,8 @@ MODULES = {
     "watch": "sbomops.watch",
     "ui": "sbomops.ui_bundle",
     "workbench": "sbomops.workbench.server",
+    "ai-fuzz": "ai_fuzz.tools.ai_fuzz",
+    "ai-review": "ai_fuzz.tools.review_queue",
 }
 
 def main():

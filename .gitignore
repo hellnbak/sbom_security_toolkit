@@ -53,3 +53,17 @@ ui/storage/jobs/*
 !ui/storage/jobs/.gitkeep
 ui/storage/uploads/*
 !ui/storage/uploads/.gitkeep
+
+# AI fuzzing review/generated artifacts
+ai_fuzz/review/incoming/*
+!ai_fuzz/review/incoming/.gitkeep
+ai_fuzz/review/accepted/*
+!ai_fuzz/review/accepted/.gitkeep
+ai_fuzz/review/rejected/*
+!ai_fuzz/review/rejected/.gitkeep
+fuzzing/corpus/ai/incoming/*
+!fuzzing/corpus/ai/incoming/.gitkeep
+fuzzing/corpus/ai/reviewed/*
+!fuzzing/corpus/ai/reviewed/.gitkeep
+fuzzing/corpus/ai/rejected/*
+!fuzzing/corpus/ai/rejected/.gitkeep

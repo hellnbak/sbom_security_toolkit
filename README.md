@@ -335,3 +335,24 @@ make ui-server
 Then open `http://127.0.0.1:8080`. The UI supports SBOM upload, workflow execution, job status/logs, scanner availability checks, delete controls, and evidence-bundle download. It stores data locally under `ui/storage/` and is not intended to be internet-facing.
 
 See `docs/ui/LOCAL-WORKBENCH.md`.
+
+## v1.6 AI-assisted fuzzing workflows
+
+The toolkit now includes a local-first AI fuzzing layer under `ai_fuzz/`. It uses a review-queue model so AI can propose better fuzzing artifacts without automatically executing or trusting them.
+
+Key commands:
+
+```bash
+make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
+make ai-mutation-plan SBOM=test-sboms/clean/minimal-cyclonedx.json
+make ai-oracle-suggest TARGET=sbomops/minimum_elements.py
+make ai-crash-triage CRASH=fuzzing/findings/example
+make ai-regression-test CRASH=fuzzing/findings/example
+make ai-fuzz-harness TARGET=sbomops/redact.py
+make ai-coverage-suggest COVERAGE=fuzzing/reports/fuzz-coverage.md
+make ai-fuzz-campaign GOAL=dependency-track-import-hardening
+make ai-explain-disagreement REPORT=reports/scanner-compare/scanner-comparison.json
+make ai-review-list
+```
+
+Default behavior is prompt-only/deterministic and requires no API key. Optional providers are configured with `AI_FUZZ_PROVIDER=ollama` or `AI_FUZZ_PROVIDER=openai-compatible`. All generated artifacts land in `ai_fuzz/review/incoming/` for human review. See `docs/fuzzing/AI-ASSISTED-FUZZING.md`.

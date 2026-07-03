@@ -487,3 +487,23 @@ Highlights:
 - Local-first safety model: no database, no cloud upload, localhost bind by default, size/type checks, sanitized filenames, per-job directories, and delete controls.
 
 See `docs/ui/LOCAL-WORKBENCH.md`.
+
+## v1.6.0 - AI-Assisted Fuzzing Workflows
+
+Added a guarded AI-assisted fuzzing layer:
+
+- Prompt-only default mode requiring no API keys or network model.
+- Optional local Ollama and OpenAI-compatible endpoint provider hooks.
+- AI seed generation for CycloneDX/SPDX edge cases with deterministic fallback seeds.
+- AI mutation-plan generation for structure-preserving SBOM fuzzing.
+- AI oracle suggestions for semantic fuzzing invariants.
+- AI crash triage summaries.
+- AI regression-test and fuzz-harness draft generation.
+- AI coverage-gap suggestions.
+- AI campaign profile generation.
+- AI scanner-disagreement explanations.
+- Review queues under `ai_fuzz/review/` with accept/reject/list commands.
+- Incoming AI-generated corpus area under `fuzzing/corpus/ai/`.
+- Workbench workflow entries for AI seed, mutation-plan, and campaign drafts.
+
+Safety model: AI proposes, deterministic tools validate, humans approve. Generated artifacts are advisory and are not executed or promoted automatically.

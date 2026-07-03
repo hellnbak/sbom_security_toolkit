@@ -92,7 +92,7 @@ validate:
 	python3 -c "import json,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '/corpus/' not in str(p) and '/malformed/' not in str(p)]; print('json ok')"
 
 
-.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts test sst demo-good demo-bad demo-supplier demo-fuzzing demo
+.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts ai-fuzz-seeds ai-mutation-plan ai-oracle-suggest ai-crash-triage ai-regression-test ai-fuzz-harness ai-coverage-suggest ai-fuzz-campaign ai-explain-disagreement ai-review-list ai-review-accept ai-review-reject test sst demo-good demo-bad demo-supplier demo-fuzzing demo
 
 POLICY ?= policies/default-release-policy.yml
 VULNS ?=
@@ -105,6 +105,13 @@ REPORTS ?= reports
 PROJECT ?= .
 EDR ?=
 ARTIFACT_DIR ?= dist
+FORMAT ?= cyclonedx
+SCENARIO ?= dependency-cycles
+AI_PROVIDER ?= none
+AI_MODEL ?=
+GOAL ?= sbom-parser-hardening
+COVERAGE ?= fuzzing/reports/fuzz-coverage.md
+ITEM ?=
 
 analyze:
 	python3 -m sbomops.analyze_project $(PROJECT) --out-dir $(REPORTS)/latest --policy $(POLICY) $(if $(VULNS),--vulns $(VULNS),)
@@ -203,6 +210,49 @@ sign-artifacts:
 
 verify-artifacts:
 	ARTIFACT_DIR=$(ARTIFACT_DIR) scripts/artifact-signing.sh verify
+
+ai-fuzz-seeds:
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) seeds --format $(FORMAT) --scenario $(SCENARIO) --count $${COUNT:-3}
+
+ai-mutation-plan:
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) mutation-plan --sbom $(SBOM)
+
+ai-oracle-suggest:
+	@if [ -z "$(TARGET)" ]; then echo "Usage: make ai-oracle-suggest TARGET=sbomops/minimum_elements.py"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) oracle-suggest --target $(TARGET)
+
+ai-crash-triage:
+	@if [ -z "$(CRASH)" ]; then echo "Usage: make ai-crash-triage CRASH=fuzzing/findings/<target>/crash"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) crash-triage --crash $(CRASH)
+
+ai-regression-test:
+	@if [ -z "$(CRASH)" ]; then echo "Usage: make ai-regression-test CRASH=fuzzing/findings/<target>/crash"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) regression-test --crash $(CRASH)
+
+ai-fuzz-harness:
+	@if [ -z "$(TARGET)" ]; then echo "Usage: make ai-fuzz-harness TARGET=sbomops/redact.py"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) harness --target $(TARGET)
+
+ai-coverage-suggest:
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) coverage --coverage $(COVERAGE)
+
+ai-fuzz-campaign:
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) campaign --goal "$(GOAL)"
+
+ai-explain-disagreement:
+	@if [ -z "$(REPORT)" ]; then echo "Usage: make ai-explain-disagreement REPORT=reports/scanner-compare/scanner-comparison.json"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_fuzz --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) disagreement --report $(REPORT)
+
+ai-review-list:
+	python3 -m ai_fuzz.tools.review_queue list
+
+ai-review-accept:
+	@if [ -z "$(ITEM)" ]; then echo "Usage: make ai-review-accept ITEM=<review-folder>"; exit 2; fi
+	python3 -m ai_fuzz.tools.review_queue accept $(ITEM)
+
+ai-review-reject:
+	@if [ -z "$(ITEM)" ]; then echo "Usage: make ai-review-reject ITEM=<review-folder>"; exit 2; fi
+	python3 -m ai_fuzz.tools.review_queue reject $(ITEM)
 
 test:
 	python3 -m unittest discover -s tests -v
