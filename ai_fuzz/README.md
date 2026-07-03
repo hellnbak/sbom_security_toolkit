@@ -31,6 +31,20 @@ AI_FUZZ_MODEL=local-model \
 make ai-fuzz-campaign GOAL=sbom-parser-hardening
 ```
 
+Optional GLM local/OpenAI-compatible profile:
+
+```bash
+AI_FUZZ_PROVIDER=glm GLM_BASE_URL=http://127.0.0.1:8000/v1 GLM_MODEL=glm-5.2 make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
+```
+
+Provider smoke test:
+
+```bash
+make ai-provider-test AI_PROVIDER=glm AI_MODEL=glm-5.2
+```
+
+See `docs/integrations/GLM-LOCAL-MODELS.md` for GLM setup patterns and safety guidance.
+
 ## Review queues
 
 Artifacts are written under `ai_fuzz/review/incoming/`.

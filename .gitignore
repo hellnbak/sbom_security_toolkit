@@ -75,3 +75,5 @@ advisories/draft/
 reports/
 ai_fuzz/review/incoming/*
 !ai_fuzz/review/incoming/.gitkeep
+.venv/
+*.egg-info/

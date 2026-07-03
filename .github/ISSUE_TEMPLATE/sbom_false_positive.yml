@@ -1,0 +1,15 @@
+name: SBOM false positive / disagreement
+description: Report scanner disagreement or suspected false positive
+labels: [sbom, triage]
+title: "[SBOM]: "
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Scanner output / evidence
+      description: Redact sensitive component names before posting.
+      render: text

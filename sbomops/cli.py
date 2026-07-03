@@ -16,6 +16,7 @@ MODULES = {
     "workbench": "sbomops.workbench.server",
     "ai-fuzz": "ai_fuzz.tools.ai_fuzz",
     "ai-review": "ai_fuzz.tools.review_queue",
+    "ai-provider-test": "ai_fuzz.tools.provider_test",
     "normalize": "sbomops.normalize",
     "explain": "sbomops.explain",
     "repair": "sbomops.repair",
@@ -25,8 +26,16 @@ MODULES = {
 
 def main():
     ap = argparse.ArgumentParser(prog="sst", description="SBOM Security Toolkit CLI")
-    ap.add_argument("command", choices=sorted(MODULES))
+    commands = sorted([*MODULES.keys(), "version"])
+    ap.add_argument("command", choices=commands)
     args, rest = ap.parse_known_args()
+    if args.command == "version":
+        try:
+            from sbomops.__version__ import __version__
+        except Exception:
+            __version__ = "0.0.0"
+        print(__version__)
+        return 0
     raise SystemExit(subprocess.call([sys.executable, "-m", MODULES[args.command], *rest]))
 
 if __name__ == "__main__": main()

@@ -15,6 +15,54 @@ It is meant for security engineers, AppSec teams, product security teams, vendor
 
 This project is released under the **Functional Source License 1.1, ALv2 Future License (`FSL-1.1-ALv2`)**. That means it is source-available/Fair Source, not OSI-approved open source. Each version converts to Apache-2.0 under the FSL future-license terms.
 
+
+## Quick start
+
+```bash
+git clone https://github.com/hellnbak/sbom_security_toolkit.git
+cd sbom_security_toolkit
+make setup
+source .venv/bin/activate
+make demo-full
+make ui-server
+```
+
+Then open `http://127.0.0.1:8080` and upload one of the synthetic demo SBOMs in `test-sboms/demo/`.
+
+The packaged CLI is available as `sst` after setup:
+
+```bash
+sst version
+sst analyze . --out-dir reports/latest
+sst workbench --host 127.0.0.1 --port 8080
+```
+
+## v1.9 agent workflow integrations
+
+This release adds optional agent workflow integrations for teams that want AI assistance without making AI a runtime dependency:
+
+- Claude Skills integration under `integrations/claude-skills/sbom-security-toolkit/`;
+- provider-neutral agent prompt packs under `integrations/agent-prompts/`;
+- workflow maps for SBOM intake, release evidence, fuzzing triage, and AI-assisted fuzzing;
+- optional GLM local/OpenAI-compatible model profile for AI-assisted fuzzing workflows;
+- provider smoke testing through `make ai-provider-test`;
+- safety rules that keep AI advisory, review-gated, and local-first by default;
+- report interpretation guidance for policy failures, scanner disagreement, supplier questions, and fuzzing results.
+
+The Claude Skill and GLM profile are optional. The toolkit still works through `make`, `sst`, Docker, and the local workbench UI without any Claude or local-model dependency.
+
+## v1.8 hardening additions
+
+This release adds the project plumbing needed for easier adoption and safer releases:
+
+- editable Python package metadata and the `sst` CLI entrypoint;
+- `make setup`, `make demo-full`, `make release`, and `make preflight-release`;
+- Docker Compose files for the local workbench and optional Dependency-Track profile;
+- GitHub Actions for tests, validation, fuzz smoke checks, and release evidence;
+- issue templates, Dependabot, and pull request checklist;
+- synthetic demo SBOMs and placeholder UI assets;
+- data-safety guidance and release preflight checks.
+
 ## What this toolkit does
 
 The toolkit combines several SBOM security workflows into one local package:
@@ -116,6 +164,16 @@ make fuzz-metamorphic SBOM=test-sboms/clean/minimal-cyclonedx.json
 make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
 make ai-fuzz-campaign GOAL=sbom-parser-hardening
 ```
+
+Optional GLM local-model profile:
+
+```bash
+make ai-provider-test AI_PROVIDER=glm AI_MODEL=glm-5.2
+GLM_BASE_URL=http://127.0.0.1:8000/v1 GLM_MODEL=glm-5.2 \
+  make ai-fuzz-seeds AI_PROVIDER=glm FORMAT=cyclonedx SCENARIO=dependency-cycles
+```
+
+Use the exact model name exposed by your local runtime. See `docs/integrations/GLM-LOCAL-MODELS.md`.
 
 AI-generated material lands in review queues first. Review before accepting anything into a corpus, campaign, harness, or regression suite.
 

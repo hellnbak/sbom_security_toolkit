@@ -1,0 +1,24 @@
+name: Fuzzing crash
+description: Report a fuzzing crash or semantic oracle failure
+title: "[Fuzzing]: "
+labels: [fuzzing, bug]
+body:
+  - type: input
+    id: target
+    attributes:
+      label: Fuzz target
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproducer command
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: minimized
+    attributes:
+      label: Minimized input or crash metadata
+      description: Do not paste sensitive production SBOM data. Use redacted or synthetic reproducer content.
+      render: text

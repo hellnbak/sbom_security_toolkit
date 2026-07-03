@@ -1,0 +1,16 @@
+name: lint
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  shell-json-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q .
+      - run: find . -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - run: make preflight-release

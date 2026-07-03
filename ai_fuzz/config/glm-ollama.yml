@@ -1,0 +1,14 @@
+# GLM via an Ollama-compatible local endpoint.
+# Use the exact model name installed in your local Ollama runtime.
+provider: ollama
+name: glm-ollama
+base_url_env: OLLAMA_HOST
+base_url_default: http://127.0.0.1:11434
+model_env: GLM_MODEL
+model_default: glm-5
+network_default: local_only
+redact_before_prompt: true
+review_required: true
+notes:
+  - This profile assumes an Ollama-compatible local endpoint.
+  - If your local runtime exposes a different model name, set GLM_MODEL or AI_FUZZ_MODEL.

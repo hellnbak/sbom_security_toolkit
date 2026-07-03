@@ -1,0 +1,12 @@
+services:
+  sbom-workbench:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../ui/storage:/app/ui/storage
+      - ../reports:/app/reports
+    environment:
+      - SST_NETWORK_MODE=local

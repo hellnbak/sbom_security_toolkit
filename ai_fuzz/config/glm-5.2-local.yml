@@ -1,0 +1,15 @@
+# GLM local/OpenAI-compatible profile for AI-assisted fuzzing workflows.
+# Use the exact model name exposed by your local runtime.
+provider: glm
+name: glm-5.2-local
+base_url_env: GLM_BASE_URL
+base_url_default: http://127.0.0.1:8000/v1
+model_env: GLM_MODEL
+model_default: glm-5.2
+network_default: local_only
+redact_before_prompt: true
+review_required: true
+notes:
+  - GLM support is optional and provider-neutral.
+  - AI output is advisory and must stay in the review queue until approved.
+  - Do not use AI output to automatically mark vulnerabilities not_affected.

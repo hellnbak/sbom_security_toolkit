@@ -1,0 +1,6 @@
+# Minimal placeholder profile for users who want to run GUAC separately.
+# GUAC deployment options change over time; see docs/integrations/GUAC.md.
+services:
+  guac-note:
+    image: alpine:3.20
+    command: ["sh", "-c", "echo 'Use docs/integrations/GUAC.md for current GUAC deployment guidance.' && sleep 3600"]

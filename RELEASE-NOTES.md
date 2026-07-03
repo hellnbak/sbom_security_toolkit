@@ -1,3 +1,42 @@
+# v1.9.0 - Agent Workflow Integrations and Claude Skills
+
+Added:
+
+- Optional Claude Skill under `integrations/claude-skills/sbom-security-toolkit/`.
+- Claude Skill resources for command reference, safety rules, workflow mapping, and report interpretation.
+- Claude Skill helper scripts for running analysis, listing reports, and triaging fuzzing crashes.
+- Provider-neutral agent prompt packs under `integrations/agent-prompts/`.
+- Optional GLM local/OpenAI-compatible model profile for AI-assisted fuzzing.
+- GLM reference configs under `ai_fuzz/config/`.
+- `make ai-provider-test` and `sst ai-provider-test` for provider smoke testing.
+- `docs/integrations/CLAUDE-SKILLS.md` with installation, safety, and usage guidance.
+- `docs/integrations/GLM-LOCAL-MODELS.md` with local GLM setup patterns and safety guidance.
+- Release notes and README positioning clarifying that agent/model workflows are optional and do not replace deterministic toolkit checks.
+
+This release keeps the toolkit local-first and provider-neutral. AI/agent integrations, including Claude Skills and the optional GLM profile, are advisory workflow helpers only: deterministic tooling validates results and humans approve decisions.
+
+---
+
+# v1.8.0 - Usability, Packaging, and Release Hardening
+
+Added:
+
+- Editable Python package metadata via `pyproject.toml`.
+- `sst` console-script entrypoint with `sst version`.
+- `make setup`, `make install`, `make demo-full`, `make coverage`, `make preflight-release`, and `make release`.
+- Dockerfile and Docker Compose profile for the local SBOM Workbench.
+- Optional Docker Compose profile scaffolds for Dependency-Track and GUAC demos.
+- GitHub Actions for tests, validation, fuzz smoke checks, and release evidence artifacts.
+- GitHub issue templates, pull request template, and Dependabot configuration.
+- `DATA-SAFETY.md` and release preflight scanning for generated artifacts, cache files, large files, secrets, and known company/customer-specific terms.
+- `docs/INSTALL.md`, `docs/DEMO.md`, and `docs/RELEASE.md`.
+- Synthetic demo SBOM set under `test-sboms/demo/`.
+- Placeholder UI/docs assets under `docs/assets/` for future screenshot replacement.
+- Additional tests for versioning, CLI routing, data safety docs, and release scripts.
+
+This release focuses on making the toolkit easier to clone, install, demo, validate, package, and safely publish.
+
+---
 
 ## v1.4.0 - SBOM Intake and Evidence Release
 

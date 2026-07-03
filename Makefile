@@ -92,7 +92,7 @@ validate:
 	python3 -c "import json,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '/corpus/' not in str(p) and '/malformed/' not in str(p)]; print('json ok')"
 
 
-.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts ai-fuzz-seeds ai-mutation-plan ai-oracle-suggest ai-crash-triage ai-regression-test ai-fuzz-harness ai-coverage-suggest ai-fuzz-campaign ai-explain-disagreement ai-review-list ai-review-accept ai-review-reject test sst demo-good demo-bad demo-supplier demo-fuzzing demo
+.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts ai-fuzz-seeds ai-mutation-plan ai-oracle-suggest ai-crash-triage ai-regression-test ai-fuzz-harness ai-coverage-suggest ai-fuzz-campaign ai-explain-disagreement ai-review-list ai-review-accept ai-review-reject ai-provider-test test sst demo-good demo-bad demo-supplier demo-fuzzing demo
 
 POLICY ?= policies/default-release-policy.yml
 VULNS ?=
@@ -187,6 +187,7 @@ ui-server:
 
 ui-clean:
 	rm -rf ui/storage/jobs/* ui/storage/uploads/*
+	mkdir -p ui/storage/jobs ui/storage/uploads
 	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
 
 redact-sbom:
@@ -253,6 +254,9 @@ ai-review-accept:
 ai-review-reject:
 	@if [ -z "$(ITEM)" ]; then echo "Usage: make ai-review-reject ITEM=<review-folder>"; exit 2; fi
 	python3 -m ai_fuzz.tools.review_queue reject $(ITEM)
+
+ai-provider-test:
+	python3 -m ai_fuzz.tools.provider_test --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),)
 
 test:
 	python3 -m unittest discover -s tests -v
@@ -405,3 +409,63 @@ sbom-experience:
 	$(MAKE) sbom-explain SBOM=$(SBOM)
 	$(MAKE) sbom-repair SBOM=$(SBOM)
 	$(MAKE) sbom-inventory SBOM=$(SBOM)
+
+# v1.8 usability, packaging, release hardening
+.PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
+VERSION ?= 1.9.0
+
+setup:
+	./setup.sh
+
+install:
+	./install.sh
+
+version:
+	python3 -m sbomops.cli version
+
+docker-build:
+	docker compose -f docker/docker-compose.yml build
+
+docker-ui:
+	docker compose -f docker/docker-compose.yml up
+
+docker-dtrack:
+	@echo "Set DTRACK_POSTGRES_PASSWORD before running this target."
+	docker compose -f docker/docker-compose.yml -f docker/docker-compose.dtrack.yml up
+
+docker-guac:
+	docker compose -f docker/docker-compose.guac.yml up
+
+demo-full:
+	$(MAKE) sbom-score SBOM=test-sboms/demo/good-sbom.json REPORTS=reports/demo
+	$(MAKE) sbom-minimum-elements SBOM=test-sboms/demo/good-sbom.json REPORTS=reports/demo
+	$(MAKE) policy-check SBOM=test-sboms/demo/good-sbom.json REPORTS=reports/demo
+	$(MAKE) supplier-intake SBOM=test-sboms/demo/supplier-sbom-needs-followup.json REPORTS=reports/demo
+	$(MAKE) supplier-questions SBOM=test-sboms/demo/supplier-sbom-needs-followup.json REPORTS=reports/demo
+	$(MAKE) scanner-confidence VULNS=test-sboms/demo/scanner-disagreement-example.json REPORTS=reports/demo
+	$(MAKE) report SBOM=test-sboms/demo/good-sbom.json VULNS=test-sboms/demo/scanner-disagreement-example.json REPORTS=reports/demo
+	$(MAKE) sbom-experience SBOM=test-sboms/demo/bad-sbom.json REPORTS=reports/demo
+	COUNT=3 $(MAKE) fuzz-structured SBOM=test-sboms/demo/good-sbom.json
+	$(MAKE) fuzz-roundtrip SBOM=test-sboms/demo/good-sbom.json
+	$(MAKE) release-evidence SBOM=test-sboms/demo/good-sbom.json POLICY=policies/default-release-policy.yml
+	mkdir -p reports/demo
+	python3 -m sbomops.ui_bundle --reports-dir reports/demo --out-dir reports/demo/ui
+	(cd reports && zip -qr demo/evidence-bundle.zip demo || true)
+	@echo "Demo bundle generated under reports/demo"
+
+coverage:
+	python3 -m coverage run -m unittest discover -s tests
+	python3 -m coverage report
+
+preflight-release:
+	scripts/preflight-release.sh .
+
+release:
+	VERSION=$(VERSION) scripts/release.sh
+
+clean-generated:
+	rm -rf reports release-evidence dist fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes
+	find . -type d -name __pycache__ -prune -exec rm -rf {} +
+	find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+	mkdir -p ui/storage/jobs ui/storage/uploads
+	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
