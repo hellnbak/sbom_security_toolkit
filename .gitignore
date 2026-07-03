@@ -46,3 +46,4 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+.sbom-watch/

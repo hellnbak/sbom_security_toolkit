@@ -1,3 +1,21 @@
+
+## v1.4.0 - SBOM Intake and Evidence Release
+
+Added:
+
+- One-command project analysis: `make analyze PROJECT=...`
+- CISA/NTIA-style SBOM minimum-elements checker
+- Supplier questionnaire and follow-up email generation
+- Scanner confidence scoring across vulnerability reports
+- Exploitability Decision Records for human-reviewed VEX evidence
+- SBOM redaction/privacy mode for safe sharing
+- Local SBOM watch mode with delta reports
+- `sst` CLI wrapper via `python3 -m sbomops.cli`
+- Static UI bundle with `data.json`
+- Runnable GUAC demo scaffold
+- Artifact checksum/sign/verify workflow with optional cosign support
+- Unit tests for core parsing, scoring, minimum-elements, and supplier-question workflows
+
 # SBOM Security Toolkit - Multi-Ecosystem Fuzzing Release
 ## Version 2.0 - 2026-07-02
 

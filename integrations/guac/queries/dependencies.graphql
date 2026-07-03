@@ -1,0 +1,1 @@
+query Dependencies { packages { namespaces { names { versions { version } } } } }

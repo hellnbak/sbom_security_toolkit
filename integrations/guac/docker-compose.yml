@@ -1,0 +1,5 @@
+services:
+  guac-demo:
+    image: ghcr.io/guacsec/guac:latest
+    command: ["--help"]
+    profiles: ["manual"]

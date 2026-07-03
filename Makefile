@@ -91,7 +91,8 @@ validate:
 	find . -name '*.sh' -print0 | xargs -0 -n1 bash -n
 	python3 -c "import json,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '/corpus/' not in str(p) and '/malformed/' not in str(p)]; print('json ok')"
 
-.PHONY: sbom-score policy-check supplier-intake vex-template vex-validate vex-merge vex-explain prioritize scanner-compare openssf-scorecard guac-export report release-evidence ui demo
+
+.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts test sst demo-good demo-bad demo-supplier demo-fuzzing demo
 
 POLICY ?= policies/default-release-policy.yml
 VULNS ?=
@@ -101,15 +102,27 @@ COMPONENT ?= pkg:pypi/example-lib@1.0.0
 STATE ?= under_investigation
 REPO ?= https://github.com/hellnbak/sbom_security_toolkit
 REPORTS ?= reports
+PROJECT ?= .
+EDR ?=
+ARTIFACT_DIR ?= dist
+
+analyze:
+	python3 -m sbomops.analyze_project $(PROJECT) --out-dir $(REPORTS)/latest --policy $(POLICY) $(if $(VULNS),--vulns $(VULNS),)
 
 sbom-score:
 	python3 -m sbomops.score_sbom $(SBOM) --out-dir $(REPORTS)/sbom-quality
+
+sbom-minimum-elements:
+	python3 -m sbomops.minimum_elements $(SBOM) --out-dir $(REPORTS)/minimum-elements
 
 policy-check:
 	python3 -m sbomops.policy_check $(SBOM) --policy $(POLICY) $(if $(VULNS),--vulns $(VULNS),) --out-dir $(REPORTS)/policy
 
 supplier-intake:
 	python3 -m sbomops.supplier_intake $(SBOM) --out-dir $(REPORTS)/supplier-intake
+
+supplier-questions:
+	python3 -m sbomops.supplier_questions $(SBOM) --out-dir $(REPORTS)/supplier-questions
 
 vex-template:
 	python3 -m sbomops.vex template --cve $(CVE) --component $(COMPONENT) --state $(STATE) --output vex/generated-vex.cdx.json
@@ -130,14 +143,25 @@ prioritize:
 	@if [ -z "$(VULNS)" ]; then echo "Usage: make prioritize VULNS=test-sboms/vulnerable/sample-trivy-report.json"; exit 2; fi
 	python3 -m sbomops.prioritize $(VULNS) --out-dir $(REPORTS)/prioritization
 
+scanner-confidence:
+	@if [ -z "$(VULNS)" ]; then echo "Usage: make scanner-confidence VULNS=report1.json"; exit 2; fi
+	python3 -m sbomops.confidence $(VULNS) --out-dir $(REPORTS)/confidence
+
 scanner-compare:
 	python3 -m sbomops.scanner_compare $(SBOM) --out-dir $(REPORTS)/scanner-compare
 
 openssf-scorecard:
 	python3 -m sbomops.scorecard --repo $(REPO) --out-dir $(REPORTS)/openssf-scorecard
 
+repo-posture:
+	$(MAKE) openssf-scorecard REPO=$(REPO)
+	python3 -m sbomops.minimum_elements $(SBOM) --out-dir $(REPORTS)/repo-posture/minimum-elements
+
 guac-export:
 	python3 -m sbomops.guac_export $(SBOM) --out $(REPORTS)/guac/guac-export.json
+
+guac-demo:
+	integrations/guac/ingest-sbom.sh $(SBOM)
 
 report:
 	python3 -m sbomops.report $(SBOM) $(if $(VULNS),--vulns $(VULNS),) --out-dir $(REPORTS)/bundle
@@ -148,15 +172,67 @@ release-evidence:
 ui:
 	python3 -m sbomops.ui --reports-dir $(REPORTS) --out $(REPORTS)/ui/index.html
 
+ui-bundle:
+	python3 -m sbomops.ui_bundle --reports-dir $(REPORTS) --out-dir $(REPORTS)/ui
+
+redact-sbom:
+	python3 -m sbomops.redact $(SBOM) --out $(REPORTS)/redacted/redacted-sbom.json --hash-internal-names
+
+watch-sbom:
+	python3 -m sbomops.watch $(SBOM) $(if $(VULNS),--vulns $(VULNS),) --out-dir $(REPORTS)/watch
+
+exploitability-record:
+	python3 -m sbomops.edr create --cve $(CVE) --component $(COMPONENT) --status $(STATE) --out-dir exploitability-records
+
+validate-edr:
+	@if [ -z "$(EDR)" ]; then echo "Usage: make validate-edr EDR=exploitability-records/CVE-...md"; exit 2; fi
+	python3 -m sbomops.edr validate $(EDR)
+
+checksums:
+	ARTIFACT_DIR=$(ARTIFACT_DIR) scripts/artifact-signing.sh checksums
+
+sign-artifacts:
+	ARTIFACT_DIR=$(ARTIFACT_DIR) scripts/artifact-signing.sh sign
+
+verify-artifacts:
+	ARTIFACT_DIR=$(ARTIFACT_DIR) scripts/artifact-signing.sh verify
+
+test:
+	python3 -m unittest discover -s tests -v
+
+sst:
+	python3 -m sbomops.cli --help
+
+demo-good:
+	$(MAKE) analyze PROJECT=. SBOM=test-sboms/clean/minimal-cyclonedx.json
+
+demo-bad:
+	$(MAKE) sbom-minimum-elements SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
+	$(MAKE) policy-check SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
+
+demo-supplier:
+	$(MAKE) supplier-intake SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
+	$(MAKE) supplier-questions SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
+
+demo-fuzzing:
+	$(MAKE) fuzz-structured SBOM=test-sboms/clean/minimal-cyclonedx.json
+	$(MAKE) fuzz-roundtrip SBOM=test-sboms/clean/minimal-cyclonedx.json
+
 demo:
 	$(MAKE) sbom-score SBOM=test-sboms/clean/minimal-cyclonedx.json
+	$(MAKE) sbom-minimum-elements SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) policy-check SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) supplier-intake SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
+	$(MAKE) supplier-questions SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
 	$(MAKE) prioritize VULNS=test-sboms/vulnerable/sample-trivy-report.json
+	$(MAKE) scanner-confidence VULNS=test-sboms/vulnerable/sample-trivy-report.json
 	$(MAKE) scanner-compare SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) report SBOM=test-sboms/clean/minimal-cyclonedx.json VULNS=test-sboms/vulnerable/sample-trivy-report.json
 	$(MAKE) ui
+	$(MAKE) ui-bundle
 	$(MAKE) fuzz-structured SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) fuzz-roundtrip SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) fuzz-metamorphic SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) fuzz-coverage
+	$(MAKE) redact-sbom SBOM=test-sboms/clean/minimal-cyclonedx.json
+	$(MAKE) watch-sbom SBOM=test-sboms/clean/minimal-cyclonedx.json VULNS=test-sboms/vulnerable/sample-trivy-report.json

@@ -1,0 +1,1 @@
+query Vulnerabilities { vulnerabilities { vulnerabilityIDs } }
