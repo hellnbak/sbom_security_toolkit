@@ -1,11 +1,139 @@
 # SBOM Security Toolkit
 
-Two source-available workflows for analyzing CycloneDX/SPDX SBOMs and then fuzzing the parser/input-handling libraries they expose:
+**SBOM Security Toolkit** is a local-first, source-available workbench for turning SBOMs into actionable security evidence.
 
-1. **`vuln-scan/`** — find *known* vulnerabilities (CVEs/advisories) in the libraries you already ship.
-2. **`fuzzing/`** — hunt for *unknown* bugs by fuzzing the parser/input-handling libraries with coverage-guided fuzzing.
+It is meant for security engineers, AppSec teams, product security teams, vendor-risk reviewers, and builders who need to answer practical questions like:
 
-This toolkit is released under the Functional Source License 1.1, ALv2 Future License (`FSL-1.1-ALv2`). It wraps well-known third-party OSS tools. The scan and fuzz stages can run locally; optional AI-assisted triage/target generation uses Claude/Claude Code only when you configure those features.
+- Is this SBOM valid and complete enough to trust?
+- Which vulnerabilities matter most, and why?
+- Do different scanners disagree on the same SBOM?
+- What should we ask a supplier to clarify?
+- Can this build or release ship under our policy?
+- Can we generate an evidence bundle for review, audit, or release records?
+- Can we harden SBOM parsers and consumers through fuzzing?
+- Can AI help propose fuzzing seeds, campaigns, and triage notes without replacing human review?
+
+This project is released under the **Functional Source License 1.1, ALv2 Future License (`FSL-1.1-ALv2`)**. That means it is source-available/Fair Source, not OSI-approved open source. Each version converts to Apache-2.0 under the FSL future-license terms.
+
+## What this toolkit does
+
+The toolkit combines several SBOM security workflows into one local package:
+
+1. **SBOM intake and validation** — accepts CycloneDX and SPDX SBOMs, validates structure, extracts components, and identifies missing or weak metadata.
+2. **SBOM quality scoring** — checks whether an SBOM has useful component names, versions, package URLs, hashes, licenses, suppliers, timestamps, and dependency relationships.
+3. **Minimum-elements checks** — evaluates whether an SBOM has the core fields expected by common SBOM guidance and supplier-review workflows.
+4. **Vulnerability scanning and prioritization** — wraps scanners such as OSV-Scanner and Trivy when available, then helps prioritize results using available severity, fix, KEV/EPSS-style, direct/transitive, and confidence signals.
+5. **Scanner comparison** — helps show when multiple tools disagree on component counts, vulnerability matches, or identity resolution.
+6. **Policy-as-code gates** — applies simple YAML release or supplier-intake policies so teams can fail, warn, or pass an SBOM consistently.
+7. **Supplier SBOM intake** — produces supplier follow-up questions, summaries, and reports for vendor-risk and procurement workflows.
+8. **VEX and exploitability evidence** — provides templates and helpers for VEX-style analysis and Exploitability Decision Records without auto-declaring anything “not affected.”
+9. **Release evidence bundles** — generates reports, checksums, UI bundles, and supporting artifacts that can be archived with a release.
+10. **Advanced fuzzing** — includes SBOM-specific fuzz targets, structure-preserving mutators, semantic oracles, round-trip checks, metamorphic tests, campaign profiles, crash deduplication, and regression workflows.
+11. **AI-assisted fuzzing** — uses prompt-only, local-model, or OpenAI-compatible workflows to propose seeds, mutation plans, oracle ideas, campaigns, crash triage, and regression-test drafts. AI output is staged for review and is never auto-promoted or executed by default.
+12. **Local workbench UI** — provides a localhost-only UI for uploading an SBOM, launching workflows, viewing job status, checking scanner availability, and downloading evidence bundles.
+
+## What this is meant to be used for
+
+Use SBOM Security Toolkit as a **hands-on SBOM security operations workbench**:
+
+- testing how your organization should consume SBOMs;
+- reviewing supplier-provided SBOMs;
+- generating release evidence for internal review;
+- comparing scanner output before standardizing on a workflow;
+- building CI/CD examples for SBOM validation and policy gates;
+- fuzzing SBOM parsers, SBOM consumers, and metadata-handling code;
+- experimenting with AI-assisted fuzzing safely and locally;
+- training security teams on SBOM operations without buying a full platform first.
+
+It is intentionally **local-first**. By default, workflows run on your machine, generated artifacts stay on disk, and the UI binds to `127.0.0.1`. Some scanners, enrichment sources, Dependency-Track, GUAC, or AI providers may require network access if you configure them, but those are optional integrations rather than required behavior.
+
+## What this is not
+
+This toolkit is **not** intended to replace mature SBOM, SCA, or vulnerability-management platforms.
+
+It is not:
+
+- a replacement for **Syft**, **cdxgen**, or GitHub SBOM export for SBOM generation;
+- a replacement for **Trivy**, **Grype**, **OSV-Scanner**, Snyk, Mend, Black Duck, FOSSA, Sonatype, Anchore Enterprise, or similar tools for production-grade SCA;
+- a replacement for **OWASP Dependency-Track** for continuous SBOM portfolio management;
+- a full ASPM, vulnerability-management, or GRC platform;
+- a SaaS product;
+- a system that automatically decides whether a vulnerability is exploitable;
+- a system that automatically trusts or executes AI-generated fuzzing code.
+
+Instead, it is designed to sit **around and alongside** those tools as a practical workflow layer: it helps you validate SBOMs, compare outputs, document decisions, generate evidence, test parser robustness, and understand where your existing tools agree or disagree.
+
+## How it compares to other tooling
+
+| Category | Examples | Relationship to this toolkit |
+|---|---|---|
+| SBOM generators | Syft, cdxgen, Microsoft SBOM Tool, GitHub SBOM export | These generate SBOMs. This toolkit consumes, validates, scores, tests, and operationalizes SBOMs. |
+| Vulnerability scanners | Trivy, Grype, OSV-Scanner | These find known vulnerabilities. This toolkit wraps or compares scanner output and adds policy, prioritization, reports, and evidence. |
+| SBOM management platforms | OWASP Dependency-Track, Anchore Enterprise, FOSSA, Black Duck, Snyk, Sonatype | These provide mature enterprise workflows. This toolkit is a lightweight local lab/workbench and reference implementation. |
+| Supply-chain graph/provenance tools | GUAC, SLSA-style provenance, OpenSSF Scorecard | These provide graph, provenance, and posture context. This toolkit includes integration scaffolding and evidence workflows. |
+| Fuzzing frameworks | Atheris, Jazzer.js, PHP-Fuzzer, AFL++ concepts | These are fuzzing engines. This toolkit adds SBOM-specific targets, mutators, semantic oracles, campaigns, and AI-assisted seed/campaign workflows. |
+| AI coding/security assistants | Claude Code, local Ollama models, OpenAI-compatible APIs | These can assist. This toolkit keeps AI advisory, review-gated, and optional. |
+
+## Typical workflows
+
+### Analyze a project or SBOM
+
+```bash
+make analyze PROJECT=./my-app
+make sbom-score SBOM=./bom.json
+make policy-check SBOM=./bom.json POLICY=policies/default-release-policy.yml
+make report SBOM=./bom.json
+```
+
+### Review a supplier SBOM
+
+```bash
+make supplier-intake SBOM=./vendor-bom.json
+make supplier-questions SBOM=./vendor-bom.json
+make sbom-minimum-elements SBOM=./vendor-bom.json
+```
+
+### Use the local workbench UI
+
+```bash
+make ui-server
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
+
+Upload an SBOM, choose a workflow, watch job status, review results, and download the evidence bundle.
+
+### Run fuzzing and AI-assisted fuzzing
+
+```bash
+make fuzz-smoke
+make fuzz-roundtrip SBOM=test-sboms/clean/minimal-cyclonedx.json
+make fuzz-metamorphic SBOM=test-sboms/clean/minimal-cyclonedx.json
+make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
+make ai-fuzz-campaign GOAL=sbom-parser-hardening
+```
+
+AI-generated material lands in review queues first. Review before accepting anything into a corpus, campaign, harness, or regression suite.
+
+## Safety and privacy model
+
+SBOMs can reveal sensitive internal package names, repository paths, supplier relationships, and vulnerable components. The toolkit follows these defaults:
+
+- local-first execution;
+- localhost-only UI by default;
+- generated artifacts stored under local report/job directories;
+- redaction helpers for sharing SBOMs or reports;
+- AI provider usage is optional;
+- prompt-only AI mode works without API keys;
+- generated AI output is advisory and review-gated;
+- VEX/exploitability decisions require human evidence;
+- no multi-user auth or cloud storage is included by default.
+
+---
 
 ## The quick path: `orchestrate.sh`
 
