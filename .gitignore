@@ -67,3 +67,11 @@ fuzzing/corpus/ai/reviewed/*
 !fuzzing/corpus/ai/reviewed/.gitkeep
 fuzzing/corpus/ai/rejected/*
 !fuzzing/corpus/ai/rejected/.gitkeep
+# v1.7 generated fuzzing and SBOM experience outputs
+fuzzing/generated-corpus/
+fuzzing/reports/
+fuzzing/findings/
+advisories/draft/
+reports/
+ai_fuzz/review/incoming/*
+!ai_fuzz/review/incoming/.gitkeep

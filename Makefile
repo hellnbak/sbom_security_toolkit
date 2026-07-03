@@ -293,3 +293,115 @@ demo:
 	$(MAKE) fuzz-coverage
 	$(MAKE) redact-sbom SBOM=test-sboms/clean/minimal-cyclonedx.json
 	$(MAKE) watch-sbom SBOM=test-sboms/clean/minimal-cyclonedx.json VULNS=test-sboms/vulnerable/sample-trivy-report.json
+
+# v1.7 coverage-guided fuzzing lab and SBOM experience improvements
+.PHONY: fuzz-generate-cyclonedx fuzz-generate-spdx fuzz-generate-vex fuzz-generate-dtrack-payloads fuzz-afl-cyclonedx fuzz-afl-spdx fuzz-afl-purl fuzz-afl-license fuzz-toolchain fuzz-stateful-dtrack fuzz-metamorphic-scanners fuzz-budget ai-corpus-review ai-harness-repair fuzz-bugclass fuzz-advisory fuzz-status fuzz-conversion fuzz-all-local sbom-normalize sbom-explain sbom-repair sbom-diff sbom-inventory sbom-experience
+
+COUNT ?= 25
+EDGE ?= valid-edge
+BUGCLASS ?= parser-dos
+BUDGET_PROFILE ?= fuzzing/budgets/pr-smoke.yml
+OLD_SBOM ?= test-sboms/clean/minimal-cyclonedx.json
+NEW_SBOM ?= test-sboms/clean/minimal-cyclonedx.json
+DTRACK_URL ?= http://127.0.0.1:8081
+
+fuzz-generate-cyclonedx:
+	python3 fuzzing/schema/cyclonedx_schema_generator.py --count $(COUNT) --edge $(EDGE)
+
+fuzz-generate-spdx:
+	python3 fuzzing/schema/spdx_schema_generator.py --count $(COUNT) --edge $(EDGE)
+
+fuzz-generate-vex:
+	python3 fuzzing/schema/vex_schema_generator.py --count $(COUNT)
+
+fuzz-generate-dtrack-payloads:
+	python3 fuzzing/schema/dependency_track_payload_generator.py $(SBOM) --count $(COUNT)
+
+fuzz-afl-cyclonedx:
+	TARGET=cyclonedx fuzzing/engines/aflplusplus/run-afl.sh cyclonedx
+
+fuzz-afl-spdx:
+	TARGET=spdx fuzzing/engines/aflplusplus/run-afl.sh spdx
+
+fuzz-afl-purl:
+	TARGET=purl fuzzing/engines/aflplusplus/run-afl.sh purl
+
+fuzz-afl-license:
+	TARGET=license fuzzing/engines/aflplusplus/run-afl.sh license
+
+fuzz-toolchain:
+	python3 fuzzing/toolchain/fuzz_toolchain.py $(SBOM)
+
+fuzz-stateful-dtrack:
+	python3 fuzzing/stateful/dependency_track_state_machine.py --url $(DTRACK_URL) --sbom $(SBOM) --dry-run
+
+fuzz-metamorphic-scanners:
+	python3 fuzzing/scanner-metamorphic/metamorphic_scanners.py $(SBOM)
+
+fuzz-budget:
+	python3 fuzzing/budgets/run_budget.py $(BUDGET_PROFILE)
+
+ai-corpus-review:
+	python3 ai_fuzz/tools/ai_corpus_review.py --corpus fuzzing/corpus/ai/incoming
+
+ai-harness-repair:
+	@if [ -z "$(TARGET)" ]; then echo "Usage: make ai-harness-repair TARGET=fuzzing/engines/python/targets/foo.py LOG=build.log"; exit 2; fi
+	python3 ai_fuzz/tools/ai_harness_repair.py --target $(TARGET) $(if $(LOG),--log $(LOG),)
+
+fuzz-bugclass:
+	python3 fuzzing/bugclasses/run_bugclass.py --bugclass $(BUGCLASS)
+
+fuzz-advisory:
+	@if [ -z "$(CRASH)" ]; then echo "Usage: make fuzz-advisory CRASH=fuzzing/findings/<target>/crash"; exit 2; fi
+	python3 fuzzing/advisory/create_advisory.py $(CRASH)
+
+fuzz-status:
+	python3 fuzzing/status_report.py
+
+fuzz-conversion:
+	python3 fuzzing/conversion/convert_sbom.py $(SBOM) --format cyclonedx-json
+
+fuzz-coverage-collect:
+	python3 fuzzing/coverage/collect_coverage.py
+
+fuzz-coverage-compare:
+	@if [ -z "$(BASE)" ] || [ -z "$(NEW)" ]; then echo "Usage: make fuzz-coverage-compare BASE=old.json NEW=new.json"; exit 2; fi
+	python3 fuzzing/coverage/compare_coverage.py $(BASE) $(NEW)
+
+fuzz-coverage-dashboard:
+	python3 fuzzing/coverage/coverage_dashboard.py
+
+fuzz-all-local:
+	$(MAKE) fuzz-generate-cyclonedx COUNT=5 EDGE=dependency-cycle
+	$(MAKE) fuzz-generate-spdx COUNT=5 EDGE=dependency-cycle
+	$(MAKE) fuzz-generate-vex COUNT=5
+	$(MAKE) fuzz-structured SBOM=$(SBOM)
+	$(MAKE) fuzz-roundtrip SBOM=$(SBOM)
+	$(MAKE) fuzz-metamorphic SBOM=$(SBOM)
+	$(MAKE) fuzz-oracles SBOM=$(SBOM)
+	$(MAKE) fuzz-toolchain SBOM=$(SBOM)
+	$(MAKE) fuzz-stateful-dtrack SBOM=$(SBOM)
+	$(MAKE) fuzz-metamorphic-scanners SBOM=$(SBOM)
+	$(MAKE) fuzz-budget
+	$(MAKE) fuzz-status
+
+sbom-normalize:
+	python3 -m sbomops.normalize $(SBOM) --out $(REPORTS)/sbom-experience/normalized.json
+
+sbom-explain:
+	python3 -m sbomops.explain $(SBOM) --out $(REPORTS)/sbom-experience/explanation.md
+
+sbom-repair:
+	python3 -m sbomops.repair $(SBOM) --out $(REPORTS)/sbom-experience/repaired-sbom.json --notes $(REPORTS)/sbom-experience/repair-notes.md
+
+sbom-diff:
+	python3 -m sbomops.diff $(OLD_SBOM) $(NEW_SBOM) --out-dir $(REPORTS)/sbom-experience/diff
+
+sbom-inventory:
+	python3 -m sbomops.inventory $(SBOM) --out-dir $(REPORTS)/sbom-experience/inventory
+
+sbom-experience:
+	$(MAKE) sbom-normalize SBOM=$(SBOM)
+	$(MAKE) sbom-explain SBOM=$(SBOM)
+	$(MAKE) sbom-repair SBOM=$(SBOM)
+	$(MAKE) sbom-inventory SBOM=$(SBOM)

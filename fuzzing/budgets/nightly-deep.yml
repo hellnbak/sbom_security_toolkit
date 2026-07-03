@@ -1,0 +1,10 @@
+name: nightly-deep
+duration_seconds: 1800
+max_memory_mb: 2048
+max_input_size_mb: 10
+targets:
+  - cyclonedx-json
+  - spdx-json
+  - vex
+  - scanner-differential
+  - dependency-track-api

@@ -507,3 +507,19 @@ Added a guarded AI-assisted fuzzing layer:
 - Workbench workflow entries for AI seed, mutation-plan, and campaign drafts.
 
 Safety model: AI proposes, deterministic tools validate, humans approve. Generated artifacts are advisory and are not executed or promoted automatically.
+
+
+## v1.7 Preview: Coverage-Guided Fuzzing Lab and SBOM Experience
+
+This version adds schema-aware SBOM seed generators, AFL++ scaffolding, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, scanner metamorphic testing, fuzzing dictionaries, budget profiles, bug-class campaigns, advisory draft generation, and an all-local fuzzing command.
+
+It also improves the SBOM user experience with commands to explain, normalize, repair, diff, and export SBOM inventories so users can better understand what an SBOM contains before feeding it into scanners or supplier workflows.
+
+Key commands:
+
+```bash
+make fuzz-all-local SBOM=test-sboms/clean/minimal-cyclonedx.json
+make fuzz-generate-cyclonedx EDGE=dependency-cycle COUNT=25
+make fuzz-toolchain SBOM=test-sboms/clean/minimal-cyclonedx.json
+make sbom-experience SBOM=test-sboms/clean/minimal-cyclonedx.json
+```

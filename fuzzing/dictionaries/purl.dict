@@ -1,0 +1,8 @@
+"pkg:npm/"
+"pkg:pypi/"
+"pkg:maven/"
+"pkg:golang/"
+"pkg:cargo/"
+"@"
+"?repository_url="
+"#subpath"

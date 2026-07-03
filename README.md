@@ -484,3 +484,19 @@ make ai-review-list
 ```
 
 Default behavior is prompt-only/deterministic and requires no API key. Optional providers are configured with `AI_FUZZ_PROVIDER=ollama` or `AI_FUZZ_PROVIDER=openai-compatible`. All generated artifacts land in `ai_fuzz/review/incoming/` for human review. See `docs/fuzzing/AI-ASSISTED-FUZZING.md`.
+
+
+## v1.7 Preview: Coverage-Guided Fuzzing Lab and SBOM Experience
+
+This version adds schema-aware SBOM seed generators, AFL++ scaffolding, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, scanner metamorphic testing, fuzzing dictionaries, budget profiles, bug-class campaigns, advisory draft generation, and an all-local fuzzing command.
+
+It also improves the SBOM user experience with commands to explain, normalize, repair, diff, and export SBOM inventories so users can better understand what an SBOM contains before feeding it into scanners or supplier workflows.
+
+Key commands:
+
+```bash
+make fuzz-all-local SBOM=test-sboms/clean/minimal-cyclonedx.json
+make fuzz-generate-cyclonedx EDGE=dependency-cycle COUNT=25
+make fuzz-toolchain SBOM=test-sboms/clean/minimal-cyclonedx.json
+make sbom-experience SBOM=test-sboms/clean/minimal-cyclonedx.json
+```

@@ -1,0 +1,8 @@
+name: upload-vex-analyze-export
+steps:
+  - create-project
+  - upload-bom
+  - upload-vex
+  - apply-analysis
+  - export-report
+  - delete-project

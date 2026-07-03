@@ -1,0 +1,7 @@
+name: upload-poll-findings
+steps:
+  - prepare-upload
+  - upload-bom
+  - poll-processing
+  - retrieve-findings
+  - delete-project

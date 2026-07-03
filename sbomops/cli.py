@@ -16,6 +16,11 @@ MODULES = {
     "workbench": "sbomops.workbench.server",
     "ai-fuzz": "ai_fuzz.tools.ai_fuzz",
     "ai-review": "ai_fuzz.tools.review_queue",
+    "normalize": "sbomops.normalize",
+    "explain": "sbomops.explain",
+    "repair": "sbomops.repair",
+    "diff": "sbomops.diff",
+    "inventory": "sbomops.inventory",
 }
 
 def main():

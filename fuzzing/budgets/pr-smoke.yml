@@ -1,0 +1,8 @@
+name: pr-smoke
+duration_seconds: 60
+max_memory_mb: 512
+max_input_size_mb: 2
+targets:
+  - cyclonedx-json
+  - spdx-json
+  - purl
