@@ -92,7 +92,7 @@ validate:
 	python3 -c "import json,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '/corpus/' not in str(p) and '/malformed/' not in str(p)]; print('json ok')"
 
 
-.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts test sst demo-good demo-bad demo-supplier demo-fuzzing demo
+.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts test sst demo-good demo-bad demo-supplier demo-fuzzing demo
 
 POLICY ?= policies/default-release-policy.yml
 VULNS ?=
@@ -174,6 +174,13 @@ ui:
 
 ui-bundle:
 	python3 -m sbomops.ui_bundle --reports-dir $(REPORTS) --out-dir $(REPORTS)/ui
+
+ui-server:
+	python3 -m sbomops.workbench.server --host 127.0.0.1 --port 8080
+
+ui-clean:
+	rm -rf ui/storage/jobs/* ui/storage/uploads/*
+	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
 
 redact-sbom:
 	python3 -m sbomops.redact $(SBOM) --out $(REPORTS)/redacted/redacted-sbom.json --hash-internal-names

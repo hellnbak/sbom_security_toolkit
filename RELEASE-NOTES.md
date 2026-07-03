@@ -471,3 +471,19 @@ The UI remains intentionally static/local for now to avoid introducing authentic
 ## Advanced fuzzing expansion
 
 Added a deeper SBOM fuzzing layer with structure-preserving mutators, semantic oracles, round-trip and metamorphic test harnesses, campaign profiles, regression corpus management, crash deduplication, malicious metadata scenario generation, local-only Dependency-Track API fuzzing scaffolding, and a proto model scaffold for future native structured fuzzing.
+
+## v1.5.0 - Local SBOM Workbench UI
+
+Adds a localhost-only SBOM workbench for uploading SBOMs, running toolkit workflows, tracking jobs, viewing logs/results, checking optional scanner availability, and downloading evidence bundles.
+
+Highlights:
+
+- `make ui-server` starts the local web UI on `127.0.0.1:8080`.
+- Upload support for `.json`, `.xml`, `.spdx`, and `.txt` SBOMs.
+- Workflow buttons for full analysis, quality scoring, minimum elements, policy checks, supplier intake, supplier questions, report generation, redaction, scanner comparison, and release evidence.
+- Simple background job runner using local filesystem state only.
+- Per-job evidence bundle downloads.
+- Scanner availability page for Syft, Trivy, Grype, OSV-Scanner, cosign, Docker, and Git.
+- Local-first safety model: no database, no cloud upload, localhost bind by default, size/type checks, sanitized filenames, per-job directories, and delete controls.
+
+See `docs/ui/LOCAL-WORKBENCH.md`.

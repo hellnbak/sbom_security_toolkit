@@ -322,3 +322,16 @@ open reports/ui/index.html
 ```
 
 A full multi-user web application is not included yet. The recommended path is to stabilize the CLI/report schemas first, then add a local-only FastAPI UI if needed.
+
+
+### Local SBOM Workbench UI
+
+Start a localhost-only UI for uploading SBOMs and running toolkit workflows:
+
+```bash
+make ui-server
+```
+
+Then open `http://127.0.0.1:8080`. The UI supports SBOM upload, workflow execution, job status/logs, scanner availability checks, delete controls, and evidence-bundle download. It stores data locally under `ui/storage/` and is not intended to be internet-facing.
+
+See `docs/ui/LOCAL-WORKBENCH.md`.

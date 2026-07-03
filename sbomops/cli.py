@@ -13,6 +13,7 @@ MODULES = {
     "redact": "sbomops.redact",
     "watch": "sbomops.watch",
     "ui": "sbomops.ui_bundle",
+    "workbench": "sbomops.workbench.server",
 }
 
 def main():

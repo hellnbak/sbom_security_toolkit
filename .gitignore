@@ -47,3 +47,9 @@ coverage/
 .idea/
 .vscode/
 .sbom-watch/
+
+# Local workbench storage
+ui/storage/jobs/*
+!ui/storage/jobs/.gitkeep
+ui/storage/uploads/*
+!ui/storage/uploads/.gitkeep
