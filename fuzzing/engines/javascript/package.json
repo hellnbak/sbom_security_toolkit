@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "fuzz": "./run.sh"
+    "fuzz": "./run.sh",
+    "fuzz:smoke": "TIME_BUDGET=60 ./run.sh"
   },
   "devDependencies": {
     "@jazzer.js/core": "^4.0.0",

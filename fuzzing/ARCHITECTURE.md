@@ -151,7 +151,7 @@ When generating new targets, prioritize components that:
 
 **Skip:**
 - Logging libraries (output-only)
-- DI containers (no untrusted input)
+- dependency-injection containers (no untrusted input)
 - CLI tools (not in request path)
 - Simple value objects (trivial code)
 - Framework glue (no parsing logic)

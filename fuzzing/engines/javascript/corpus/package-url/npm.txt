@@ -1,0 +1,1 @@
+pkg:npm/%40scope/demo@1.0.0?repository_url=https%3A%2F%2Fexample.invalid%2Frepo.git

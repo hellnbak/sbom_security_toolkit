@@ -1,6 +1,7 @@
-# Example Python libraries for fuzzing targets
-# Claude Code will replace these with actual SBOM versions in Stage 3
+# Example Python libraries for fuzzing targets.
+# Pin exact versions when mirroring a production SBOM.
 
+atheris>=2.3.0
 pyyaml>=6.0
 jinja2>=3.0
 jsonschema>=4.0

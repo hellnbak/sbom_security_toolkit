@@ -98,7 +98,7 @@ Drop a `targets/<name>.php` that sets `$config->setTarget(fn(string $input) => /
 
 ## Deploying this
 
-It needs an environment with Docker and internet access: your machine, a CI runner, or a server. Three tiers, roughly in the order most teams adopt them:
+None of this runs inside a chat sandbox — it needs an environment with Docker and internet access: your machine, a CI runner, or a server. Three tiers, roughly in the order most teams adopt them:
 
 ### 1. Local, one-off (try it out)
 ```bash
@@ -167,6 +167,44 @@ Review whatever it writes before trusting it the way you'd review any generated 
 
 For unattended/scheduled runs of either command, add `--bare --dangerously-skip-permissions` (only in CI, never on a dev machine) so it doesn't stop for approval prompts.
 
+### What the current evidence actually says about local/security-specific models
+
+Worth grounding this before building on it, since the space moves fast and is easy to oversell:
+
+- A 2026 reproducibility study (["Revisiting Vul-RAG"](https://arxiv.org/pdf/2606.04739)) testing a range of open-weight models — code-specialized, general-purpose, and reasoning models of varying sizes — on RAG-augmented vulnerability detection found a **performance plateau around 0.30 pairwise accuracy that persists even for the most recent, most capable open-weight models.** More parameters and more reasoning didn't move the needle much. Read that as: don't expect a local model, however large, to reliably tell you whether something is *actually* exploitable.
+- A separate 2026 benchmark of real-world web vulnerability detection across six frontier and open-weight models found **Claude Opus 4.6 leading at 63% detection, with every other model — including self-hosted open-weight ones — under 50%.**
+- There is no single obviously-best "security-specific" open-weight model to reach for. What people actually run locally for security tasks right now are general-purpose open-weight reasoning models (DeepSeek-R1, Qwen3, GLM-class models), prompted toward the task — not a narrow fine-tune that reliably beats general capability.
+
+None of that means local models are useless here — it means the honest allocation is: **local models for narrow, high-frequency, low-judgment tasks; Claude for anything where a wrong call costs something.** That's the split used below.
+
+### Local models — where they actually help: fuzzing seed generation
+
+This is a real, separately-studied use case, not a stretch: [SeedMind](https://arxiv.org/html/2411.18143v1), [LLAMAFUZZ](https://arxiv.org/pdf/2406.07714), and [ISC4DGF](https://arxiv.org/pdf/2409.14329) (2024–2026) all show LLM-suggested seeds measurably improving coverage-guided fuzzing, using models well below frontier scale — because generating plausible, edge-case-y inputs for a known format doesn't require deep security judgment, just format fluency and a nudge toward boundary conditions.
+
+`fuzzing/local-model-seed-suggest.sh` does this against [Ollama](https://ollama.com) running locally:
+```bash
+ollama pull qwen2.5-coder:7b   # once
+cd fuzzing
+./local-model-seed-suggest.sh commonmark 10
+```
+It reads the target definition + a few existing seeds, asks the local model for more in the same format, and drops them into `corpus/<target>/`. It does **not** touch PHP-Fuzzer's own mutation engine — a bad suggestion is inert; the coverage-guided algorithm just never selects it. Cheap enough to re-run every few minutes during a long campaign, which an API call to any cloud model wouldn't be.
+
+**Directed follow-up:** when `ai-triage.sh` or Dependency-Track flags a new advisory against a library we fuzz, that's a signal about *where* to point fuzzing effort next, not just what to patch — directed greybox fuzzing research (ISC4DGF) is built on exactly this idea. In practice, that's just:
+```bash
+docker run --rm -e TIME_BUDGET=3600 -v "$PWD/findings:/fuzz/findings" sbom-fuzzer symfony_yaml
+```
+— pointing a bigger time budget at the specific target implicated by a fresh finding, rather than spreading budget evenly across all 8.
+
+### Claude Code + local models together, not instead of each other
+
+Fully replacing Claude Code's brain with a local model is possible — Ollama has a documented [Anthropic-compatible endpoint](https://docs.ollama.com/integrations/claude-code) (`ollama launch claude`) that points Claude Code at a local or Ollama-hosted model instead of Anthropic's API. That's the right call only if the actual requirement is "nothing leaves this machine, full stop" — worth being honest that this trades Claude's judgment for a model sitting on the wrong side of that Vul-RAG plateau, so it's a real capability cost, not a free swap. It's also worth naming plainly: `ai-triage.sh` and the Claude Code examples elsewhere in this README already send data to Anthropic's API. If air-gapping is the actual goal, that constraint applies to those too, not just anything new.
+
+The more useful pattern for most teams is the other direction: **keep Claude Code on the real API for judgment, delegate high-volume/low-judgment sub-steps to a local model it calls out to.** This is an established pattern with existing community MCP servers built for exactly it — e.g. [`claude-sidekick`](https://github.com/andrewbrereton/claude-sidekick) and [`OllamaClaude`](https://github.com/Jadael/OllamaClaude), both wiring a local Ollama instance in as tools Claude Code can call, reporting up to ~98% token savings on the sub-tasks they offload. These are third-party community projects, not Anthropic's — read the code before pointing them at anything sensitive, same as you would any tool with API/filesystem access. Concretely for this toolkit: pointing Claude Code's target-scaffolding task (see Tier 2 above) at such a bridge lets the *local* model do the mechanical work — reading through an entire vendor library's source tree and summarizing its API surface — while Claude still makes the actual judgment call about what's worth fuzzing and writes the target.
+
+### Where this doesn't help
+
+An LLM guessing at "interesting" fuzz inputs directly would be a *worse* fuzzer than PHP-Fuzzer's actual edge-coverage feedback loop — don't replace `run.sh` with prompting; use local models to widen the seed pool, not to replace the mutation engine. Likewise, don't let Tier 1's output, or a local model's opinion, skip the reachability check: given the plateau in open-weight vulnerability-detection accuracy above, a confident-sounding severity label from any model that hasn't seen your code — local or otherwise — is a prioritization hint, not clearance to patch-and-forget without a human looking at the actual call sites.
+
 ---
 
 ## Running this on EC2 with Amazon Bedrock
@@ -218,3 +256,27 @@ Third-party tools and libraries retain their own licenses.
 - **A crash isn't automatically a CVE.** Confirm reachability and impact before filing or patching.
 - Run all of this only against software your organization owns or is authorized to test.
 - Pin the `php-fuzzer.phar` version in the Dockerfile once you've validated a release, rather than tracking `latest`.
+
+## Fuzzing Capabilities
+
+The toolkit includes an expanded fuzzing subsystem for SBOM security research and parser hardening:
+
+- SBOM-specific fuzz targets for CycloneDX JSON, SPDX JSON, package-url strings, and SPDX-style license expressions.
+- Dockerized Python/Atheris, JavaScript/Jazzer.js, and PHP/php-fuzzer engines.
+- `make fuzz-smoke`, `make fuzz-nightly`, and `make fuzz-deep` workflows.
+- Crash metadata and reproducer scaffolding under `fuzzing/findings/<target>/`.
+- Corpus generation and mutation tools for real SBOMs.
+- Differential SBOM testing across locally installed tools such as Trivy, Grype, Syft, and CycloneDX CLI.
+- AI-assisted seed suggestion using a local Ollama model, with human review required before seeds are promoted.
+
+Start with:
+
+```bash
+make fuzz-smoke
+make fuzz-scorecard
+make fuzz-corpus SBOM=vuln-scan/cyclonedx-sbom.xml
+make fuzz-differential SBOM=vuln-scan/cyclonedx-sbom.xml
+```
+
+See `docs/fuzzing/CONTINUOUS-FUZZING.md` and `fuzzing/README-ENGINES.md` for details.
+

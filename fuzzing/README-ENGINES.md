@@ -252,7 +252,7 @@ Good fuzzing targets have these properties:
 
 ### ❌ Skip This
 - **Loggers:** Output-only, no untrusted input
-- **DI containers:** No parsing logic
+- **dependency-injection containers:** No parsing logic
 - **CLI tools:** Not in request path
 - **Framework glue:** No complex logic
 - **Simple value objects:** Trivial getters/setters
@@ -374,3 +374,42 @@ Check the specific error:
 
 **Status:** PHP, JavaScript, Python engines ready. Java, Go, Rust templates exist but need testing.  
 **Updated:** 2026-07-02
+
+---
+
+## SBOM-Specific Fuzzing Additions
+
+The toolkit now includes targets that exercise SBOM inputs directly, not only package-library parsers:
+
+| Target | Engine | Purpose |
+|---|---|---|
+| `cyclonedx_json_atheris` | Python/Atheris | CycloneDX JSON parsing, component traversal, dependency graph handling |
+| `spdx_json_atheris` | Python/Atheris | SPDX JSON package and relationship traversal |
+| `purl_atheris` | Python/Atheris | package-url parsing edge cases |
+| `license_expression_atheris` | Python/Atheris | SPDX-style license expression tokenization and nesting |
+| `cyclonedx-json` | JavaScript/Jazzer.js | CycloneDX JSON parser behavior in Node.js |
+| `spdx-json` | JavaScript/Jazzer.js | SPDX JSON parser behavior in Node.js |
+| `package-url` | JavaScript/Jazzer.js | package-url parsing edge cases in Node.js |
+
+## Common Commands
+
+```bash
+make fuzz-smoke
+make fuzz-nightly
+make fuzz-deep
+make fuzz-python TARGET=cyclonedx_json_atheris TIME_BUDGET=120
+make fuzz-js TARGET=cyclonedx-json TIME_BUDGET=120
+make fuzz-scorecard
+make fuzz-repro CRASH=fuzzing/findings/<target>/crash-...
+```
+
+## Corpus and Differential Tools
+
+```bash
+make fuzz-corpus SBOM=vuln-scan/cyclonedx-sbom.xml
+python3 fuzzing/tools/mutate-sbom.py vuln-scan/cyclonedx-sbom.xml
+python3 fuzzing/tools/minimize-corpus.py fuzzing/generated-corpus --out fuzzing/minimized-corpus
+make fuzz-differential SBOM=vuln-scan/cyclonedx-sbom.xml
+```
+
+AI-assisted seed generation is available through `fuzzing/tools/ai-seed-suggest.py`. Treat its output as untrusted candidate corpus material and review it before committing.

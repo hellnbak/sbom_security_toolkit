@@ -6,12 +6,19 @@
 *.key
 *.p12
 *.pfx
+id_rsa*
+id_ed25519*
 
 # Runtime output
 runs/
 reports/
 findings*/
 fuzzing/findings/
+fuzzing/crashes/
+fuzzing/reports/
+fuzzing/**/crash-*
+fuzzing/**/timeout-*
+fuzzing/**/oom-*
 vuln-scan/reports/
 *.log
 
@@ -24,6 +31,14 @@ __pycache__/
 .coverage
 dist/
 build/
+coverage/
+.nyc_output/
+
+# Fuzzer minimization and temporary outputs
+*.profraw
+*.profdata
+*.sancov
+*.sancov.raw
 
 # OS/editor
 .DS_Store

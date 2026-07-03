@@ -1,0 +1,8 @@
+# ClusterFuzzLite template for projects that want CI-native continuous fuzzing.
+# Copy this directory into your own CI setup and adapt image names/targets.
+language: python
+main_repo: https://github.com/example/sbom-security-toolkit
+sanitizers:
+  - address
+fuzzing_engines:
+  - libfuzzer

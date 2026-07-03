@@ -1,0 +1,22 @@
+name: Fuzz Smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run smoke fuzzing
+        run: make fuzz-smoke
+      - name: Upload fuzz findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-findings
+          path: |
+            fuzzing/findings
+            fuzzing/reports

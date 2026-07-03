@@ -85,7 +85,7 @@ Coverage-guided fuzzing:
 
 Smart target selection:
   • Claude Code analyzes SBOM
-  • Prioritizes parsers/validators over loggers/DI containers
+  • Prioritizes parsers/validators over loggers/dependency-injection containers
   • Writes harnesses + seed corpora automatically
 
 WHAT'S IN THE BOX

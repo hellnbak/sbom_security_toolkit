@@ -1,0 +1,1 @@
+pkg:pypi/example-package@2.0.0#src/example

@@ -1,0 +1,23 @@
+name: Fuzz Nightly
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  fuzz-nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run nightly fuzzing
+        run: make fuzz-nightly
+      - name: Upload fuzz findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-nightly-findings
+          path: |
+            fuzzing/findings
+            fuzzing/reports

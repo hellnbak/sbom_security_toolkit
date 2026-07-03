@@ -33,6 +33,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY targets/ /fuzz/targets/
 COPY corpus/  /fuzz/corpus/
 COPY run.sh   /fuzz/run.sh
+COPY tools/   /fuzz/tools/
 RUN chmod +x /fuzz/run.sh
 
 # Output (corpus growth + crash files) lands in /fuzz/findings (bind-mount it)

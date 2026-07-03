@@ -417,3 +417,16 @@ For issues or questions:
 **Tested:** Real vulnerabilities found in actual SBOMs
 
 Enjoy comprehensive SBOM security analysis across multiple languages! 🚀
+
+## Fuzzing Enhancement Update
+
+This package now includes an expanded fuzzing subsystem:
+
+- Added SBOM-specific Python/Atheris targets for CycloneDX JSON, SPDX JSON, package-url strings, and SPDX-style license expressions.
+- Added JavaScript/Jazzer.js SBOM parser targets for CycloneDX JSON, SPDX JSON, and package-url strings.
+- Added `make fuzz-smoke`, `make fuzz-nightly`, `make fuzz-deep`, `make fuzz-repro`, `make fuzz-scorecard`, `make fuzz-corpus`, and `make fuzz-differential` commands.
+- Added crash metadata and reproducer scaffolding.
+- Added corpus generation, mutation, minimization, and local AI seed-suggestion helpers.
+- Added a differential SBOM parser/scanner harness for locally installed tools.
+- Added GitHub Actions templates for PR smoke fuzzing and scheduled nightly fuzzing.
+- Added continuous fuzzing documentation and ClusterFuzzLite starter templates.

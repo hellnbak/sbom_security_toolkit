@@ -12,6 +12,10 @@ FROM node:20-bookworm-slim
 
 WORKDIR /fuzz
 
+RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+
 # Install target libraries at their exact SBOM versions
 COPY package.json package-lock.json* /fuzz/
 RUN npm install
@@ -22,6 +26,7 @@ RUN npm install --save-dev typescript ts-node @types/node
 COPY targets/ /fuzz/targets/
 COPY corpus/  /fuzz/corpus/
 COPY run.sh   /fuzz/run.sh
+COPY tools/   /fuzz/tools/
 RUN chmod +x /fuzz/run.sh
 
 # Output (corpus growth + crash files) lands in /fuzz/findings (bind-mount it)

@@ -17,7 +17,7 @@ FROM php:8.3-cli-bookworm
 # sockets => required by datadog/php-datadogstatsd.
 # Build deps for composer.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libzip-dev curl ca-certificates \
+        git unzip libzip-dev curl ca-certificates python3 \
     && docker-php-ext-install pcntl sockets \
     && rm -rf /var/lib/apt/lists/*
 
@@ -40,6 +40,7 @@ RUN composer install --no-interaction --no-progress --prefer-dist
 COPY targets/ /fuzz/targets/
 COPY corpus/  /fuzz/corpus/
 COPY run.sh   /fuzz/run.sh
+COPY tools/   /fuzz/tools/
 RUN chmod +x /fuzz/run.sh
 
 # Output (corpus growth + crash files) lands in /fuzz/findings (bind-mount it).

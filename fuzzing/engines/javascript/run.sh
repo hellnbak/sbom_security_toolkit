@@ -55,6 +55,7 @@ for target in /fuzz/targets/*.js /fuzz/targets/*.ts; do
         # Move crashes to crash dir root for consistency with other engines
         mv "$corpus"/crash-* "$crashdir/"
         status=1
+        python3 /fuzz/tools/record-crashes.py --engine javascript --target "$name" --target-file "$target" --crash-dir "$crashdir" || true
     else
         echo "[✓] '$name' finished its budget with no new crashes (rc=$rc)."
     fi

@@ -49,6 +49,7 @@ for target in /fuzz/targets/*.php; do
         echo "[!] CRASH(es) found for '$name':"
         ls -1 "$crashdir"/crash-*.txt
         status=1
+        python3 /fuzz/tools/record-crashes.py --engine php --target "$name" --target-file "$target" --crash-dir "$crashdir" || true
     else
         echo "[✓] '$name' finished its budget with no new crashes (rc=$rc)."
     fi
