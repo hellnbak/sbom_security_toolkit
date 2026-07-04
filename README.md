@@ -14,6 +14,18 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine. Uploaded SBOMs and generated evidence stay on disk. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, or OpenAI-compatible providers can be enabled when you choose to use them.
 
+
+## Current release: v2.1.1
+
+This README reflects the current **v2.1.1** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+
+- **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
+- **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
+- **v2.1.0 Intelligent Fuzzing Operations:** fuzzing intelligence scoring, corpus promotion recommendations, harness quality auditing, AI harness quality loop, semantic format-diff fuzzing, vulnerability matching fuzzing, VEX logic fuzzing, evil supplier SBOM scenarios, AI red-team checks, CI fuzz dashboarding, and fuzz finding lifecycle tracking.
+- **v2.1.1 Fuzzing UI Fixes:** restored per-run time limits, added `fuzz-all-timed`, and fixed JSON-oriented fuzzing workflows so CycloneDX XML and other supported non-JSON SBOMs are normalized before semantic fuzzing.
+
+The current focus is **local SBOM operations plus intelligent SBOM fuzzing**: upload or analyze SBOMs, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
+
 ## What this toolkit does
 
 SBOM Security Toolkit combines workflows that are often spread across several tools:
