@@ -1,0 +1,3 @@
+document = "{" metadata? components? dependencies? vulnerabilities? "}" ;
+metadata = "metadata" ":" object ;
+components = "components" ":" array ;

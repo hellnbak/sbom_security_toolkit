@@ -1,3 +1,46 @@
+# v2.0.1 - Fuzzing Lab UI Enhancements
+
+This patch release expands the local Workbench UI with browser-driven fuzzing workflows and a dedicated fuzzing log view.
+
+Added:
+
+- richer Fuzzing Lab page with upload-driven fuzzing workflow selection,
+- UI options for seed count, edge-case profile, budget profile, Dependency-Track URL, AI provider/model/scenario/goal, and harness-repair target,
+- browser-launchable fuzzing workflows for structured mutation, round-trip checks, metamorphic checks, semantic oracles, scanner/toolchain fuzzing, stateful Dependency-Track dry runs, scanner metamorphic testing, schema-aware seed generation, budget profiles, coverage/status reports, replay packs, and AI corpus/harness workflows,
+- dedicated `/fuzzing/logs` page showing recent fuzzing and AI-fuzzing job logs,
+- job detail display of workflow options used for the run,
+- tests for Fuzzing Lab workflow exposure and logging/filter behavior.
+
+Safety model remains local-first: jobs run under `ui/storage/jobs`, uploaded files are isolated per job, AI workflows remain review-gated, and scanner/network behavior stays opt-in.
+
+---
+
+# v2.0.0 - Adaptive Fuzzing + SBOM Experience Alignment
+
+This release adds adaptive, measurable fuzzing workflows while keeping the project local-first and review-driven.
+
+Added:
+
+- local SQLite fuzzing knowledge base,
+- fuzz campaign recommendation planner,
+- AI harness loop and multi-agent fuzz-loop prompt workflow,
+- grammar files for CycloneDX, SPDX tag-value, purl, license expressions, and VEX,
+- protobuf-model converter scaffolding,
+- fuzz benchmark and benchmark comparison,
+- scanner compatibility matrix,
+- curated scanner truth-set tests,
+- replay-pack generation for findings,
+- Fuzzing Lab workbench workflows,
+- safe AI provider evaluation,
+- ClusterFuzzLite PR/nightly scaffolding,
+- README alignment with actual shipped features.
+
+Intentionally not added:
+
+- executable semantic bug-class profiles from the previous roadmap item #11,
+- public fuzzing research-report generation.
+
+
 # v1.9.0 - Agent Workflow Integrations and Claude Skills
 
 Added:

@@ -1,20 +1,60 @@
 # SBOM Security Toolkit
 
-**SBOM Security Toolkit** is a local-first, source-available workbench for turning SBOMs into actionable security evidence.
+**SBOM Security Toolkit** is a local-first, source-available workbench for practical SBOM security operations, supplier SBOM review, release evidence, and SBOM-focused fuzzing research.
 
-It is meant for security engineers, AppSec teams, product security teams, vendor-risk reviewers, and builders who need to answer practical questions like:
+It is designed to help security teams, product-security engineers, AppSec teams, and maintainers answer practical questions:
 
-- Is this SBOM valid and complete enough to trust?
-- Which vulnerabilities matter most, and why?
-- Do different scanners disagree on the same SBOM?
-- What should we ask a supplier to clarify?
-- Can this build or release ship under our policy?
-- Can we generate an evidence bundle for review, audit, or release records?
-- Can we harden SBOM parsers and consumers through fuzzing?
-- Can AI help propose fuzzing seeds, campaigns, and triage notes without replacing human review?
+- Is this SBOM valid, complete, and useful?
+- What is missing from a supplier SBOM?
+- Which vulnerabilities should be prioritized and which need human exploitability review?
+- Do scanners agree or disagree on the same SBOM?
+- Can this build or vendor package pass a policy gate?
+- Can malformed or edge-case SBOMs cause crashes, silent component drops, VEX loss, policy bypasses, or scanner disagreement?
+- Can AI help generate fuzzing ideas and triage results without taking over security decisions?
 
-This project is released under the **Functional Source License 1.1, ALv2 Future License (`FSL-1.1-ALv2`)**. That means it is source-available/Fair Source, not OSI-approved open source. Each version converts to Apache-2.0 under the FSL future-license terms.
+## What this toolkit does
 
+The toolkit combines several workflows that are usually spread across separate tools:
+
+- SBOM quality scoring, normalization, explanation, repair hints, inventory export, and diffing.
+- CISA/NTIA-style minimum-elements checks.
+- Policy-as-code gates for release and supplier intake.
+- Supplier intake reports and follow-up questions.
+- Vulnerability prioritization, scanner confidence scoring, and scanner comparison scaffolding.
+- VEX templates, validation, merge, explanation, and exploitability decision records.
+- Local workbench UI for uploading SBOMs and launching workflows.
+- Release evidence bundle generation, checksums, and optional signing workflow.
+- SBOM-focused fuzzing: schema-aware generation, mutation, semantic oracles, round-trip/metamorphic testing, scanner/toolchain fuzzing, replay packs, benchmarks, and truth-set testing.
+- AI-assisted fuzzing workflows with safe review queues, Claude Skills, provider-neutral agent prompts, and optional local/OpenAI-compatible providers such as GLM.
+
+## What this is not
+
+This project is **not** a replacement for mature SBOM/SCA/scanner platforms such as Syft, cdxgen, Trivy, Grype, OSV-Scanner, OWASP Dependency-Track, Snyk, FOSSA, Black Duck, Sonatype, Anchore, GUAC, SLSA tooling, or OpenSSF Scorecard.
+
+Instead, it is an **operations and experimentation layer** around those tools. It helps users validate, compare, explain, fuzz, and package SBOM evidence in a local-first workflow.
+
+## Current feature set
+
+- **SBOM operations:** score, explain, normalize, repair, diff, inventory, redact, watch, report.
+- **Supplier workflows:** intake, minimum-elements checks, supplier follow-up questions, evidence bundles.
+- **Policy workflows:** policy-as-code checks, release evidence, exploitability records, VEX helpers.
+- **Scanner workflows:** scanner comparison, confidence scoring, tool availability checks, compatibility matrix, curated truth-set tests.
+- **Fuzzing workflows:** structure-preserving mutation, schema-aware generation, semantic oracles, round-trip/metamorphic testing, scanner metamorphic tests, stateful local Dependency-Track workflow fuzzing, benchmarks, replay packs, and ClusterFuzzLite scaffolding.
+- **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, GLM/local model profiles, AI seed/campaign/mutation/crash-triage/harness-repair/provider-eval workflows.
+- **User interfaces:** CLI, Make targets, static dashboard bundle, and local-only workbench UI.
+- **Release hardening:** tests, validation, preflight checks, Docker workbench, GitHub Actions, release automation, data-safety guidance.
+
+## Quick start
+
+```bash
+git clone https://github.com/hellnbak/sbom_security_toolkit.git
+cd sbom_security_toolkit
+make setup
+make demo-full
+make ui-server
+```
+
+Then open `http://127.0.0.1:8080`.
 
 ## Quick start
 

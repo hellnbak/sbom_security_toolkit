@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 
 from .job_runner import (
-    ROOT, JOBS, WORKFLOWS, create_job, delete_job, list_jobs, read_status, save_upload,
+    ROOT, JOBS, WORKFLOWS, FUZZ_WORKFLOWS, create_job, delete_job, list_jobs, read_status, save_upload,
     scanner_status, status_path, logs_path, job_dir, storage_init, MAX_UPLOAD_BYTES
 )
 
@@ -21,7 +21,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/fuzzing'>Fuzzing Lab</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -70,6 +70,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/jobs": return self.jobs()
         if path.startswith("/jobs/"): return self.job(path.split("/", 2)[2])
         if path == "/scanners": return self.scanners()
+        if path == "/fuzzing": return self.fuzzing_lab()
+        if path == "/fuzzing/logs": return self.fuzzing_logs()
         if path.startswith("/api/jobs/"): return self.api_job(path.split("/", 3)[3])
         if path.startswith("/download/"): return self.download(path.split("/", 2)[2])
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -108,7 +110,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             fields, (filename, content) = parse_multipart(self.rfile.read(length), ctype)
             upload = save_upload(filename, content)
-            jid = create_job(fields.get("workflow", "analyze"), upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1")
+            options = {k: fields.get(k, "") for k in ["count", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target"]}
+            jid = create_job(fields.get("workflow", "analyze"), upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options)
             self.redirect(f"/jobs/{jid}")
         except Exception as exc:
             self.send_html("Upload error", f"<div class='card'><h2>Upload error</h2><pre>{esc(exc)}</pre></div>", 400)
@@ -122,11 +125,19 @@ class Handler(BaseHTTPRequestHandler):
         try: s = read_status(jid)
         except FileNotFoundError: return self.send_html("Job not found", "<div class='card'><h2>Job not found</h2></div>", 404)
         logs = logs_path(jid).read_text(errors="replace") if logs_path(jid).exists() else ""
+        options_html = self.options_table(s.get("options") or {})
         steps = "".join(f"<tr><td>{esc(x.get('name'))}</td><td>{esc(x.get('returncode'))}</td><td>{esc(x.get('elapsed_seconds',''))}</td></tr>" for x in s.get("steps", [])) or "<tr><td colspan='3' class='muted'>No completed steps yet.</td></tr>"
         result_links = self.result_links(jid)
         refresh = "<meta http-equiv='refresh' content='3'>" if s.get("state") in {"queued", "running"} else ""
-        body = f"{refresh}<div class='card'><h2>Job {esc(jid)}</h2><p><span class='pill {esc(s.get('state'))}'>{esc(s.get('state'))}</span> {esc(s.get('workflow_label'))}</p><p class='muted'>Input: <code>{esc(s.get('input_file'))}</code></p><p><a class='btn' href='/download/{esc(jid)}'>Download evidence bundle</a> <a class='btn secondary' href='/api/jobs/{esc(jid)}'>JSON status</a></p><form method='post' action='/delete/{esc(jid)}'><button class='danger'>Delete job</button></form></div><div class='card'><h2>Steps</h2><table><tr><th>Step</th><th>Exit</th><th>Seconds</th></tr>{steps}</table></div><div class='card'><h2>Results</h2>{result_links}</div><div class='card'><h2>Logs</h2><pre>{esc(logs[-20000:])}</pre></div>"
+        body = f"{refresh}<div class='card'><h2>Job {esc(jid)}</h2><p><span class='pill {esc(s.get('state'))}'>{esc(s.get('state'))}</span> {esc(s.get('workflow_label'))}</p><p class='muted'>Input: <code>{esc(s.get('input_file'))}</code></p><p><a class='btn' href='/download/{esc(jid)}'>Download evidence bundle</a> <a class='btn secondary' href='/api/jobs/{esc(jid)}'>JSON status</a></p><form method='post' action='/delete/{esc(jid)}'><button class='danger'>Delete job</button></form></div><div class='card'><h2>Workflow Options</h2>{options_html}</div><div class='card'><h2>Steps</h2><table><tr><th>Step</th><th>Exit</th><th>Seconds</th></tr>{steps}</table></div><div class='card'><h2>Results</h2>{result_links}</div><div class='card'><h2>Logs</h2><pre>{esc(logs[-20000:])}</pre></div>"
         self.send_html("Job", body)
+
+    def options_table(self, options: Dict[str, str]) -> str:
+        visible = {k: v for k, v in options.items() if v}
+        if not visible:
+            return "<p class='muted'>No custom workflow options.</p>"
+        rows = "".join(f"<tr><td><code>{esc(k)}</code></td><td>{esc(v)}</td></tr>" for k, v in sorted(visible.items()))
+        return f"<table><tr><th>Option</th><th>Value</th></tr>{rows}</table>"
 
     def result_links(self, jid: str) -> str:
         base = job_dir(jid) / "results"
@@ -141,6 +152,58 @@ class Handler(BaseHTTPRequestHandler):
     def api_job(self, jid: str):
         try: return self.send_json(read_status(jid))
         except FileNotFoundError: return self.send_json({"error":"not found"}, 404)
+
+
+    def fuzzing_lab(self):
+        opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k, v in FUZZ_WORKFLOWS.items())
+        recent = [j for j in list_jobs() if j.get("workflow") in FUZZ_WORKFLOWS]
+        recent_rows = "".join(
+            f"<tr><td><a href='/jobs/{esc(j['job_id'])}'>{esc(j['job_id'])}</a></td><td>{esc(j.get('workflow_label'))}</td><td><span class='pill {esc(j.get('state'))}'>{esc(j.get('state'))}</span></td><td>{esc(j.get('created_at'))}</td></tr>"
+            for j in recent[:10]
+        ) or "<tr><td colspan='4' class='muted'>No fuzzing jobs yet.</td></tr>"
+        body = f"""
+        <div class='card'><h2>Fuzzing Lab</h2>
+        <p class='muted'>Upload a seed SBOM and launch local fuzzing workflows. Jobs run in isolated folders under <code>ui/storage/jobs</code>; AI-assisted actions create review artifacts and never execute generated code automatically.</p>
+        <form action='/upload' method='post' enctype='multipart/form-data'>
+          <label>Seed SBOM or fuzz input</label><input type='file' name='sbom' required>
+          <p class='small muted'>Allowed: .json, .xml, .spdx, .txt. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
+          <label>Fuzzing workflow</label><select name='workflow'>{opts}</select>
+          <div class='grid'>
+            <div><label>Seed count</label><input name='count' value='10' size='8'><p class='small muted'>Used by seed generation and structured mutation workflows.</p></div>
+            <div><label>Edge case</label><select name='edge'><option>valid-edge</option><option>dependency-cycle</option><option>duplicate-bom-ref</option><option>conflicting-identities</option><option>missing-version</option><option>huge-version</option><option>unicode</option><option>invalid-license</option></select></div>
+            <div><label>Budget profile</label><select name='budget_profile'><option value='fuzzing/budgets/pr-smoke.yml'>PR smoke</option><option value='fuzzing/budgets/nightly-deep.yml'>Nightly deep</option></select></div>
+            <div><label>Dependency-Track URL</label><input name='dtrack_url' value='http://127.0.0.1:8081' size='28'></div>
+          </div>
+          <div class='grid'>
+            <div><label>AI provider</label><select name='ai_provider'><option value='none'>prompt-only / none</option><option value='glm'>GLM local/OpenAI-compatible</option><option value='ollama'>Ollama-compatible</option><option value='openai-compatible'>OpenAI-compatible</option></select></div>
+            <div><label>AI model</label><input name='ai_model' placeholder='glm-5.2' size='20'></div>
+            <div><label>AI scenario</label><input name='scenario' value='dependency-cycles' size='24'></div>
+            <div><label>AI goal</label><input name='ai_goal' value='scanner-disagreement-hardening' size='28'></div>
+          </div>
+          <label>Harness repair target</label><input name='target' value='fuzzing/engines/python/targets/cyclonedx_json_atheris.py' size='72'>
+          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available</label></p>
+          <input type='submit' value='Start fuzzing job'>
+        </form></div>
+        <div class='grid'>
+          <div class='card'><h3>Recommended starters</h3><p><strong>Round-trip</strong>, <strong>semantic oracles</strong>, <strong>structured mutations</strong>, and <strong>fuzz-all-local</strong> are good safe first runs.</p></div>
+          <div class='card'><h3>Scanner workflows</h3><p>Toolchain, compatibility, truth-set, and metamorphic scanner workflows depend on locally installed scanners.</p></div>
+          <div class='card'><h3>AI-assisted workflows</h3><p>Prompt-only mode works without keys. GLM/Ollama/OpenAI-compatible endpoints are optional and review-gated.</p></div>
+        </div>
+        <div class='card'><h2>Recent Fuzzing Jobs</h2><table><tr><th>Job</th><th>Workflow</th><th>Status</th><th>Created</th></tr>{recent_rows}</table><p><a class='btn secondary' href='/fuzzing/logs'>Open fuzzing logs</a></p></div>
+        """
+        self.send_html("Fuzzing Lab", body)
+
+    def fuzzing_logs(self):
+        jobs = [j for j in list_jobs() if j.get("workflow") in FUZZ_WORKFLOWS]
+        cards = []
+        for j in jobs[:20]:
+            jid = j.get("job_id")
+            lp = logs_path(jid)
+            logs = lp.read_text(errors="replace")[-12000:] if lp.exists() else ""
+            cards.append(f"<div class='card'><h3><a href='/jobs/{esc(jid)}'>{esc(jid)}</a> <span class='pill {esc(j.get('state'))}'>{esc(j.get('state'))}</span></h3><p class='muted'>{esc(j.get('workflow_label'))}</p><pre>{esc(logs)}</pre></div>")
+        if not cards:
+            cards.append("<div class='card'><h2>No fuzzing logs yet</h2><p class='muted'>Start a fuzzing job from the Fuzzing Lab first.</p></div>")
+        self.send_html("Fuzzing logs", "<div class='card'><h2>Fuzzing Logs</h2><p class='muted'>Recent fuzzing and AI-fuzzing job logs, newest first.</p><p><a class='btn' href='/fuzzing'>Start another fuzzing job</a></p></div>" + "".join(cards))
 
     def scanners(self):
         rows = "".join(f"<tr><td>{esc(r['tool'])}</td><td class='{ 'ok' if r['available'] else 'bad'}'>{'yes' if r['available'] else 'no'}</td><td><code>{esc(r['path'])}</code></td><td>{esc(r['note'])}</td></tr>" for r in scanner_status())

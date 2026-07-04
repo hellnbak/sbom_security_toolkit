@@ -1,0 +1,3 @@
+document = version dataLicense spdxid name+ ;
+version = "SPDXVersion:" value ;
+dataLicense = "DataLicense:" value ;

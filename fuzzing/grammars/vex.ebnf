@@ -1,0 +1,3 @@
+vex = vulnerability analysis ;
+analysis = state justification? response* detail? ;
+state = "affected" | "not_affected" | "fixed" | "under_investigation" ;

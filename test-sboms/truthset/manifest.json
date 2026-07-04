@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "file": "log4j-direct.json",
+      "expected_policy": "review",
+      "expected_components": 1
+    },
+    {
+      "file": "purl-cpe-conflict.json",
+      "expected_policy": "review",
+      "expected_components": 1
+    },
+    {
+      "file": "vex-not-affected.json",
+      "expected_policy": "review",
+      "expected_components": 1
+    }
+  ]
+}

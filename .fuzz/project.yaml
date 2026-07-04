@@ -1,0 +1,6 @@
+language: python
+main_repo: https://github.com/hellnbak/sbom_security_toolkit
+fuzzing_engines:
+  - libfuzzer
+sanitizers:
+  - address

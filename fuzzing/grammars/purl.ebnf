@@ -1,0 +1,1 @@
+purl = "pkg:" type "/" namespace? name "@" version qualifiers? subpath? ;

@@ -14,6 +14,13 @@ make test
 echo "[release] validating"
 make validate
 
+echo "[release] cleaning generated artifacts before preflight"
+rm -rf reports release-evidence fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes ui/storage/jobs ui/storage/uploads
+find . -type d -name __pycache__ -prune -exec rm -rf {} +
+find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+mkdir -p ui/storage/jobs ui/storage/uploads
+touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
+
 echo "[release] preflight"
 make preflight-release
 

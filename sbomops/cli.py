@@ -22,6 +22,16 @@ MODULES = {
     "repair": "sbomops.repair",
     "diff": "sbomops.diff",
     "inventory": "sbomops.inventory",
+
+    "fuzz-plan": "fuzzing.planner.fuzz_plan",
+    "fuzz-kb": "fuzzing.kb.fuzz_kb",
+    "fuzz-benchmark": "fuzzing.benchmarks.run_benchmark",
+    "scanner-compatibility": "fuzzing.compatibility.scanner_compatibility",
+    "scanner-truthset": "fuzzing.truthset.scanner_truthset",
+    "fuzz-replay-pack": "fuzzing.replay.create_replay_pack",
+    "ai-harness-loop": "ai_fuzz.tools.ai_harness_loop",
+    "ai-fuzz-loop": "ai_fuzz.tools.ai_fuzz_loop",
+    "ai-fuzz-eval": "ai_fuzz.tools.ai_eval",
 }
 
 def main():

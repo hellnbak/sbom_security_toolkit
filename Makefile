@@ -187,6 +187,7 @@ ui-server:
 
 ui-clean:
 	rm -rf ui/storage/jobs/* ui/storage/uploads/*
+	rm -rf ui/storage/jobs ui/storage/uploads
 	mkdir -p ui/storage/jobs ui/storage/uploads
 	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
 
@@ -412,7 +413,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 1.9.0
+VERSION ?= 2.0.1
 
 setup:
 	./setup.sh
@@ -467,5 +468,53 @@ clean-generated:
 	rm -rf reports release-evidence dist fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 	find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+	rm -rf ui/storage/jobs ui/storage/uploads
 	mkdir -p ui/storage/jobs ui/storage/uploads
 	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
+
+# v2.0 adaptive fuzzing platform additions
+.PHONY: fuzz-kb-init fuzz-kb-summary fuzz-plan ai-harness-loop ai-fuzz-loop fuzz-benchmark fuzz-benchmark-compare sbom-tool-compatibility scanner-truthset fuzz-replay-pack ai-fuzz-eval clusterfuzzlite-smoke
+AI_PROVIDERS ?= none,glm
+FINDING ?= test-sboms/truthset/log4j-direct.json
+BENCH_BASE ?=
+BENCH_NEW ?=
+
+fuzz-kb-init:
+	python3 fuzzing/kb/fuzz_kb.py init
+
+fuzz-kb-summary:
+	python3 fuzzing/kb/fuzz_kb.py summary
+
+fuzz-plan:
+	python3 fuzzing/planner/fuzz_plan.py
+
+ai-harness-loop:
+	@if [ -z "$(TARGET)" ]; then echo "Usage: make ai-harness-loop TARGET=sbomops/minimum_elements.py AI_PROVIDER=glm"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_harness_loop --target $(TARGET) --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),)
+
+ai-fuzz-loop:
+	python3 -m ai_fuzz.tools.ai_fuzz_loop --goal "$(GOAL)" --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),)
+
+fuzz-benchmark:
+	python3 fuzzing/benchmarks/run_benchmark.py --sbom $(SBOM)
+
+fuzz-benchmark-compare:
+	@if [ -z "$(BENCH_BASE)" ] || [ -z "$(BENCH_NEW)" ]; then echo "Usage: make fuzz-benchmark-compare BENCH_BASE=old.json BENCH_NEW=new.json"; exit 2; fi
+	python3 fuzzing/benchmarks/compare_benchmark.py $(BENCH_BASE) $(BENCH_NEW)
+
+sbom-tool-compatibility:
+	python3 fuzzing/compatibility/scanner_compatibility.py --corpus test-sboms
+
+scanner-truthset:
+	python3 fuzzing/truthset/scanner_truthset.py
+
+fuzz-replay-pack:
+	python3 fuzzing/replay/create_replay_pack.py $(FINDING)
+
+ai-fuzz-eval:
+	python3 -m ai_fuzz.tools.ai_eval --providers "$(AI_PROVIDERS)"
+
+clusterfuzzlite-smoke:
+	mkdir -p /tmp/sst-cfl-out
+	OUT=/tmp/sst-cfl-out .fuzz/build.sh
+	/tmp/sst-cfl-out/sbom_smoke_fuzzer test-sboms/clean/minimal-cyclonedx.json
