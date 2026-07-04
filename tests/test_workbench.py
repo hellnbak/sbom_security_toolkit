@@ -1,6 +1,9 @@
 import unittest
+from pathlib import Path
 
 from sbomops.workbench.job_runner import safe_name, WORKFLOWS, FUZZ_WORKFLOWS, scanner_status
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class WorkbenchTests(unittest.TestCase):
@@ -39,3 +42,13 @@ class WorkbenchFuzzingLabTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class WorkbenchFuzzingTimeLimitTests(unittest.TestCase):
+    def test_timed_all_fuzzing_workflow_exposed(self):
+        self.assertIn('fuzz-all-timed', FUZZ_WORKFLOWS)
+
+    def test_format_tolerant_fuzzing_loads_xml(self):
+        from fuzzing.common.sbom_load import load_json_or_normalized
+        doc = load_json_or_normalized(ROOT / 'vuln-scan' / 'cyclonedx-sbom.xml')
+        self.assertIsInstance(doc, dict)
+        self.assertIn('components', doc)

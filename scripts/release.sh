@@ -15,7 +15,7 @@ echo "[release] validating"
 make validate
 
 echo "[release] cleaning generated artifacts before preflight"
-rm -rf reports release-evidence fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes ui/storage/jobs ui/storage/uploads
+rm -rf reports release-evidence fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes test-sboms/evil-supplier fuzzing/findings_lifecycle/findings.json ai_fuzz/review/incoming/harness-quality-loop ai_fuzz/review/incoming/generators ui/storage/jobs ui/storage/uploads
 find . -type d -name __pycache__ -prune -exec rm -rf {} +
 find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 mkdir -p ui/storage/jobs ui/storage/uploads

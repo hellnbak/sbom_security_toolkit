@@ -7,12 +7,15 @@ process crashes.
 from __future__ import annotations
 import argparse, json, sys
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 def load(path: Path):
-    data = path.read_text(errors="replace")
-    if path.suffix.lower() == ".json":
-        return json.loads(data)
-    raise ValueError("semantic oracles currently require JSON input")
+    try:
+        from fuzzing.common.sbom_load import load_json_or_normalized
+        return load_json_or_normalized(path)
+    except Exception as exc:
+        raise ValueError(f"semantic oracles could not parse or normalize input: {exc}") from exc
 
 def comps(doc):
     if isinstance(doc, dict):

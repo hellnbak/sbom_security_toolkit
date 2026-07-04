@@ -100,7 +100,7 @@ The Fuzzing Lab lets you upload a seed SBOM and run local fuzzing workflows from
 - replay-pack generation,
 - AI-assisted corpus review, harness repair prompts, mutation plans, fuzz campaigns, and provider evaluation.
 
-The Fuzzing Lab form supports workflow options such as seed count, edge-case profile, budget profile, local Dependency-Track URL, AI provider/model, AI scenario/goal, and harness target. AI-assisted workflows remain advisory and review-gated.
+The Fuzzing Lab form supports workflow options such as seed count, time limit per fuzzing step/library, run target groups, edge-case profile, budget profile, local Dependency-Track URL, AI provider/model, AI scenario/goal, and harness target. Use the timed all-fuzzing workflow when you want the workbench to run all available local fuzzing modes with the same per-step time budget. AI-assisted workflows remain advisory and review-gated.
 
 ### Fuzzing logs
 

@@ -21,7 +21,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/fuzzing'>Fuzzing Lab</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -72,6 +72,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/scanners": return self.scanners()
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
+        if path == "/fuzzing/dashboard": return self.fuzzing_dashboard()
         if path.startswith("/api/jobs/"): return self.api_job(path.split("/", 3)[3])
         if path.startswith("/download/"): return self.download(path.split("/", 2)[2])
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -110,7 +111,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             fields, (filename, content) = parse_multipart(self.rfile.read(length), ctype)
             upload = save_upload(filename, content)
-            options = {k: fields.get(k, "") for k in ["count", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target"]}
+            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state"]}
             jid = create_job(fields.get("workflow", "analyze"), upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options)
             self.redirect(f"/jobs/{jid}")
         except Exception as exc:
@@ -170,6 +171,8 @@ class Handler(BaseHTTPRequestHandler):
           <label>Fuzzing workflow</label><select name='workflow'>{opts}</select>
           <div class='grid'>
             <div><label>Seed count</label><input name='count' value='10' size='8'><p class='small muted'>Used by seed generation and structured mutation workflows.</p></div>
+            <div><label>Time limit per fuzzing step / library</label><input name='duration_seconds' value='60' size='8'><p class='small muted'>Used by timed runs and as a timeout guard for long fuzzing actions.</p></div>
+            <div><label>Run targets</label><input name='library_targets' value='sbom,scanner,ai' size='28'><p class='small muted'>For timed all-runs. Examples: <code>sbom,scanner,ai</code> or <code>python,javascript,php,sbom</code>.</p></div>
             <div><label>Edge case</label><select name='edge'><option>valid-edge</option><option>dependency-cycle</option><option>duplicate-bom-ref</option><option>conflicting-identities</option><option>missing-version</option><option>huge-version</option><option>unicode</option><option>invalid-license</option></select></div>
             <div><label>Budget profile</label><select name='budget_profile'><option value='fuzzing/budgets/pr-smoke.yml'>PR smoke</option><option value='fuzzing/budgets/nightly-deep.yml'>Nightly deep</option></select></div>
             <div><label>Dependency-Track URL</label><input name='dtrack_url' value='http://127.0.0.1:8081' size='28'></div>
@@ -180,16 +183,21 @@ class Handler(BaseHTTPRequestHandler):
             <div><label>AI scenario</label><input name='scenario' value='dependency-cycles' size='24'></div>
             <div><label>AI goal</label><input name='ai_goal' value='scanner-disagreement-hardening' size='28'></div>
           </div>
-          <label>Harness repair target</label><input name='target' value='fuzzing/engines/python/targets/cyclonedx_json_atheris.py' size='72'>
+          <label>Harness / method target</label><input name='target' value='fuzzing/engines/python/targets/cyclonedx_json_atheris.py' size='72'>
+          <div class='grid'>
+            <div><label>Grammar</label><select name='grammar'><option>cyclonedx</option><option>spdx</option><option>purl</option><option>license</option><option>vex</option></select></div>
+            <div><label>Finding ID</label><input name='finding_id' value='workbench-demo-finding' size='28'></div>
+            <div><label>Finding state</label><select name='finding_state'><option>triaged</option><option>found</option><option>minimized</option><option>regression-added</option><option>fixed</option><option>verified</option><option>archived</option></select></div>
+          </div>
           <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available</label></p>
           <input type='submit' value='Start fuzzing job'>
         </form></div>
         <div class='grid'>
-          <div class='card'><h3>Recommended starters</h3><p><strong>Round-trip</strong>, <strong>semantic oracles</strong>, <strong>structured mutations</strong>, and <strong>fuzz-all-local</strong> are good safe first runs.</p></div>
+          <div class='card'><h3>Recommended starters</h3><p><strong>Round-trip</strong>, <strong>semantic oracles</strong>, <strong>structured mutations</strong>, <strong>fuzz-all-local</strong>, and <strong>fuzz-all-timed</strong> are good safe first runs. Use <strong>fuzz-all-timed</strong> when you want every available local fuzzing effort to run with a user-set time limit per step/library.</p></div>
           <div class='card'><h3>Scanner workflows</h3><p>Toolchain, compatibility, truth-set, and metamorphic scanner workflows depend on locally installed scanners.</p></div>
           <div class='card'><h3>AI-assisted workflows</h3><p>Prompt-only mode works without keys. GLM/Ollama/OpenAI-compatible endpoints are optional and review-gated.</p></div>
         </div>
-        <div class='card'><h2>Recent Fuzzing Jobs</h2><table><tr><th>Job</th><th>Workflow</th><th>Status</th><th>Created</th></tr>{recent_rows}</table><p><a class='btn secondary' href='/fuzzing/logs'>Open fuzzing logs</a></p></div>
+        <div class='card'><h2>Recent Fuzzing Jobs</h2><table><tr><th>Job</th><th>Workflow</th><th>Status</th><th>Created</th></tr>{recent_rows}</table><p><a class='btn secondary' href='/fuzzing/logs'>Open fuzzing logs</a> <a class='btn secondary' href='/fuzzing/dashboard'>Open fuzzing dashboard</a></p></div>
         """
         self.send_html("Fuzzing Lab", body)
 
@@ -204,6 +212,24 @@ class Handler(BaseHTTPRequestHandler):
         if not cards:
             cards.append("<div class='card'><h2>No fuzzing logs yet</h2><p class='muted'>Start a fuzzing job from the Fuzzing Lab first.</p></div>")
         self.send_html("Fuzzing logs", "<div class='card'><h2>Fuzzing Logs</h2><p class='muted'>Recent fuzzing and AI-fuzzing job logs, newest first.</p><p><a class='btn' href='/fuzzing'>Start another fuzzing job</a></p></div>" + "".join(cards))
+
+
+    def fuzzing_dashboard(self):
+        cards = []
+        for label, rel in [
+            ("Intelligence", "reports/fuzzing/intelligence/intelligence.json"),
+            ("Corpus Recommendations", "reports/fuzzing/corpus-recommendations/recommendations.json"),
+            ("Compatibility", "reports/fuzzing/scanner-compatibility.json"),
+            ("AI Red-Team", "reports/ai-fuzz-redteam.json"),
+            ("Lifecycle", "fuzzing/findings_lifecycle/findings.json"),
+        ]:
+            p = ROOT / rel
+            if p.exists():
+                txt = p.read_text(errors="replace")[-8000:]
+                cards.append(f"<div class='card'><h2>{esc(label)}</h2><p class='muted'><code>{esc(rel)}</code></p><pre>{esc(txt)}</pre></div>")
+            else:
+                cards.append(f"<div class='card'><h2>{esc(label)}</h2><p class='muted'>No data yet. Run the matching workflow from the Fuzzing Lab.</p></div>")
+        self.send_html("Fuzzing dashboard", "<div class='card'><h2>Fuzzing Lab Dashboard</h2><p class='muted'>Local-only view of fuzzing intelligence, corpus promotion, compatibility, AI safety, and finding lifecycle artifacts.</p><p><a class='btn' href='/fuzzing'>Start fuzzing job</a> <a class='btn secondary' href='/fuzzing/logs'>Open logs</a></p></div>" + "".join(cards))
 
     def scanners(self):
         rows = "".join(f"<tr><td>{esc(r['tool'])}</td><td class='{ 'ok' if r['available'] else 'bad'}'>{'yes' if r['available'] else 'no'}</td><td><code>{esc(r['path'])}</code></td><td>{esc(r['note'])}</td></tr>" for r in scanner_status())

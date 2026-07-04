@@ -7,6 +7,8 @@ semantic parser/scanner paths instead of stopping at JSON decoding.
 from __future__ import annotations
 import argparse, copy, hashlib, json, random, sys
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 EDGE_STRINGS = [
     "", " ", "0", "latest", "999999999999999999999.0.0", "1.0.0-alpha+build.☃",
@@ -101,7 +103,13 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--count", type=int, default=25)
     args = ap.parse_args()
-    src = Path(args.input).read_bytes()
+    src_path = Path(args.input)
+    try:
+        src = src_path.read_bytes()
+        load_doc(src)
+    except Exception:
+        from fuzzing.common.sbom_load import load_json_or_normalized
+        src = dump_doc(load_json_or_normalized(src_path))
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     for i in range(args.count):
         data = mutate(src, seed=i)

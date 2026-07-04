@@ -187,7 +187,7 @@ ui-server:
 
 ui-clean:
 	rm -rf ui/storage/jobs/* ui/storage/uploads/*
-	rm -rf ui/storage/jobs ui/storage/uploads
+	rm -rf ui/storage/jobs ui/storage/uploads ai_fuzz/review/incoming/harness-quality-loop ai_fuzz/review/incoming/generators
 	mkdir -p ui/storage/jobs ui/storage/uploads
 	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
 
@@ -300,7 +300,7 @@ demo:
 	$(MAKE) watch-sbom SBOM=test-sboms/clean/minimal-cyclonedx.json VULNS=test-sboms/vulnerable/sample-trivy-report.json
 
 # v1.7 coverage-guided fuzzing lab and SBOM experience improvements
-.PHONY: fuzz-generate-cyclonedx fuzz-generate-spdx fuzz-generate-vex fuzz-generate-dtrack-payloads fuzz-afl-cyclonedx fuzz-afl-spdx fuzz-afl-purl fuzz-afl-license fuzz-toolchain fuzz-stateful-dtrack fuzz-metamorphic-scanners fuzz-budget ai-corpus-review ai-harness-repair fuzz-bugclass fuzz-advisory fuzz-status fuzz-conversion fuzz-all-local sbom-normalize sbom-explain sbom-repair sbom-diff sbom-inventory sbom-experience
+.PHONY: fuzz-generate-cyclonedx fuzz-generate-spdx fuzz-generate-vex fuzz-generate-dtrack-payloads fuzz-afl-cyclonedx fuzz-afl-spdx fuzz-afl-purl fuzz-afl-license fuzz-toolchain fuzz-stateful-dtrack fuzz-metamorphic-scanners fuzz-budget ai-corpus-review ai-harness-repair fuzz-bugclass fuzz-advisory fuzz-status fuzz-conversion fuzz-all-local fuzz-all-timed sbom-normalize sbom-explain sbom-repair sbom-diff sbom-inventory sbom-experience
 
 COUNT ?= 25
 EDGE ?= valid-edge
@@ -390,6 +390,23 @@ fuzz-all-local:
 	$(MAKE) fuzz-budget
 	$(MAKE) fuzz-status
 
+fuzz-all-timed:
+	@echo "Running local fuzzing workflows with TIME_BUDGET=$${TIME_BUDGET:-60} seconds per step. Use SBOM=... COUNT=... EDGE=..."
+	$(MAKE) fuzz-generate-cyclonedx COUNT=$${COUNT:-5} EDGE=$(EDGE)
+	$(MAKE) fuzz-generate-spdx COUNT=$${COUNT:-5} EDGE=$(EDGE)
+	$(MAKE) fuzz-generate-vex COUNT=$${COUNT:-5}
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-structured SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-roundtrip SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-metamorphic SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-oracles SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-toolchain SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-stateful-dtrack SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-metamorphic-scanners SBOM=$(SBOM) || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-vuln-matching || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-vex-logic || true
+	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-evil-supplier || true
+	$(MAKE) fuzz-status
+
 sbom-normalize:
 	python3 -m sbomops.normalize $(SBOM) --out $(REPORTS)/sbom-experience/normalized.json
 
@@ -413,7 +430,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.0.1
+VERSION ?= 2.1.1
 
 setup:
 	./setup.sh
@@ -465,10 +482,10 @@ release:
 	VERSION=$(VERSION) scripts/release.sh
 
 clean-generated:
-	rm -rf reports release-evidence dist fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes
+	rm -rf reports release-evidence dist fuzzing/findings fuzzing/reports fuzzing/generated-corpus fuzzing/crashes test-sboms/evil-supplier fuzzing/findings_lifecycle/findings.json
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 	find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
-	rm -rf ui/storage/jobs ui/storage/uploads
+	rm -rf ui/storage/jobs ui/storage/uploads ai_fuzz/review/incoming/harness-quality-loop ai_fuzz/review/incoming/generators
 	mkdir -p ui/storage/jobs ui/storage/uploads
 	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
 
@@ -518,3 +535,66 @@ clusterfuzzlite-smoke:
 	mkdir -p /tmp/sst-cfl-out
 	OUT=/tmp/sst-cfl-out .fuzz/build.sh
 	/tmp/sst-cfl-out/sbom_smoke_fuzzer test-sboms/clean/minimal-cyclonedx.json
+
+# v2.1 intelligent fuzzing operations
+.PHONY: fuzz-intelligence fuzz-corpus-recommend fuzz-harness-audit ai-harness-quality-loop ai-seed-generator ai-seed-generator-test fuzz-grammar fuzz-target-coverage fuzz-semantic-format-diff fuzz-vuln-matching fuzz-vex-logic fuzz-evil-supplier ai-fuzz-redteam cflite-import-results fuzz-ci-dashboard fuzz-finding-update fuzz-lab-dashboard
+HARNESS ?= fuzzing/engines/python/targets/cyclonedx_json_atheris.py
+GENERATOR ?=
+GRAMMAR ?= cyclonedx
+FORMAT_DIFF_SBOMS ?= test-sboms/clean/minimal-cyclonedx.json test-sboms/clean/minimal-cyclonedx.json
+FINDING_ID ?= demo-finding
+FINDING_STATE ?= triaged
+
+fuzz-intelligence:
+	python3 fuzzing/intelligence/intelligence_score.py --out-dir reports/fuzzing/intelligence
+
+fuzz-corpus-recommend:
+	python3 fuzzing/corpus/recommend.py --corpus fuzzing/corpus/ai/incoming --out-dir reports/fuzzing/corpus-recommendations
+
+fuzz-harness-audit:
+	python3 fuzzing/harness/audit.py $(HARNESS) --out reports/fuzzing/harness-audit.json
+
+ai-harness-quality-loop:
+	@if [ -z "$(TARGET)" ]; then echo "Usage: make ai-harness-quality-loop TARGET=sbomops/minimum_elements.py AI_PROVIDER=glm"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_harness_quality_loop --target $(TARGET) --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),)
+
+ai-seed-generator:
+	python3 -m ai_fuzz.tools.ai_seed_generator --goal "$(GOAL)" --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),)
+
+ai-seed-generator-test:
+	@if [ -z "$(GENERATOR)" ]; then echo "Usage: make ai-seed-generator-test GENERATOR=ai_fuzz/review/incoming/generators/<name>.py"; exit 2; fi
+	python3 -m ai_fuzz.tools.ai_seed_generator_test --generator $(GENERATOR)
+
+fuzz-grammar:
+	python3 fuzzing/grammar/run_grammar_mutator.py --grammar $(GRAMMAR) --count $${COUNT:-25} --out fuzzing/generated-corpus/grammar/$(GRAMMAR)
+
+fuzz-target-coverage:
+	@if [ -z "$(TARGET)" ]; then echo "Usage: make fuzz-target-coverage TARGET=sbomops.minimum_elements:main"; exit 2; fi
+	python3 fuzzing/coverage/target_coverage.py --target $(TARGET) --out reports/fuzzing/target-coverage.json
+
+fuzz-semantic-format-diff:
+	python3 fuzzing/semantic_format_diff/semantic_format_diff.py $(FORMAT_DIFF_SBOMS) --out reports/fuzzing/semantic-format-diff.json
+
+fuzz-vuln-matching:
+	python3 fuzzing/vuln_matching/vuln_matching_fuzz.py --out-dir fuzzing/generated-corpus/vuln-matching
+
+fuzz-vex-logic:
+	python3 fuzzing/vex_logic/vex_logic_fuzz.py --out-dir fuzzing/generated-corpus/vex-logic
+
+fuzz-evil-supplier:
+	python3 fuzzing/evil_supplier/evil_supplier.py --out-dir test-sboms/evil-supplier fuzzing/findings_lifecycle/findings.json
+
+ai-fuzz-redteam:
+	python3 -m ai_fuzz.tools.ai_redteam --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) --out reports/ai-fuzz-redteam.json
+
+cflite-import-results:
+	python3 fuzzing/clusterfuzzlite/import_results.py --input-dir fuzzing/clusterfuzzlite/results --out reports/fuzzing/clusterfuzzlite-results.json
+
+fuzz-ci-dashboard:
+	python3 fuzzing/clusterfuzzlite/ci_dashboard.py --results reports/fuzzing/clusterfuzzlite-results.json --out reports/fuzzing/ci-dashboard.html
+
+fuzz-finding-update:
+	python3 fuzzing/findings_lifecycle/lifecycle.py --finding $(FINDING_ID) --state $(FINDING_STATE) --notes "$(NOTES)"
+
+fuzz-lab-dashboard:
+	python3 fuzzing/visualize/fuzzing_lab_dashboard.py --out reports/fuzzing/lab-dashboard.html

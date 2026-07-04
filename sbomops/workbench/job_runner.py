@@ -58,12 +58,30 @@ WORKFLOWS = {
     "fuzz-coverage": "Fuzzing Lab: coverage summary",
     "fuzz-status": "Fuzzing Lab: fuzzing status report",
     "fuzz-all-local": "Fuzzing Lab: all local smoke workflows",
+    "fuzz-all-timed": "Fuzzing Lab: run all fuzzing modes with per-step time limit",
     "ai-corpus-review": "Fuzzing Lab: AI corpus review",
     "ai-harness-repair": "Fuzzing Lab: AI harness repair prompt",
     "ai-fuzz-eval": "AI fuzz provider evaluation",
+    "fuzz-intelligence": "Fuzzing Lab: intelligence scoring",
+    "fuzz-corpus-recommend": "Fuzzing Lab: corpus promotion recommendations",
+    "fuzz-harness-audit": "Fuzzing Lab: harness quality audit",
+    "ai-harness-quality-loop": "Fuzzing Lab: AI harness quality loop",
+    "ai-seed-generator": "Fuzzing Lab: AI seed-generator synthesis",
+    "ai-seed-generator-test": "Fuzzing Lab: AI seed-generator test",
+    "fuzz-grammar": "Fuzzing Lab: grammar mutator mode",
+    "fuzz-target-coverage": "Fuzzing Lab: method-targeted coverage",
+    "fuzz-semantic-format-diff": "Fuzzing Lab: semantic format diff",
+    "fuzz-vuln-matching": "Fuzzing Lab: vulnerability matching cases",
+    "fuzz-vex-logic": "Fuzzing Lab: VEX contradiction fuzzing",
+    "fuzz-evil-supplier": "Fuzzing Lab: evil supplier scenarios",
+    "ai-fuzz-redteam": "Fuzzing Lab: AI provider red-team checks",
+    "cflite-import-results": "Fuzzing Lab: ClusterFuzzLite result import",
+    "fuzz-ci-dashboard": "Fuzzing Lab: CI fuzzing dashboard",
+    "fuzz-finding-update": "Fuzzing Lab: finding lifecycle update",
+    "fuzz-lab-dashboard": "Fuzzing Lab: visual dashboard",
 }
 
-FUZZ_WORKFLOWS = {k: v for k, v in WORKFLOWS.items() if k.startswith("fuzz-") or k.startswith("ai-fuzz") or k in {"ai-mutation-plan", "ai-corpus-review", "ai-harness-repair"}}
+FUZZ_WORKFLOWS = {k: v for k, v in WORKFLOWS.items() if k.startswith("fuzz-") or k.startswith("ai-fuzz") or k in {"ai-mutation-plan", "ai-corpus-review", "ai-harness-repair", "ai-harness-quality-loop", "ai-seed-generator", "ai-seed-generator-test", "ai-fuzz-redteam"}}
 
 
 
@@ -172,16 +190,25 @@ def module_cmd(module: str, *args: Any) -> List[str]:
     return [sys.executable, "-m", module, *map(str, args)]
 
 
-def run_step(job_id: str, name: str, cmd: List[str], timeout: int = 600) -> Dict[str, Any]:
+def run_step(job_id: str, name: str, cmd: List[str], timeout: int = 600, *, timeout_ok: bool = False, env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     append_log(job_id, f"\n=== {name} ===\n$ {' '.join(cmd)}")
     started = time.time()
-    proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=timeout)
-    elapsed = round(time.time() - started, 2)
-    if proc.stdout:
-        append_log(job_id, proc.stdout[-12000:])
-    if proc.stderr:
-        append_log(job_id, proc.stderr[-12000:])
-    return {"name": name, "cmd": cmd, "returncode": proc.returncode, "elapsed_seconds": elapsed}
+    try:
+        proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=timeout, env=env)
+        elapsed = round(time.time() - started, 2)
+        if proc.stdout:
+            append_log(job_id, proc.stdout[-12000:])
+        if proc.stderr:
+            append_log(job_id, proc.stderr[-12000:])
+        return {"name": name, "cmd": cmd, "returncode": proc.returncode, "elapsed_seconds": elapsed}
+    except subprocess.TimeoutExpired as exc:
+        elapsed = round(time.time() - started, 2)
+        append_log(job_id, f"Timed out after {timeout} seconds. This is expected for time-boxed fuzzing runs.\n")
+        if exc.stdout:
+            append_log(job_id, str(exc.stdout)[-12000:])
+        if exc.stderr:
+            append_log(job_id, str(exc.stderr)[-12000:])
+        return {"name": name, "cmd": cmd, "returncode": 0 if timeout_ok else 124, "elapsed_seconds": elapsed, "timed_out": True}
 
 
 
@@ -218,12 +245,14 @@ def run_job(job_id: str) -> None:
     policy = status.get("policy") or "policies/default-release-policy.yml"
     workflow = status["workflow"]
     count = option_int(status, "count", 10, low=1, high=250)
+    duration_seconds = option_int(status, "duration_seconds", 60, low=5, high=86400)
     edge = option(status, "edge", "valid-edge")
     budget_profile = option(status, "budget_profile", "fuzzing/budgets/pr-smoke.yml")
     ai_provider = option(status, "ai_provider", "none")
     ai_model = option(status, "ai_model", "")
     ai_goal = option(status, "ai_goal", "sbom-workbench-upload-hardening")
     dtrack_url = option(status, "dtrack_url", "http://127.0.0.1:8081")
+    library_targets = [x.strip().lower() for x in option(status, "library_targets", "sbom,scanner,ai").split(",") if x.strip()]
     steps: List[Dict[str, Any]] = []
     try:
         if workflow in {"analyze", "score"}:
@@ -291,13 +320,57 @@ def run_job(job_id: str) -> None:
         if workflow == "fuzz-all-local":
             for step_name, cmd in [
                 ("Generate CycloneDX seeds", [sys.executable, "fuzzing/schema/cyclonedx_schema_generator.py", "--count", str(min(count, 10)), "--edge", edge, "--out", str(out / "all-local" / "cyclonedx")]),
+                ("Generate SPDX seeds", [sys.executable, "fuzzing/schema/spdx_schema_generator.py", "--count", str(min(count, 10)), "--edge", edge, "--out", str(out / "all-local" / "spdx")]),
+                ("Generate VEX seeds", [sys.executable, "fuzzing/schema/vex_schema_generator.py", "--count", str(min(count, 10)), "--out", str(out / "all-local" / "vex")]),
                 ("Structure mutations", [sys.executable, "fuzzing/mutators/sbom_json_mutator.py", str(sbom), "--out", str(out / "all-local" / "structured"), "--count", str(min(count, 25))]),
                 ("Round-trip", [sys.executable, "fuzzing/roundtrip/roundtrip_sbom.py", str(sbom), "--out-dir", str(out / "all-local" / "roundtrip")]),
                 ("Metamorphic", [sys.executable, "fuzzing/metamorphic/metamorphic_sbom.py", str(sbom), "--out-dir", str(out / "all-local" / "metamorphic")]),
                 ("Semantic oracles", [sys.executable, "fuzzing/oracles/semantic_oracles.py", str(sbom), "--out", str(out / "all-local" / "semantic-oracles.json")]),
+                ("Toolchain fuzzing", [sys.executable, "fuzzing/toolchain/fuzz_toolchain.py", str(sbom), "--out", str(out / "all-local" / "toolchain.json")]),
+                ("Scanner metamorphic", [sys.executable, "fuzzing/scanner-metamorphic/metamorphic_scanners.py", str(sbom), "--out-dir", str(out / "all-local" / "scanner-metamorphic")]),
+                ("Vulnerability matching cases", [sys.executable, "fuzzing/vuln_matching/vuln_matching_fuzz.py", "--out-dir", str(out / "all-local" / "vuln-matching")]),
+                ("VEX logic cases", [sys.executable, "fuzzing/vex_logic/vex_logic_fuzz.py", "--out-dir", str(out / "all-local" / "vex-logic")]),
+                ("Evil supplier scenarios", [sys.executable, "fuzzing/evil_supplier/evil_supplier.py", "--out-dir", str(out / "all-local" / "evil-supplier")]),
                 ("Fuzzing status", [sys.executable, "fuzzing/status_report.py", "--out", str(out / "all-local" / "fuzz-status.md")]),
             ]:
                 steps.append(run_step(job_id, step_name, cmd, timeout=900))
+        if workflow == "fuzz-all-timed":
+            timed_env = os.environ.copy()
+            timed_env["TIME_BUDGET"] = str(duration_seconds)
+            timed_env["FUZZ_MAX_SECONDS"] = str(duration_seconds)
+            timed_plan = [
+                ("Generate CycloneDX seeds", [sys.executable, "fuzzing/schema/cyclonedx_schema_generator.py", "--count", str(min(count, 25)), "--edge", edge, "--out", str(out / "timed" / "cyclonedx")]),
+                ("Generate SPDX seeds", [sys.executable, "fuzzing/schema/spdx_schema_generator.py", "--count", str(min(count, 25)), "--edge", edge, "--out", str(out / "timed" / "spdx")]),
+                ("Generate VEX seeds", [sys.executable, "fuzzing/schema/vex_schema_generator.py", "--count", str(min(count, 25)), "--out", str(out / "timed" / "vex")]),
+                ("Structure mutations", [sys.executable, "fuzzing/mutators/sbom_json_mutator.py", str(sbom), "--out", str(out / "timed" / "structured"), "--count", str(min(count, 50))]),
+                ("Round-trip", [sys.executable, "fuzzing/roundtrip/roundtrip_sbom.py", str(sbom), "--out-dir", str(out / "timed" / "roundtrip")]),
+                ("Metamorphic", [sys.executable, "fuzzing/metamorphic/metamorphic_sbom.py", str(sbom), "--out-dir", str(out / "timed" / "metamorphic")]),
+                ("Semantic oracles", [sys.executable, "fuzzing/oracles/semantic_oracles.py", str(sbom), "--out", str(out / "timed" / "semantic-oracles.json")]),
+                ("Toolchain fuzzing", [sys.executable, "fuzzing/toolchain/fuzz_toolchain.py", str(sbom), "--out", str(out / "timed" / "toolchain.json"), "--timeout", str(max(5, duration_seconds))]),
+                ("Dependency-Track dry-run", [sys.executable, "fuzzing/stateful/dependency_track_state_machine.py", "--url", dtrack_url, "--sbom", str(sbom), "--dry-run", "--out", str(out / "timed" / "dependency-track-stateful.json")]),
+                ("Scanner metamorphic", [sys.executable, "fuzzing/scanner-metamorphic/metamorphic_scanners.py", str(sbom), "--out-dir", str(out / "timed" / "scanner-metamorphic")]),
+                ("Budget profile", [sys.executable, "fuzzing/budgets/run_budget.py", budget_profile, "--out", str(out / "timed" / "budget.json")]),
+                ("Fuzz intelligence", [sys.executable, "fuzzing/intelligence/intelligence_score.py", "--inputs", "fuzzing/findings", "fuzzing/generated-corpus", "test-sboms", "--out-dir", str(out / "timed" / "intelligence")]),
+                ("Vulnerability matching", [sys.executable, "fuzzing/vuln_matching/vuln_matching_fuzz.py", "--out-dir", str(out / "timed" / "vuln-matching")]),
+                ("VEX logic", [sys.executable, "fuzzing/vex_logic/vex_logic_fuzz.py", "--out-dir", str(out / "timed" / "vex-logic")]),
+                ("Evil supplier", [sys.executable, "fuzzing/evil_supplier/evil_supplier.py", "--out-dir", str(out / "timed" / "evil-supplier")]),
+                ("Grammar mutator", [sys.executable, "fuzzing/grammar/run_grammar_mutator.py", "--grammar", option(status, "grammar", "cyclonedx"), "--count", str(min(count, 25)), "--out", str(out / "timed" / "grammar")]),
+                ("Fuzz status", [sys.executable, "fuzzing/status_report.py", "--out", str(out / "timed" / "fuzz-status.md")]),
+            ]
+            if "ai" in library_targets:
+                timed_plan.extend([
+                    ("AI corpus review", [sys.executable, "ai_fuzz/tools/ai_corpus_review.py", "--corpus", "fuzzing/corpus/ai/incoming", "--out", str(out / "timed" / "ai-corpus-review.md")]),
+                    ("AI provider evaluation", [sys.executable, "-m", "ai_fuzz.tools.ai_eval", "--providers", "none,glm", "--out", str(out / "timed" / "ai-fuzz-provider-eval.json")]),
+                ])
+            if shutil.which("docker") and any(x in library_targets for x in ["python", "javascript", "js", "php"]):
+                if "python" in library_targets:
+                    timed_plan.append(("Python engine smoke", ["bash", "-lc", f"docker build -t sbom-fuzzer-python fuzzing/engines/python >/dev/null && docker run --rm -e TIME_BUDGET={duration_seconds} sbom-fuzzer-python"]))
+                if "javascript" in library_targets or "js" in library_targets:
+                    timed_plan.append(("JavaScript engine smoke", ["bash", "-lc", f"docker build -t sbom-fuzzer-javascript fuzzing/engines/javascript >/dev/null && docker run --rm -e TIME_BUDGET={duration_seconds} sbom-fuzzer-javascript"]))
+                if "php" in library_targets:
+                    timed_plan.append(("PHP engine smoke", ["bash", "-lc", f"docker build -t sbom-fuzzer-php fuzzing/engines/php >/dev/null && docker run --rm -e TIME_BUDGET={duration_seconds} sbom-fuzzer-php"]))
+            for step_name, cmd in timed_plan:
+                steps.append(run_step(job_id, step_name, cmd, timeout=duration_seconds + 10, timeout_ok=True, env=timed_env))
         if workflow == "ai-corpus-review":
             steps.append(run_step(job_id, "AI corpus review", [sys.executable, "ai_fuzz/tools/ai_corpus_review.py", "--corpus", "fuzzing/corpus/ai/incoming", "--out", str(out / "ai-corpus-review.md")]))
         if workflow == "ai-harness-repair":
@@ -306,6 +379,47 @@ def run_job(job_id: str) -> None:
 
         if workflow == "ai-fuzz-eval":
             steps.append(run_step(job_id, "AI fuzz provider evaluation", [sys.executable, "-m", "ai_fuzz.tools.ai_eval", "--providers", "none,glm", "--out", str(out / "ai-fuzz-provider-eval.json")]))
+
+        if workflow == "fuzz-intelligence":
+            steps.append(run_step(job_id, "Fuzzing intelligence", [sys.executable, "fuzzing/intelligence/intelligence_score.py", "--inputs", "fuzzing/findings", "fuzzing/generated-corpus", "test-sboms", "--out-dir", str(out / "intelligence")]))
+        if workflow == "fuzz-corpus-recommend":
+            steps.append(run_step(job_id, "Corpus promotion recommendations", [sys.executable, "fuzzing/corpus/recommend.py", "--corpus", "fuzzing/corpus/ai/incoming", "--out-dir", str(out / "corpus-recommendations")]))
+        if workflow == "fuzz-harness-audit":
+            target = option(status, "target", "fuzzing/engines/python/targets/cyclonedx_json_atheris.py")
+            steps.append(run_step(job_id, "Harness quality audit", [sys.executable, "fuzzing/harness/audit.py", target, "--out", str(out / "harness-audit.json")]))
+        if workflow == "ai-harness-quality-loop":
+            target = option(status, "target", "sbomops/minimum_elements.py")
+            steps.append(run_step(job_id, "AI harness quality loop", [sys.executable, "-m", "ai_fuzz.tools.ai_harness_quality_loop", "--target", target, "--provider", ai_provider, *( ["--model", ai_model] if ai_model else [] ), "--out-dir", str(out / "ai-harness-quality-loop")]))
+        if workflow == "ai-seed-generator":
+            steps.append(run_step(job_id, "AI seed-generator synthesis", [sys.executable, "-m", "ai_fuzz.tools.ai_seed_generator", "--goal", ai_goal, "--provider", ai_provider, *( ["--model", ai_model] if ai_model else [] ), "--out-dir", str(out / "ai-seed-generator")]))
+        if workflow == "ai-seed-generator-test":
+            target = option(status, "target", "")
+            if not target:
+                target = "ai_fuzz/review/incoming/generators/" + ai_goal.replace(" ", "-") + "_generator.py"
+            steps.append(run_step(job_id, "AI seed-generator test", [sys.executable, "-m", "ai_fuzz.tools.ai_seed_generator_test", "--generator", target, "--out", str(out / "ai-seed-generator-test.json")]))
+        if workflow == "fuzz-grammar":
+            steps.append(run_step(job_id, "Grammar mutator", [sys.executable, "fuzzing/grammar/run_grammar_mutator.py", "--grammar", option(status, "grammar", "cyclonedx"), "--count", str(count), "--out", str(out / "grammar-corpus")]))
+        if workflow == "fuzz-target-coverage":
+            target = option(status, "target", "sbomops.minimum_elements:main")
+            steps.append(run_step(job_id, "Method-targeted coverage", [sys.executable, "fuzzing/coverage/target_coverage.py", "--target", target, "--out", str(out / "target-coverage.json")]))
+        if workflow == "fuzz-semantic-format-diff":
+            steps.append(run_step(job_id, "Semantic format diff", [sys.executable, "fuzzing/semantic_format_diff/semantic_format_diff.py", str(sbom), str(sbom), "--out", str(out / "semantic-format-diff.json")]))
+        if workflow == "fuzz-vuln-matching":
+            steps.append(run_step(job_id, "Vulnerability matching fuzz cases", [sys.executable, "fuzzing/vuln_matching/vuln_matching_fuzz.py", "--out-dir", str(out / "vuln-matching")]))
+        if workflow == "fuzz-vex-logic":
+            steps.append(run_step(job_id, "VEX contradiction fuzz cases", [sys.executable, "fuzzing/vex_logic/vex_logic_fuzz.py", "--out-dir", str(out / "vex-logic")]))
+        if workflow == "fuzz-evil-supplier":
+            steps.append(run_step(job_id, "Evil supplier SBOM scenarios", [sys.executable, "fuzzing/evil_supplier/evil_supplier.py", "--out-dir", str(out / "evil-supplier")]))
+        if workflow == "ai-fuzz-redteam":
+            steps.append(run_step(job_id, "AI fuzz red-team", [sys.executable, "-m", "ai_fuzz.tools.ai_redteam", "--provider", ai_provider, *( ["--model", ai_model] if ai_model else [] ), "--out", str(out / "ai-fuzz-redteam.json")]))
+        if workflow == "cflite-import-results":
+            steps.append(run_step(job_id, "ClusterFuzzLite result import", [sys.executable, "fuzzing/clusterfuzzlite/import_results.py", "--out", str(out / "clusterfuzzlite-results.json")]))
+        if workflow == "fuzz-ci-dashboard":
+            steps.append(run_step(job_id, "CI fuzzing dashboard", [sys.executable, "fuzzing/clusterfuzzlite/ci_dashboard.py", "--out", str(out / "ci-dashboard.html")]))
+        if workflow == "fuzz-finding-update":
+            steps.append(run_step(job_id, "Fuzz finding lifecycle update", [sys.executable, "fuzzing/findings_lifecycle/lifecycle.py", "--finding", option(status, "finding_id", "workbench-demo-finding"), "--state", option(status, "finding_state", "triaged"), "--notes", "Updated from local workbench"] ))
+        if workflow == "fuzz-lab-dashboard":
+            steps.append(run_step(job_id, "Fuzzing Lab dashboard", [sys.executable, "fuzzing/visualize/fuzzing_lab_dashboard.py", "--out", str(out / "lab-dashboard.html")]))
         if workflow == "release-evidence":
             env = os.environ.copy(); env.update({"SBOM": str(sbom), "POLICY": policy, "OUT": str(out / "release-evidence")})
             cmd = ["bash", "scripts/release-evidence.sh"]

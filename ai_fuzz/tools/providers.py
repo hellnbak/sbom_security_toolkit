@@ -101,3 +101,14 @@ def _openai_compatible(prompt: str, *, model: str, timeout: int, provider_label:
         return ProviderResult(provider=provider_label, model=model, text=text, used_network=True)
     except Exception as exc:
         return ProviderResult(provider=provider_label, model=model, text="", used_network=True, error=str(exc))
+
+
+def render_or_call(provider: str, prompt: str, *, model: str = "") -> str:
+    """Return provider output, or a prompt-only review artifact when provider is disabled/unavailable."""
+    result = complete(prompt, provider=provider, model=model or None)
+    if result.text:
+        return result.text
+    header = f"# Prompt-only AI artifact\n\nProvider: {result.provider}\nModel: {result.model}\n"
+    if result.error:
+        header += f"Provider error: {result.error}\n"
+    return header + "\nReview this prompt manually or configure a local provider.\n\n```text\n" + prompt + "\n```\n"

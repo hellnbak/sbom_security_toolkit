@@ -1,60 +1,39 @@
 # SBOM Security Toolkit
 
-**SBOM Security Toolkit** is a local-first, source-available workbench for practical SBOM security operations, supplier SBOM review, release evidence, and SBOM-focused fuzzing research.
+**SBOM Security Toolkit** is a local-first, source-available workbench for SBOM security operations, supplier SBOM intake, release evidence, and SBOM-focused fuzzing research.
 
-It is designed to help security teams, product-security engineers, AppSec teams, and maintainers answer practical questions:
+It is meant to help security teams, product-security engineers, AppSec teams, maintainers, and researchers answer practical questions:
 
 - Is this SBOM valid, complete, and useful?
-- What is missing from a supplier SBOM?
-- Which vulnerabilities should be prioritized and which need human exploitability review?
-- Do scanners agree or disagree on the same SBOM?
-- Can this build or vendor package pass a policy gate?
-- Can malformed or edge-case SBOMs cause crashes, silent component drops, VEX loss, policy bypasses, or scanner disagreement?
+- What is missing from a supplier SBOM before we can rely on it?
+- Which vulnerabilities need priority review, follow-up, or VEX/exploitability evidence?
+- Do scanners agree on the same SBOM, or are there identity-matching differences?
+- Can this build or supplier package pass a policy gate?
+- Can malformed, ambiguous, or adversarial SBOMs cause crashes, timeouts, silent component drops, VEX loss, policy bypasses, or scanner disagreement?
 - Can AI help generate fuzzing ideas and triage results without taking over security decisions?
+
+The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine. Uploaded SBOMs and generated evidence stay on disk. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 ## What this toolkit does
 
-The toolkit combines several workflows that are usually spread across separate tools:
+SBOM Security Toolkit combines workflows that are often spread across several tools:
 
-- SBOM quality scoring, normalization, explanation, repair hints, inventory export, and diffing.
-- CISA/NTIA-style minimum-elements checks.
-- Policy-as-code gates for release and supplier intake.
-- Supplier intake reports and follow-up questions.
-- Vulnerability prioritization, scanner confidence scoring, and scanner comparison scaffolding.
-- VEX templates, validation, merge, explanation, and exploitability decision records.
-- Local workbench UI for uploading SBOMs and launching workflows.
-- Release evidence bundle generation, checksums, and optional signing workflow.
-- SBOM-focused fuzzing: schema-aware generation, mutation, semantic oracles, round-trip/metamorphic testing, scanner/toolchain fuzzing, replay packs, benchmarks, and truth-set testing.
-- AI-assisted fuzzing workflows with safe review queues, Claude Skills, provider-neutral agent prompts, and optional local/OpenAI-compatible providers such as GLM.
+- **SBOM experience:** explain, normalize, repair, diff, inventory, redact, and score SBOMs.
+- **Supplier intake:** minimum-elements checks, supplier-question generation, supplier reports, and evidence bundles.
+- **Policy and evidence:** policy-as-code checks, release evidence, checksums/signing helpers, VEX helpers, and Exploitability Decision Records.
+- **Scanner operations:** scanner availability checks, scanner comparison, scanner confidence scoring, compatibility matrix, and curated scanner truth-set testing.
+- **Local workbench UI:** upload SBOMs, launch workflows, view job status/logs, download evidence bundles, and run fuzzing workflows from the browser.
+- **Fuzzing lab:** structure-preserving mutation, schema-aware generation, semantic oracles, round-trip/metamorphic checks, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, replay packs, benchmarks, coverage scaffolding, ClusterFuzzLite scaffolding, and fuzz finding lifecycle tracking.
+- **Intelligent fuzzing operations:** fuzzing intelligence scoring, corpus promotion recommendations, harness quality auditing, AI harness quality loop, AI seed-generator synthesis, grammar-mutator scaffolding, method-targeted coverage, semantic format-diff testing, vulnerability matching fuzzing, VEX logic fuzzing, evil supplier SBOM scenarios, AI red-team checks, CI fuzz result import, and local fuzzing dashboards.
+- **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, provider-neutral agent prompts, optional GLM/local model profiles, Ollama/OpenAI-compatible hooks, and AI-assisted fuzzing triage/planning.
 
 ## What this is not
 
-This project is **not** a replacement for mature SBOM/SCA/scanner platforms such as Syft, cdxgen, Trivy, Grype, OSV-Scanner, OWASP Dependency-Track, Snyk, FOSSA, Black Duck, Sonatype, Anchore, GUAC, SLSA tooling, or OpenSSF Scorecard.
+This project is **not** a replacement for mature production tools such as Syft, cdxgen, Trivy, Grype, OSV-Scanner, OWASP Dependency-Track, Snyk, FOSSA, Black Duck, Sonatype, Anchore, GUAC, SLSA tooling, OpenSSF Scorecard, Atheris, Jazzer, AFL++, or ClusterFuzzLite.
 
-Instead, it is an **operations and experimentation layer** around those tools. It helps users validate, compare, explain, fuzz, and package SBOM evidence in a local-first workflow.
+Instead, it is an **operations, testing, and experimentation layer** around those tools. It helps users validate, compare, explain, fuzz, triage, and package SBOM evidence in a repeatable local workflow.
 
-## Current feature set
-
-- **SBOM operations:** score, explain, normalize, repair, diff, inventory, redact, watch, report.
-- **Supplier workflows:** intake, minimum-elements checks, supplier follow-up questions, evidence bundles.
-- **Policy workflows:** policy-as-code checks, release evidence, exploitability records, VEX helpers.
-- **Scanner workflows:** scanner comparison, confidence scoring, tool availability checks, compatibility matrix, curated truth-set tests.
-- **Fuzzing workflows:** structure-preserving mutation, schema-aware generation, semantic oracles, round-trip/metamorphic testing, scanner metamorphic tests, stateful local Dependency-Track workflow fuzzing, benchmarks, replay packs, and ClusterFuzzLite scaffolding.
-- **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, GLM/local model profiles, AI seed/campaign/mutation/crash-triage/harness-repair/provider-eval workflows.
-- **User interfaces:** CLI, Make targets, static dashboard bundle, and local-only workbench UI.
-- **Release hardening:** tests, validation, preflight checks, Docker workbench, GitHub Actions, release automation, data-safety guidance.
-
-## Quick start
-
-```bash
-git clone https://github.com/hellnbak/sbom_security_toolkit.git
-cd sbom_security_toolkit
-make setup
-make demo-full
-make ui-server
-```
-
-Then open `http://127.0.0.1:8080`.
+AI is advisory only. AI-generated seeds, harnesses, tests, and VEX/exploitability suggestions are staged for review. They are not executed, promoted, or trusted automatically.
 
 ## Quick start
 
@@ -67,7 +46,11 @@ make demo-full
 make ui-server
 ```
 
-Then open `http://127.0.0.1:8080` and upload one of the synthetic demo SBOMs in `test-sboms/demo/`.
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
 
 The packaged CLI is available as `sst` after setup:
 
@@ -77,98 +60,14 @@ sst analyze . --out-dir reports/latest
 sst workbench --host 127.0.0.1 --port 8080
 ```
 
-## v1.9 agent workflow integrations
-
-This release adds optional agent workflow integrations for teams that want AI assistance without making AI a runtime dependency:
-
-- Claude Skills integration under `integrations/claude-skills/sbom-security-toolkit/`;
-- provider-neutral agent prompt packs under `integrations/agent-prompts/`;
-- workflow maps for SBOM intake, release evidence, fuzzing triage, and AI-assisted fuzzing;
-- optional GLM local/OpenAI-compatible model profile for AI-assisted fuzzing workflows;
-- provider smoke testing through `make ai-provider-test`;
-- safety rules that keep AI advisory, review-gated, and local-first by default;
-- report interpretation guidance for policy failures, scanner disagreement, supplier questions, and fuzzing results.
-
-The Claude Skill and GLM profile are optional. The toolkit still works through `make`, `sst`, Docker, and the local workbench UI without any Claude or local-model dependency.
-
-## v1.8 hardening additions
-
-This release adds the project plumbing needed for easier adoption and safer releases:
-
-- editable Python package metadata and the `sst` CLI entrypoint;
-- `make setup`, `make demo-full`, `make release`, and `make preflight-release`;
-- Docker Compose files for the local workbench and optional Dependency-Track profile;
-- GitHub Actions for tests, validation, fuzz smoke checks, and release evidence;
-- issue templates, Dependabot, and pull request checklist;
-- synthetic demo SBOMs and placeholder UI assets;
-- data-safety guidance and release preflight checks.
-
-## What this toolkit does
-
-The toolkit combines several SBOM security workflows into one local package:
-
-1. **SBOM intake and validation** — accepts CycloneDX and SPDX SBOMs, validates structure, extracts components, and identifies missing or weak metadata.
-2. **SBOM quality scoring** — checks whether an SBOM has useful component names, versions, package URLs, hashes, licenses, suppliers, timestamps, and dependency relationships.
-3. **Minimum-elements checks** — evaluates whether an SBOM has the core fields expected by common SBOM guidance and supplier-review workflows.
-4. **Vulnerability scanning and prioritization** — wraps scanners such as OSV-Scanner and Trivy when available, then helps prioritize results using available severity, fix, KEV/EPSS-style, direct/transitive, and confidence signals.
-5. **Scanner comparison** — helps show when multiple tools disagree on component counts, vulnerability matches, or identity resolution.
-6. **Policy-as-code gates** — applies simple YAML release or supplier-intake policies so teams can fail, warn, or pass an SBOM consistently.
-7. **Supplier SBOM intake** — produces supplier follow-up questions, summaries, and reports for vendor-risk and procurement workflows.
-8. **VEX and exploitability evidence** — provides templates and helpers for VEX-style analysis and Exploitability Decision Records without auto-declaring anything “not affected.”
-9. **Release evidence bundles** — generates reports, checksums, UI bundles, and supporting artifacts that can be archived with a release.
-10. **Advanced fuzzing** — includes SBOM-specific fuzz targets, structure-preserving mutators, semantic oracles, round-trip checks, metamorphic tests, campaign profiles, crash deduplication, and regression workflows.
-11. **AI-assisted fuzzing** — uses prompt-only, local-model, or OpenAI-compatible workflows to propose seeds, mutation plans, oracle ideas, campaigns, crash triage, and regression-test drafts. AI output is staged for review and is never auto-promoted or executed by default.
-12. **Local workbench UI** — provides a localhost-only UI for uploading an SBOM, launching workflows, viewing job status, checking scanner availability, and downloading evidence bundles.
-
-## What this is meant to be used for
-
-Use SBOM Security Toolkit as a **hands-on SBOM security operations workbench**:
-
-- testing how your organization should consume SBOMs;
-- reviewing supplier-provided SBOMs;
-- generating release evidence for internal review;
-- comparing scanner output before standardizing on a workflow;
-- building CI/CD examples for SBOM validation and policy gates;
-- fuzzing SBOM parsers, SBOM consumers, and metadata-handling code;
-- experimenting with AI-assisted fuzzing safely and locally;
-- training security teams on SBOM operations without buying a full platform first.
-
-It is intentionally **local-first**. By default, workflows run on your machine, generated artifacts stay on disk, and the UI binds to `127.0.0.1`. Some scanners, enrichment sources, Dependency-Track, GUAC, or AI providers may require network access if you configure them, but those are optional integrations rather than required behavior.
-
-## What this is not
-
-This toolkit is **not** intended to replace mature SBOM, SCA, or vulnerability-management platforms.
-
-It is not:
-
-- a replacement for **Syft**, **cdxgen**, or GitHub SBOM export for SBOM generation;
-- a replacement for **Trivy**, **Grype**, **OSV-Scanner**, Snyk, Mend, Black Duck, FOSSA, Sonatype, Anchore Enterprise, or similar tools for production-grade SCA;
-- a replacement for **OWASP Dependency-Track** for continuous SBOM portfolio management;
-- a full ASPM, vulnerability-management, or GRC platform;
-- a SaaS product;
-- a system that automatically decides whether a vulnerability is exploitable;
-- a system that automatically trusts or executes AI-generated fuzzing code.
-
-Instead, it is designed to sit **around and alongside** those tools as a practical workflow layer: it helps you validate SBOMs, compare outputs, document decisions, generate evidence, test parser robustness, and understand where your existing tools agree or disagree.
-
-## How it compares to other tooling
-
-| Category | Examples | Relationship to this toolkit |
-|---|---|---|
-| SBOM generators | Syft, cdxgen, Microsoft SBOM Tool, GitHub SBOM export | These generate SBOMs. This toolkit consumes, validates, scores, tests, and operationalizes SBOMs. |
-| Vulnerability scanners | Trivy, Grype, OSV-Scanner | These find known vulnerabilities. This toolkit wraps or compares scanner output and adds policy, prioritization, reports, and evidence. |
-| SBOM management platforms | OWASP Dependency-Track, Anchore Enterprise, FOSSA, Black Duck, Snyk, Sonatype | These provide mature enterprise workflows. This toolkit is a lightweight local lab/workbench and reference implementation. |
-| Supply-chain graph/provenance tools | GUAC, SLSA-style provenance, OpenSSF Scorecard | These provide graph, provenance, and posture context. This toolkit includes integration scaffolding and evidence workflows. |
-| Fuzzing frameworks | Atheris, Jazzer.js, PHP-Fuzzer, AFL++ concepts | These are fuzzing engines. This toolkit adds SBOM-specific targets, mutators, semantic oracles, campaigns, and AI-assisted seed/campaign workflows. |
-| AI coding/security assistants | Claude Code, local Ollama models, OpenAI-compatible APIs | These can assist. This toolkit keeps AI advisory, review-gated, and optional. |
-
-## Typical workflows
+## Common workflows
 
 ### Analyze a project or SBOM
 
 ```bash
 make analyze PROJECT=./my-app
 make sbom-score SBOM=./bom.json
+make sbom-minimum-elements SBOM=./bom.json
 make policy-check SBOM=./bom.json POLICY=policies/default-release-policy.yml
 make report SBOM=./bom.json
 ```
@@ -178,423 +77,122 @@ make report SBOM=./bom.json
 ```bash
 make supplier-intake SBOM=./vendor-bom.json
 make supplier-questions SBOM=./vendor-bom.json
-make sbom-minimum-elements SBOM=./vendor-bom.json
+make redact-sbom SBOM=./vendor-bom.json
 ```
 
-### Use the local workbench UI
+### Generate release evidence
 
 ```bash
-make ui-server
+make release-evidence SBOM=./bom.json POLICY=policies/default-release-policy.yml
+make checksums ARTIFACT_DIR=dist
+make sign-artifacts ARTIFACT_DIR=dist
 ```
 
-Then open:
-
-```text
-http://127.0.0.1:8080
-```
-
-Upload an SBOM, choose a workflow, watch job status, review results, and download the evidence bundle.
-
-### Run fuzzing and AI-assisted fuzzing
-
-```bash
-make fuzz-smoke
-make fuzz-roundtrip SBOM=test-sboms/clean/minimal-cyclonedx.json
-make fuzz-metamorphic SBOM=test-sboms/clean/minimal-cyclonedx.json
-make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
-make ai-fuzz-campaign GOAL=sbom-parser-hardening
-```
-
-Optional GLM local-model profile:
-
-```bash
-make ai-provider-test AI_PROVIDER=glm AI_MODEL=glm-5.2
-GLM_BASE_URL=http://127.0.0.1:8000/v1 GLM_MODEL=glm-5.2 \
-  make ai-fuzz-seeds AI_PROVIDER=glm FORMAT=cyclonedx SCENARIO=dependency-cycles
-```
-
-Use the exact model name exposed by your local runtime. See `docs/integrations/GLM-LOCAL-MODELS.md`.
-
-AI-generated material lands in review queues first. Review before accepting anything into a corpus, campaign, harness, or regression suite.
-
-## Safety and privacy model
-
-SBOMs can reveal sensitive internal package names, repository paths, supplier relationships, and vulnerable components. The toolkit follows these defaults:
-
-- local-first execution;
-- localhost-only UI by default;
-- generated artifacts stored under local report/job directories;
-- redaction helpers for sharing SBOMs or reports;
-- AI provider usage is optional;
-- prompt-only AI mode works without API keys;
-- generated AI output is advisory and review-gated;
-- VEX/exploitability decisions require human evidence;
-- no multi-user auth or cloud storage is included by default.
-
----
-
-## The quick path: `orchestrate.sh`
-
-```bash
-./orchestrate.sh path/to/any-sbom
-```
-
-Feed it any SBOM (CycloneDX XML/JSON or SPDX JSON, any tool that produced it, any spec version) and it runs the pipeline: scan it (Stage 1), have Claude triage the results (Stage 2, if `ANTHROPIC_API_KEY` is set), hand the component list to Claude Code to pick what's worth fuzzing and write new harnesses for it (Stage 3, if `claude` is on PATH), then fuzz everything that exists (Stage 4, if Docker is available). Each stage degrades gracefully and says so if its dependency is missing, rather than failing the whole run. Output lands in `runs/<timestamp>/`, ending in one `SUMMARY.md`.
-
-**Multi-ecosystem support:** Stage 1 (vuln scanning) is genuinely ecosystem-agnostic — OSV-Scanner and Trivy work across all languages. Stage 3/4 (fuzzing) now supports **PHP (php-fuzzer), JavaScript/TypeScript (Jazzer.js), and Python (Atheris)** with engines ready to use. Java, Go, and Rust templates exist but need testing. When you run `orchestrate.sh`, it detects which ecosystems are in your SBOM and automatically runs the appropriate fuzzing engines. Ecosystems without engines still get scanned for CVEs; they just skip fuzzing with a clear message.
-
-"Takes over" here means the deterministic and delegate-able steps run unattended — it does not mean nothing needs a human afterward. `SUMMARY.md` ends with an explicit "still needs a human" list every run: generated targets to read before trusting, P0/P1 triage calls to confirm against real code, any crash to actually go minimize and judge. See `--auto`, `--budget`, `--skip-new-targets`, `--skip-fuzz` in the script header for the available flags — `--auto` unattends Claude Code's permission prompts too (`--dangerously-skip-permissions`), which is fine in CI and not something to reach for on a dev machine by default.
-
----
-
-## 1. Known-vulnerability analysis (`vuln-scan/`)
-
-```bash
-cd vuln-scan
-chmod +x scan.sh
-./scan.sh                       # uses ./cyclonedx-sbom.xml, writes reports/<timestamp>/
-```
-
-- **OSV-Scanner** (Google) and **Trivy** (Aqua) run independently against the SBOM and cross-check each other. Different advisory sources → fewer missed CVEs.
-- Both read CycloneDX directly, so no PHP toolchain is needed — but **internet access is required** the first time (they download advisory databases).
-- Outputs: human-readable tables, plus JSON/SARIF/CycloneDX-VEX for CI and GitHub code scanning.
-
-**Continuous monitoring (recommended):** `docker compose up -d` brings up **OWASP Dependency-Track** (backed by Postgres — see `docker-compose.yml`). Upload the SBOM once via the UI, or run `./upload-to-dependency-track.sh` to do it via API, and it re-evaluates as new CVEs are published — so a flaw disclosed next month against a version you currently ship alerts you automatically.
-
-**`triage-2026-06.md`** is a preliminary manual triage I did from public advisories. It already flags likely hits on `laravel/framework 11.35.0` (debug-page XSS, file-validation bypass) and several `symfony/* 7.2.x` components (May–June 2026 advisories). **Treat it as a starting point — `scan.sh` is the authoritative list.** I matched version ranges by hand, which is error-prone across 91 packages.
-
----
-
-## 2. Fuzzing apparatus (`fuzzing/`)
-
-Coverage-guided fuzzing for **PHP, JavaScript/TypeScript, and Python** libraries extracted from your SBOM. Each ecosystem uses its best-in-class open-source fuzzer:
-
-- **PHP:** [nikic/PHP-Fuzzer](https://github.com/nikic/PHP-Fuzzer) — libFuzzer-style with AST instrumentation
-- **JavaScript/TypeScript:** [Jazzer.js](https://github.com/CodeIntelligenceTesting/jazzer.js) — V8 native coverage
-- **Python:** [Atheris](https://github.com/google/atheris) — libFuzzer for Python via C API
-
-All engines are containerized and follow a common interface. See `fuzzing/README-ENGINES.md` for full documentation.
-
-Targets are pinned to your **exact SBOM versions** (see `composer.json`) so you fuzz what you actually deploy:
-
-| Target | Library (SBOM version) | Why it's a good fuzz target |
-|---|---|---|
-| `commonmark`       | league/commonmark 2.6.0      | Markdown parser; attacker-controlled text in many apps |
-| `php_parser`       | nikic/php-parser 5.3.1       | Full PHP-grammar parser (the classic case) |
-| `psr7_uri`         | guzzlehttp/psr7 2.7.0        | URI parse/serialize; feeds routing & SSRF defenses |
-| `psr7_message`     | guzzlehttp/psr7 2.7.0        | Raw HTTP message parse/serialize — the exact surface behind CVE-2026-48998/49214/55766, see below |
-| `league_uri`       | league/uri 7.5.1             | Second URI parser → differential bugs vs. PSR-7 |
-| `symfony_yaml`     | symfony/yaml 7.2.0           | YAML parser; historic DoS / type-confusion bugs, corpus now seeded to probe three confirmed 2026 CVEs, see below |
-| `email_validator`  | egulias/email-validator 4.0.2| RFC email lexer behind your mailer |
-| `brick_math`       | brick/math 0.12.1            | Numeric-string parsing + bignum arithmetic |
-
-> **Building this surfaced real findings.** `composer install` failed on the first build: Composer's built-in security-advisory blocking (on by default since 2.9) refused to install `league/commonmark 2.6.0`, `guzzlehttp/psr7 2.7.0`, and `symfony/yaml 7.2.0` because all three carry active, currently-unpatched-at-that-version CVEs — nine advisories total. `composer.json` now explicitly allows installing them anyway (that's the entire point: fuzz what's deployed, vulnerabilities included), with the full list in a comment there and in `vuln-scan/triage-2026-06.md`. Two targets were sharpened in response: `psr7_message.php` is new because the psr7 CVEs live in raw-message parse/serialize, not the URI parsing the original `psr7_uri` target exercised; and `symfony_yaml`'s corpus now includes seeds built directly from the three confirmed YAML CVEs (deep-nesting stack exhaustion, alias-expansion "billion laughs," and a ReDoS-prone directive-header regex) — since `Yaml::parse()` on raw fuzzer input is exactly the vulnerable call shape, this harness has a real shot at rediscovering those independently.
-
-### Run it
-
-```bash
-cd fuzzing
-docker build -t sbom-fuzzer .
-
-# Short smoke test (5 min/target), persist findings to ./findings:
-docker run --rm -v "$PWD/findings:/fuzz/findings" sbom-fuzzer
-
-# A real campaign — 4 hours per target:
-docker run --rm -e TIME_BUDGET=14400 -v "$PWD/findings:/fuzz/findings" sbom-fuzzer
-
-# One target only:
-docker run --rm -v "$PWD/findings:/fuzz/findings" sbom-fuzzer commonmark
-```
-
-Corpora and crash files accumulate in `./findings/<target>/`. Resuming a run reuses the grown corpus, so coverage compounds over time.
-
-### When a crash is found
-```bash
-php-fuzzer minimize-crash targets/<t>.php findings/<t>/crash-XXXX.txt   # shrink it
-php-fuzzer run-single     targets/<t>.php findings/<t>/minimized-XXXX.txt # read trace
-php-fuzzer report-coverage targets/<t>.php findings/<t>/corpus cov-<t>/   # HTML coverage
-```
-
-A whitelisted exception (e.g. `PhpParser\Error`) on bad input is normal. An **uncaught `\Error`, a hang, or runaway memory is a real bug.** Whether it's a *security* bug depends on whether that input is attacker-reachable in your application — triage by reachability, not just by the fact that it crashed.
-
-### Adding a target
-Drop a `targets/<name>.php` that sets `$config->setTarget(fn(string $input) => /* call the library */)`, add the library to `composer.json` at its SBOM version, add seeds under `corpus/<name>/`, rebuild. Good candidates still on the table: `league/flysystem`, `monolog` formatters, `nette/schema`, `ramsey/uuid`, `symfony/mime`.
-
----
-
-## Deploying this
-
-None of this runs inside a chat sandbox — it needs an environment with Docker and internet access: your machine, a CI runner, or a server. Three tiers, roughly in the order most teams adopt them:
-
-### 1. Local, one-off (try it out)
-```bash
-# vuln scan — install the two binaries once, then:
-cd vuln-scan && ./scan.sh
-
-# fuzzing — needs Docker:
-cd fuzzing && docker build -t sbom-fuzzer . && docker run --rm -v "$PWD/findings:/fuzz/findings" sbom-fuzzer
-```
-Install OSV-Scanner and Trivy via Homebrew (`brew install osv-scanner trivy`) or see their installation docs linked in `scan.sh`'s error output.
-
-### 2. CI (automatic, every build + on a schedule)
-`ci/github-actions-vuln-scan.yml` and `ci/github-actions-fuzz-scheduled.yml` are ready to copy into `.github/workflows/`. The vuln-scan workflow installs OSV-Scanner and Trivy as pinned, checksum-verified binaries rather than via the `aquasecurity/trivy-action` / `setup-trivy` GitHub Actions — **read the comment block at the top of that file**: those two Actions had their version tags force-pushed to malicious commits in a March 2026 supply-chain compromise (remediated within hours, but it's the reason "pin third-party Actions to a commit SHA, not a tag" is in there as a standing rule, not just trivia). Not on GitHub Actions? The same two `curl`+binary steps drop into a GitLab CI, Jenkins, or CircleCI job with only syntax changes — the underlying commands don't change.
-
-### 3. Persistent server (continuous monitoring)
-Point-in-time scans miss CVEs disclosed *after* the scan ran. `docker compose up -d` in `vuln-scan/` brings up OWASP Dependency-Track (with a real Postgres backend, not the eval-only embedded H2) so newly-published advisories against your current versions alert automatically. This needs a host that stays up — not a laptop.
-- Change the admin/admin login immediately (Dependency-Track forces this on first web login).
-- Keep it off the public internet — internal network or VPN only — since it's a map of every vulnerable thing you run.
-- `vuln-scan/upload-to-dependency-track.sh` pushes a fresh SBOM to it via API; call it from CI so the picture stays current without anyone clicking "upload."
-
-Fuzzing doesn't fit the "persistent service" model the way Dependency-Track does — it's a batch job. Best run as the scheduled CI job above, or on a spare box with `findings/` bind-mounted permanently so the corpus keeps growing across runs instead of resetting each time.
-
----
-
-## AI-assisted analysis
-
-Two integration points, deliberately kept separate from the core engines. **The fuzzer's coverage-guided mutation and the scanners' advisory-database matching stay exactly as they are** — those are well-defined algorithmic problems that PHP-Fuzzer and OSV-Scanner/Trivy already solve better than an LLM would. What AI adds is the judgment layer on top: turning raw findings into prioritized, plain-English triage, and extending investigation into places nobody's pointed a human yet.
-
-### Tier 1 — synthesizing scanner/fuzzer output (works anywhere, just needs an API key)
-
-`vuln-scan/ai-triage.sh` sends `scan.sh`'s raw OSV/Trivy JSON to Claude and gets back a priority-sorted, plain-English draft — the same kind of synthesis that went into `triage-2026-06.md` by hand (read the advisory, pull out the gating condition, decide if it's a P0 or a non-issue), but for all 91 components instead of the handful checked manually.
-
-```bash
-export ANTHROPIC_API_KEY="your_anthropic_api_key_here"
-cd vuln-scan
-./ai-triage.sh reports/osv.json reports/trivy.json
-```
-
-It does **not** read your application code — it only reasons over the scanner JSON, which already carries the advisory description, so it can't tell you whether a finding is actually reachable. Treat its output as a sorted first draft, not a verdict. `ci/github-actions-vuln-scan.yml` now runs this automatically after every scan if you add an `ANTHROPIC_API_KEY` repository secret — it's skipped cleanly if you don't.
-
-### Tier 2 — repo-aware investigation (needs Claude Code)
-
-For "is this actually reachable in *our* code," you need something that can read the codebase, not just the advisory text. That's a natural fit for [Claude Code](https://docs.claude.com/en/docs/claude-code/overview)'s headless mode (`claude -p`), which runs non-interactively and can read/search files.
-
-**Reachability check** — run this from your *application's* repo (not this toolkit, which doesn't contain the app source):
-```bash
-cd /path/to/your/laravel/app
-claude -p --allowedTools "Read,Grep,Glob" --output-format json \
-  "A dependency scan flagged guzzlehttp/psr7 2.7.0 for CVE-2026-48998/49214/55766 — CRLF injection and host confusion, all in GuzzleHttp\Psr7\Message::parseRequest(), Message::toString(), and ServerRequest::fromGlobals()/getUriFromGlobals(), NOT in normal Guzzle client usage. Search this codebase for direct calls to those methods. Report every call site with file:line, what feeds it, and whether that input could be attacker-controlled. If there are none, say so explicitly." \
-  > psr7-reachability.json
-```
-
-**Extending fuzz coverage** — we've hand-built targets for 8 of the 91 SBOM components. Claude Code can draft more, following the existing pattern:
-```bash
-cd fuzzing
-# Make the installed library source readable on the host first —
-# vendor/ only exists inside the built image otherwise:
-docker create --name tmp-fuzz-extract sbom-fuzzer >/dev/null
-docker cp tmp-fuzz-extract:/fuzz/vendor ./vendor
-docker rm tmp-fuzz-extract >/dev/null
-
-claude -p --allowedTools "Read,Write,Bash" --max-turns 15 \
-  "Look at targets/commonmark.php and targets/symfony_yaml.php as examples of this project's php-fuzzer target pattern. Read vendor/league/flysystem's public API (composer.json for the exact pinned version, then src/). Write targets/flysystem.php fuzzing a sensible entry point — path handling or adapter resolution — for that exact version, following the same structure: setMaxLen, setAllowedExceptions for the library's own declared exception types, and a setTarget closure. Add 3-5 seed files under corpus/flysystem/."
-```
-Review whatever it writes before trusting it the way you'd review any generated code — it's a draft to accelerate the same manual process used for the 8 existing targets, not a replacement for reading it.
-
-For unattended/scheduled runs of either command, add `--bare --dangerously-skip-permissions` (only in CI, never on a dev machine) so it doesn't stop for approval prompts.
-
-### What the current evidence actually says about local/security-specific models
-
-Worth grounding this before building on it, since the space moves fast and is easy to oversell:
-
-- A 2026 reproducibility study (["Revisiting Vul-RAG"](https://arxiv.org/pdf/2606.04739)) testing a range of open-weight models — code-specialized, general-purpose, and reasoning models of varying sizes — on RAG-augmented vulnerability detection found a **performance plateau around 0.30 pairwise accuracy that persists even for the most recent, most capable open-weight models.** More parameters and more reasoning didn't move the needle much. Read that as: don't expect a local model, however large, to reliably tell you whether something is *actually* exploitable.
-- A separate 2026 benchmark of real-world web vulnerability detection across six frontier and open-weight models found **Claude Opus 4.6 leading at 63% detection, with every other model — including self-hosted open-weight ones — under 50%.**
-- There is no single obviously-best "security-specific" open-weight model to reach for. What people actually run locally for security tasks right now are general-purpose open-weight reasoning models (DeepSeek-R1, Qwen3, GLM-class models), prompted toward the task — not a narrow fine-tune that reliably beats general capability.
-
-None of that means local models are useless here — it means the honest allocation is: **local models for narrow, high-frequency, low-judgment tasks; Claude for anything where a wrong call costs something.** That's the split used below.
-
-### Local models — where they actually help: fuzzing seed generation
-
-This is a real, separately-studied use case, not a stretch: [SeedMind](https://arxiv.org/html/2411.18143v1), [LLAMAFUZZ](https://arxiv.org/pdf/2406.07714), and [ISC4DGF](https://arxiv.org/pdf/2409.14329) (2024–2026) all show LLM-suggested seeds measurably improving coverage-guided fuzzing, using models well below frontier scale — because generating plausible, edge-case-y inputs for a known format doesn't require deep security judgment, just format fluency and a nudge toward boundary conditions.
-
-`fuzzing/local-model-seed-suggest.sh` does this against [Ollama](https://ollama.com) running locally:
-```bash
-ollama pull qwen2.5-coder:7b   # once
-cd fuzzing
-./local-model-seed-suggest.sh commonmark 10
-```
-It reads the target definition + a few existing seeds, asks the local model for more in the same format, and drops them into `corpus/<target>/`. It does **not** touch PHP-Fuzzer's own mutation engine — a bad suggestion is inert; the coverage-guided algorithm just never selects it. Cheap enough to re-run every few minutes during a long campaign, which an API call to any cloud model wouldn't be.
-
-**Directed follow-up:** when `ai-triage.sh` or Dependency-Track flags a new advisory against a library we fuzz, that's a signal about *where* to point fuzzing effort next, not just what to patch — directed greybox fuzzing research (ISC4DGF) is built on exactly this idea. In practice, that's just:
-```bash
-docker run --rm -e TIME_BUDGET=3600 -v "$PWD/findings:/fuzz/findings" sbom-fuzzer symfony_yaml
-```
-— pointing a bigger time budget at the specific target implicated by a fresh finding, rather than spreading budget evenly across all 8.
-
-### Claude Code + local models together, not instead of each other
-
-Fully replacing Claude Code's brain with a local model is possible — Ollama has a documented [Anthropic-compatible endpoint](https://docs.ollama.com/integrations/claude-code) (`ollama launch claude`) that points Claude Code at a local or Ollama-hosted model instead of Anthropic's API. That's the right call only if the actual requirement is "nothing leaves this machine, full stop" — worth being honest that this trades Claude's judgment for a model sitting on the wrong side of that Vul-RAG plateau, so it's a real capability cost, not a free swap. It's also worth naming plainly: `ai-triage.sh` and the Claude Code examples elsewhere in this README already send data to Anthropic's API. If air-gapping is the actual goal, that constraint applies to those too, not just anything new.
-
-The more useful pattern for most teams is the other direction: **keep Claude Code on the real API for judgment, delegate high-volume/low-judgment sub-steps to a local model it calls out to.** This is an established pattern with existing community MCP servers built for exactly it — e.g. [`claude-sidekick`](https://github.com/andrewbrereton/claude-sidekick) and [`OllamaClaude`](https://github.com/Jadael/OllamaClaude), both wiring a local Ollama instance in as tools Claude Code can call, reporting up to ~98% token savings on the sub-tasks they offload. These are third-party community projects, not Anthropic's — read the code before pointing them at anything sensitive, same as you would any tool with API/filesystem access. Concretely for this toolkit: pointing Claude Code's target-scaffolding task (see Tier 2 above) at such a bridge lets the *local* model do the mechanical work — reading through an entire vendor library's source tree and summarizing its API surface — while Claude still makes the actual judgment call about what's worth fuzzing and writes the target.
-
-### Where this doesn't help
-
-An LLM guessing at "interesting" fuzz inputs directly would be a *worse* fuzzer than PHP-Fuzzer's actual edge-coverage feedback loop — don't replace `run.sh` with prompting; use local models to widen the seed pool, not to replace the mutation engine. Likewise, don't let Tier 1's output, or a local model's opinion, skip the reachability check: given the plateau in open-weight vulnerability-detection accuracy above, a confident-sounding severity label from any model that hasn't seen your code — local or otherwise — is a prioritization hint, not clearance to patch-and-forget without a human looking at the actual call sites.
-
----
-
-## Running this on EC2 with Amazon Bedrock
-
-For teams that want this on AWS infrastructure billing through the existing AWS account, with IAM instead of a separate Anthropic API key floating around.
-
-**Read this first, it'll save you time:** Claude Sonnet 5 reached Bedrock through a distinct, very new endpoint Anthropic calls "Mantle" (`AnthropicBedrockMantle` in the SDK) — separate from the older `AnthropicBedrock` client used for earlier, ARN-versioned model IDs. `vuln-scan/call_claude.py` tries Mantle first and falls back to the legacy client with a clear warning if your installed SDK doesn't have it yet. If both paths fail, that's a sign this corner of the API moved again since this was written — check `docs.claude.com`'s Bedrock pages rather than trusting either hardcoded model ID blindly. This isn't hedging for its own sake: this exact endpoint was days old when this was built, so treat the model ID as something to verify once, not gospel.
-
-### One-time AWS setup
-1. **Request model access** — AWS Console → Bedrock → Model access → enable the Anthropic models you want. Per-account, one-time, takes a few minutes to a few hours to grant.
-2. **Have an EC2 key pair** ready (`aws ec2 describe-key-pairs` to check, or create one in the console).
-
-### Launch
-```bash
-cd aws
-export YOUR_IP=$(curl -s https://checkip.amazonaws.com)/32
-export KEY_NAME=your-key-pair-name
-./launch-ec2.sh
-```
-This creates an IAM role scoped to exactly `bedrock:InvokeModel`/`InvokeModelWithResponseStream` on Anthropic models — no broader AWS access, and no static credentials anywhere — a security group open for SSH from your IP only, looks up the *current* Amazon Linux 2023 AMI via SSM rather than a hardcoded ID that goes stale, and launches with `bootstrap.sh` as user-data. **This targets AL2023, not AL2** — Amazon Linux 2 reaches end-of-support on 2026-06-30, so starting anything new on it isn't a reasonable default anymore.
-
-Bootstrap installs Docker, Node + Claude Code, OSV-Scanner, pinned+checksum-verified Trivy (same approach as the CI file), and the `anthropic[bedrock]` Python SDK. It does not fetch this toolkit onto the box — after it finishes (`ssh` in, `sudo tail -50 /var/log/cloud-init-output.log` to confirm), pull the toolkit yourself (git clone your fork/mirror, or scp the zip).
-
-### Point everything at Bedrock
-```bash
-export CLAUDE_BACKEND=bedrock          # ai-triage.sh / call_claude.py
-export CLAUDE_CODE_USE_BEDROCK=1       # Claude Code itself
-export AWS_REGION=us-east-1            # wherever you granted model access
-```
-With those set, `./orchestrate.sh path/to/sbom.xml` runs exactly as documented above — every stage that talks to Claude now goes through Bedrock using the instance's IAM role, with zero code changes and no API key on the box at all. Verify with `aws sts get-caller-identity` (confirms the role is assumed) followed by `python3 vuln-scan/call_claude.py --backend bedrock --prompt "Say OK"` (confirms inference actually works) — **not** `aws bedrock list-foundation-models`, which needs `bedrock:ListFoundationModels`, a permission `iam-bedrock-policy.json` deliberately doesn't grant. An error on the second command citing `bedrock-mantle:CreateInference` means the role's policy predates that statement (Claude Sonnet 5 runs through a Mantle endpoint with its own separate IAM namespace from classic `bedrock:InvokeModel` — confirmed against AWS's own `AmazonBedrockMantleInferenceAccess` managed policy, not guessed) — re-run the `put-role-policy` command from `launch-ec2.sh` with the current `iam-bedrock-policy.json` to update the existing role. An error about model access instead means Step 1 above hasn't been granted yet.
-
-**On the Dependency-Track piece specifically:** if you also stand that up on this box, do not open its port in the security group `launch-ec2.sh` created — it's intentionally SSH-only. Reach the UI via `ssh -L 8080:localhost:8080 ec2-user@<ip>` instead. Same reasoning as before: it's a live map of every vulnerable thing you run.
-
----
-
-## License
-
-This toolkit is released under the **Functional Source License, Version 1.1, ALv2 Future License (`FSL-1.1-ALv2`)**. Each version converts to Apache-2.0 under the Future License terms described in `LICENSE`.
-
-This is source-available/Fair Source licensing, not OSI-approved open source. Do not describe this package as OSI open source unless you change to an OSI-approved license.
-
-Third-party tools and libraries retain their own licenses.
-
----
-
-## Scope & honest limitations
-
-- **Fuzzing finds crashes/DoS-class bugs in input handling.** It does not find authz flaws, business-logic bugs, SQLi in your own queries, or stored XSS. It complements — does not replace — known-CVE scanning, SAST, and code review.
-- **A crash isn't automatically a CVE.** Confirm reachability and impact before filing or patching.
-- Run all of this only against software your organization owns or is authorized to test.
-- Pin the `php-fuzzer.phar` version in the Dockerfile once you've validated a release, rather than tracking `latest`.
-
-## Fuzzing Capabilities
-
-The toolkit includes an expanded fuzzing subsystem for SBOM security research and parser hardening:
-
-- SBOM-specific fuzz targets for CycloneDX JSON, SPDX JSON, package-url strings, and SPDX-style license expressions.
-- Dockerized Python/Atheris, JavaScript/Jazzer.js, and PHP/php-fuzzer engines.
-- `make fuzz-smoke`, `make fuzz-nightly`, and `make fuzz-deep` workflows.
-- Crash metadata and reproducer scaffolding under `fuzzing/findings/<target>/`.
-- Corpus generation and mutation tools for real SBOMs.
-- Differential SBOM testing across locally installed tools such as Trivy, Grype, Syft, and CycloneDX CLI.
-- AI-assisted seed suggestion using a local Ollama model, with human review required before seeds are promoted.
-
-Start with:
-
-```bash
-make fuzz-smoke
-make fuzz-scorecard
-make fuzz-corpus SBOM=vuln-scan/cyclonedx-sbom.xml
-make fuzz-differential SBOM=vuln-scan/cyclonedx-sbom.xml
-```
-
-See `docs/fuzzing/CONTINUOUS-FUZZING.md` and `fuzzing/README-ENGINES.md` for details.
-
-
-## SBOM Operations Workbench
-
-The toolkit now includes a lightweight SBOM operations layer in addition to vulnerability scanning and fuzzing.
-
-Useful commands:
-
-```bash
-make sbom-score SBOM=vuln-scan/cyclonedx-sbom.xml
-make policy-check SBOM=vuln-scan/cyclonedx-sbom.xml POLICY=policies/default-release-policy.yml
-make supplier-intake SBOM=test-sboms/supplier-intake/incomplete-supplier-sbom.json
-make vex-template CVE=CVE-2099-0001 COMPONENT=pkg:pypi/example-lib@1.0.0 STATE=under_investigation
-make vex-validate VEX=vex/examples/not_affected.cdx.json
-make prioritize VULNS=test-sboms/vulnerable/sample-trivy-report.json
-make scanner-compare SBOM=vuln-scan/cyclonedx-sbom.xml
-make release-evidence SBOM=vuln-scan/cyclonedx-sbom.xml
-make demo
-```
-
-New capabilities include:
-
-- SBOM quality scoring.
-- Policy-as-code release gates.
-- Supplier SBOM intake review.
-- CycloneDX VEX template, validation, merge, and explanation helpers.
-- Vulnerability prioritization using CVSS/EPSS/KEV-style fields when available.
-- Scanner comparison scaffolding for Trivy, Grype, and OSV-Scanner.
-- OpenSSF Scorecard wrapper scaffolding.
-- GUAC-friendly export scaffolding.
-- Static local dashboard generation.
-- Release evidence bundle generation.
-
-### UI direction
-
-The current UI approach is intentionally lightweight: generate a static local dashboard with:
-
-```bash
-make ui
-open reports/ui/index.html
-```
-
-A full multi-user web application is not included yet. The recommended path is to stabilize the CLI/report schemas first, then add a local-only FastAPI UI if needed.
-
-
-### Local SBOM Workbench UI
-
-Start a localhost-only UI for uploading SBOMs and running toolkit workflows:
-
-```bash
-make ui-server
-```
-
-Then open `http://127.0.0.1:8080`. The UI supports SBOM upload, workflow execution, job status/logs, scanner availability checks, delete controls, and evidence-bundle download. It stores data locally under `ui/storage/` and is not intended to be internet-facing.
-
-See `docs/ui/LOCAL-WORKBENCH.md`.
-
-## v1.6 AI-assisted fuzzing workflows
-
-The toolkit now includes a local-first AI fuzzing layer under `ai_fuzz/`. It uses a review-queue model so AI can propose better fuzzing artifacts without automatically executing or trusting them.
-
-Key commands:
-
-```bash
-make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
-make ai-mutation-plan SBOM=test-sboms/clean/minimal-cyclonedx.json
-make ai-oracle-suggest TARGET=sbomops/minimum_elements.py
-make ai-crash-triage CRASH=fuzzing/findings/example
-make ai-regression-test CRASH=fuzzing/findings/example
-make ai-fuzz-harness TARGET=sbomops/redact.py
-make ai-coverage-suggest COVERAGE=fuzzing/reports/fuzz-coverage.md
-make ai-fuzz-campaign GOAL=dependency-track-import-hardening
-make ai-explain-disagreement REPORT=reports/scanner-compare/scanner-comparison.json
-make ai-review-list
-```
-
-Default behavior is prompt-only/deterministic and requires no API key. Optional providers are configured with `AI_FUZZ_PROVIDER=ollama` or `AI_FUZZ_PROVIDER=openai-compatible`. All generated artifacts land in `ai_fuzz/review/incoming/` for human review. See `docs/fuzzing/AI-ASSISTED-FUZZING.md`.
-
-
-## v1.7 Preview: Coverage-Guided Fuzzing Lab and SBOM Experience
-
-This version adds schema-aware SBOM seed generators, AFL++ scaffolding, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, scanner metamorphic testing, fuzzing dictionaries, budget profiles, bug-class campaigns, advisory draft generation, and an all-local fuzzing command.
-
-It also improves the SBOM user experience with commands to explain, normalize, repair, diff, and export SBOM inventories so users can better understand what an SBOM contains before feeding it into scanners or supplier workflows.
-
-Key commands:
+### Run local fuzzing workflows
 
 ```bash
 make fuzz-all-local SBOM=test-sboms/clean/minimal-cyclonedx.json
-make fuzz-generate-cyclonedx EDGE=dependency-cycle COUNT=25
-make fuzz-toolchain SBOM=test-sboms/clean/minimal-cyclonedx.json
-make sbom-experience SBOM=test-sboms/clean/minimal-cyclonedx.json
+TIME_BUDGET=60 make fuzz-all-timed SBOM=test-sboms/clean/minimal-cyclonedx.json
+make fuzz-intelligence
+make fuzz-corpus-recommend
+make fuzz-vuln-matching
+make fuzz-vex-logic
+make fuzz-evil-supplier
+make fuzz-lab-dashboard
 ```
+
+### Use AI-assisted fuzzing safely
+
+```bash
+make ai-provider-test AI_PROVIDER=glm AI_MODEL=glm-5.2
+make ai-fuzz-seeds AI_PROVIDER=none FORMAT=cyclonedx SCENARIO=dependency-cycles
+make ai-harness-quality-loop TARGET=sbomops/minimum_elements.py AI_PROVIDER=none
+make ai-seed-generator GOAL=vex-logic-errors AI_PROVIDER=none
+make ai-fuzz-redteam AI_PROVIDER=none
+```
+
+`AI_PROVIDER=none` is prompt-only mode and requires no API key. Optional provider aliases include `glm`, `ollama`, and `openai-compatible`.
+
+## Local workbench UI
+
+Start the local UI:
+
+```bash
+make ui-server
+```
+
+The workbench provides:
+
+- SBOM upload and workflow launch
+- job status and logs
+- evidence bundle download
+- scanner availability checks
+- Fuzzing Lab workflow launch page
+- time limit controls for fuzzing runs
+- run-all timed fuzzing workflow for user-defined seconds per step/library
+- Fuzzing Logs page
+- Fuzzing Dashboard page for intelligence, corpus recommendations, AI red-team results, compatibility data, and finding lifecycle state
+
+The UI binds to `127.0.0.1` by default. It has no auth, no database, and no cloud upload. Use it as a local single-user workbench.
+
+## Fuzzing capabilities
+
+The fuzzing lab focuses on **semantic SBOM failures**, not just crashes. It includes:
+
+- SBOM-specific targets for CycloneDX, SPDX, purl, license expressions, VEX, and Dependency-Track payloads
+- structure-preserving mutators and schema-aware seed generation
+- grammar-mutator scaffolding for CycloneDX, SPDX tag-value, purl, license expressions, and VEX
+- round-trip and metamorphic SBOM checks
+- semantic oracles for component drops, dependency loss, duplicate identities, invalid references, and related issues
+- scanner/toolchain fuzzing and metamorphic scanner checks
+- vulnerability matching fuzzing for purl/CPE/ecosystem ambiguity
+- VEX contradiction and logic fuzzing
+- evil supplier SBOM scenarios for supplier-intake hardening
+- fuzzing intelligence scoring and corpus promotion recommendations
+- crash/replay packs, finding lifecycle tracking, and CI fuzzing scaffolding
+- AI-assisted seed, campaign, harness, repair, red-team, and triage workflows
+- format-tolerant fuzzing handlers that normalize CycloneDX XML/SPDX/tag-value inputs before JSON-oriented semantic fuzzing workflows
+
+## How this compares to other tooling
+
+| Category | Examples | Relationship to this toolkit |
+|---|---|---|
+| SBOM generators | Syft, cdxgen, Microsoft SBOM Tool, GitHub SBOM export | These generate SBOMs. This toolkit consumes, validates, scores, compares, repairs, and tests SBOM workflows. |
+| Vulnerability scanners | Trivy, Grype, OSV-Scanner | These find known vulnerabilities. This toolkit wraps/compares scanner output and adds policy, confidence, fuzzing, and evidence workflows. |
+| SBOM management platforms | Dependency-Track, Anchore, FOSSA, Black Duck, Snyk, Sonatype | These provide mature enterprise workflows. This toolkit is a lightweight local lab/workbench and reference implementation. |
+| Supply-chain graph/provenance | GUAC, SLSA, OpenSSF Scorecard | These provide graph/provenance/posture context. This toolkit includes integration scaffolding and evidence workflows. |
+| Fuzzing engines | Atheris, Jazzer.js, AFL++, ClusterFuzzLite | These provide fuzzing engines/infrastructure. This toolkit adds SBOM-specific inputs, mutators, semantic oracles, campaigns, and dashboards. |
+| AI assistants | Claude Skills, GLM, Ollama, OpenAI-compatible endpoints | These can assist. This toolkit keeps AI optional, advisory, review-gated, and local-first by default. |
+
+## Install and packaging
+
+```bash
+make setup
+make test
+make validate
+make preflight-release
+make release VERSION=2.1.1
+```
+
+Docker helpers are available:
+
+```bash
+make docker-build
+make docker-ui
+make docker-dtrack
+make docker-guac
+```
+
+## Data safety
+
+This repository is designed to contain synthetic examples and local tooling only. Do not commit production SBOMs, customer data, secrets, internal package inventories, private vendor SBOMs, or generated reports. Run this before releases:
+
+```bash
+make preflight-release
+```
+
+See `DATA-SAFETY.md` and `SECURITY.md`.
+
+## License
+
+This project uses the **Functional Source License 1.1, Apache 2.0 Future License (`FSL-1.1-ALv2`)**. See `LICENSE`.

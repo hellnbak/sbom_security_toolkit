@@ -32,6 +32,23 @@ MODULES = {
     "ai-harness-loop": "ai_fuzz.tools.ai_harness_loop",
     "ai-fuzz-loop": "ai_fuzz.tools.ai_fuzz_loop",
     "ai-fuzz-eval": "ai_fuzz.tools.ai_eval",
+    "fuzz-intelligence": "fuzzing.intelligence.intelligence_score",
+    "fuzz-corpus-recommend": "fuzzing.corpus.recommend",
+    "fuzz-harness-audit": "fuzzing.harness.audit",
+    "ai-harness-quality-loop": "ai_fuzz.tools.ai_harness_quality_loop",
+    "ai-seed-generator": "ai_fuzz.tools.ai_seed_generator",
+    "ai-seed-generator-test": "ai_fuzz.tools.ai_seed_generator_test",
+    "fuzz-grammar": "fuzzing.grammar.run_grammar_mutator",
+    "fuzz-target-coverage": "fuzzing.coverage.target_coverage",
+    "fuzz-semantic-format-diff": "fuzzing.semantic_format_diff.semantic_format_diff",
+    "fuzz-vuln-matching": "fuzzing.vuln_matching.vuln_matching_fuzz",
+    "fuzz-vex-logic": "fuzzing.vex_logic.vex_logic_fuzz",
+    "fuzz-evil-supplier": "fuzzing.evil_supplier.evil_supplier",
+    "ai-fuzz-redteam": "ai_fuzz.tools.ai_redteam",
+    "cflite-import-results": "fuzzing.clusterfuzzlite.import_results",
+    "fuzz-ci-dashboard": "fuzzing.clusterfuzzlite.ci_dashboard",
+    "fuzz-finding-update": "fuzzing.findings_lifecycle.lifecycle",
+    "fuzz-lab-dashboard": "fuzzing.visualize.fuzzing_lab_dashboard",
 }
 
 def main():

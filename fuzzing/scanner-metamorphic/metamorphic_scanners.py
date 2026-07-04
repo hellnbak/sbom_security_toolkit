@@ -2,9 +2,15 @@
 from __future__ import annotations
 import argparse,json,subprocess,shutil,tempfile
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 def variants(sbom:Path,out:Path):
-    data=json.loads(sbom.read_text())
+    try:
+        data=json.loads(sbom.read_text())
+    except Exception:
+        from fuzzing.common.sbom_load import load_json_or_normalized
+        data=load_json_or_normalized(sbom)
     outs=[]
     for name,indent,sort in [('pretty',2,True),('minified',None,False),('reordered',2,False)]:
         d=json.loads(json.dumps(data))

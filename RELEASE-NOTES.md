@@ -1,3 +1,46 @@
+# v2.1.1 - Fuzzing Lab Time Limits and Format-Tolerant Runs
+
+This patch fixes the Fuzzing Lab before the v2.1 line is considered final.
+
+Added/fixed:
+
+- Restored browser controls for fuzzing run time limits.
+- Added a **run all timed fuzzing** workflow that runs available local fuzzing efforts with a user-set time limit per step/library.
+- Added run-target controls for timed runs, including SBOM/scanner/AI and optional Python/JavaScript/PHP engine groups when Docker is available.
+- Hardened JSON-oriented fuzzing workflows so CycloneDX XML, SPDX tag-value, and other supported non-JSON SBOMs are normalized before semantic/round-trip/metamorphic fuzzing instead of crashing with `JSONDecodeError`.
+- Added workbench tests for timed fuzzing exposure and XML normalization.
+- Updated README and UI docs to reflect the actual Fuzzing Lab behavior.
+
+# v2.1.0 - Intelligent Fuzzing Operations
+
+This release expands the Fuzzing Lab into a more adaptive local fuzzing operations environment and updates the README to match the shipped feature set.
+
+## Added
+
+- Fuzzing intelligence scoring.
+- Corpus promotion recommendations.
+- Harness quality audit.
+- AI generate-check-fix harness quality loop.
+- AI seed-generator synthesis and test workflow.
+- Runnable grammar-mutator scaffold.
+- Method-targeted coverage hints.
+- Semantic format-diff fuzzing.
+- Vulnerability matching fuzzing.
+- VEX contradiction and logic fuzzing.
+- Evil supplier SBOM scenario suite.
+- AI fuzzing provider red-team checks.
+- ClusterFuzzLite result import and local CI dashboard.
+- Fuzz finding lifecycle tracking.
+- Fuzzing Lab visualization dashboard.
+- Web UI updates for additional fuzzing workflows, workflow options, logs, and dashboard access.
+- CLI and Make targets for the new fuzzing operations workflows.
+
+## Safety model
+
+AI remains optional, advisory, and review-gated. The default provider mode is prompt-only. AI-generated harnesses, seed generators, and campaign ideas are saved for review and are not executed or promoted automatically.
+
+---
+
 # v2.0.1 - Fuzzing Lab UI Enhancements
 
 This patch release expands the local Workbench UI with browser-driven fuzzing workflows and a dedicated fuzzing log view.

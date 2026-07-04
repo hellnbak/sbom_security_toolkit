@@ -2,8 +2,11 @@
 from __future__ import annotations
 import argparse, copy, json, random, sys
 from pathlib import Path
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "oracles"))
 import semantic_oracles
+from fuzzing.common.sbom_load import load_json_or_normalized, write_json
 
 def reorder(doc):
     out=copy.deepcopy(doc)
@@ -24,9 +27,9 @@ TRANSFORMS={"reorder":reorder,"harmless_metadata":harmless_metadata,"minify_pret
 
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("sbom"); ap.add_argument("--out-dir",default="fuzzing/reports/metamorphic"); args=ap.parse_args(); p=Path(args.sbom); out=Path(args.out_dir); out.mkdir(parents=True,exist_ok=True)
-    doc=json.loads(p.read_text(errors="replace")); reports=[]
+    doc=load_json_or_normalized(p); reports=[]
     for name,fn in TRANSFORMS.items():
-        transformed=fn(doc); tp=out/f"{p.stem}.{name}.json"; tp.write_text(json.dumps(transformed,indent=2,ensure_ascii=False)+"\n")
+        transformed=fn(doc); tp=out/f"{p.stem}.{name}.json"; write_json(tp, transformed)
         findings=semantic_oracles.compare(doc,transformed)
         reports.append({"transform":name,"output":str(tp),"findings":findings,"passed":not any(f["severity"]=="fail" for f in findings)})
     report={"input":str(p),"transforms":reports,"passed":all(r["passed"] for r in reports)}
