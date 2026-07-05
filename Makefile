@@ -598,3 +598,27 @@ fuzz-finding-update:
 
 fuzz-lab-dashboard:
 	python3 fuzzing/visualize/fuzzing_lab_dashboard.py --out reports/fuzzing/lab-dashboard.html
+
+# Repository intake and SBOM build pipeline
+REPO_SOURCE ?= .
+REPO_OUT ?= reports/repo-intake
+REPO_GENERATORS ?= auto
+GITHUB_TOKEN_ENV ?= GITHUB_TOKEN
+ALLOW_REMOTE ?= 0
+
+.PHONY: repo-intake repo-sbom repo-scan repo-fuzz repo-evidence repo-detect
+
+repo-detect:
+	python3 -m sbomops.repo_intake detect $(REPO_SOURCE) --out $(REPO_OUT)/detected-ecosystems.json $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+
+repo-sbom:
+	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --no-scan $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+
+repo-scan:
+	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+
+repo-fuzz:
+	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --fuzz $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+
+repo-evidence repo-intake:
+	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --fuzz $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)

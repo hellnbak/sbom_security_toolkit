@@ -1,3 +1,27 @@
+
+## v2.2.0 - Repository Intake and SBOM Build Pipeline
+
+Adds repository-to-SBOM workflows so users can start from source code instead of requiring a pre-built SBOM.
+
+Highlights:
+
+- Repository Intake tab in the local workbench UI.
+- Local path, repository archive upload, and HTTPS GitHub repository intake.
+- Optional GitHub token support for private repositories; tokens are held only in process memory for the job and are not written to status files or logs.
+- Static ecosystem detection for npm, Python, Go, Maven, Gradle, Rust, Composer, Ruby, .NET, containers, and GitHub Actions.
+- Internal static CycloneDX fallback generator from manifests/lock files.
+- Orchestration for Syft, cdxgen, Trivy, Grype, and OSV-Scanner when installed.
+- SBOM generator comparison report.
+- Optional vulnerability scanning and fuzzing of generated SBOMs.
+- Repository evidence bundle output.
+- CLI and Make targets: `repo-intake`, `repo-sbom`, `repo-scan`, `repo-fuzz`, `repo-evidence`, and `sst repo analyze`.
+
+Safety model:
+
+- No project install/build scripts are run by default.
+- Remote cloning is explicit opt-in.
+- GitHub tokens are passed through environment variables or transient UI process memory.
+
 # v2.1.1 - Fuzzing Lab Time Limits and Format-Tolerant Runs
 
 This patch fixes the Fuzzing Lab before the v2.1 line is considered final.

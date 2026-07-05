@@ -22,6 +22,8 @@ MODULES = {
     "repair": "sbomops.repair",
     "diff": "sbomops.diff",
     "inventory": "sbomops.inventory",
+    "repo": "sbomops.repo_intake",
+    "repo-intake": "sbomops.repo_intake",
 
     "fuzz-plan": "fuzzing.planner.fuzz_plan",
     "fuzz-kb": "fuzzing.kb.fuzz_kb",

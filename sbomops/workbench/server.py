@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 
 from .job_runner import (
-    ROOT, JOBS, WORKFLOWS, FUZZ_WORKFLOWS, create_job, delete_job, list_jobs, read_status, save_upload,
+    ROOT, JOBS, WORKFLOWS, FUZZ_WORKFLOWS, REPO_WORKFLOWS, create_job, delete_job, list_jobs, read_status, save_upload,
     scanner_status, status_path, logs_path, job_dir, storage_init, MAX_UPLOAD_BYTES
 )
 
@@ -21,7 +21,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -70,6 +70,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/jobs": return self.jobs()
         if path.startswith("/jobs/"): return self.job(path.split("/", 2)[2])
         if path == "/scanners": return self.scanners()
+        if path == "/repository": return self.repository_intake()
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
         if path == "/fuzzing/dashboard": return self.fuzzing_dashboard()
@@ -110,9 +111,28 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_html("Upload too large", "<div class='card'><h2>Upload too large</h2></div>", 413)
         try:
             fields, (filename, content) = parse_multipart(self.rfile.read(length), ctype)
-            upload = save_upload(filename, content)
-            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state"]}
-            jid = create_job(fields.get("workflow", "analyze"), upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options)
+            workflow = fields.get("workflow", "analyze")
+            secrets = {}
+            github_token = fields.get("github_token", "").strip()
+            if github_token:
+                secrets["GITHUB_TOKEN"] = github_token
+            repo_source = fields.get("repo_source", "").strip()
+            repo_source_type = fields.get("repo_source_type", "upload")
+            if workflow.startswith("repo-") and repo_source and (not content or not filename):
+                descriptor = {
+                    "kind": "repo-descriptor",
+                    "source": repo_source,
+                    "allow_remote": repo_source_type == "github" or fields.get("repo_allow_remote") == "1",
+                    "github_token_env": "GITHUB_TOKEN",
+                }
+                upload_path = ROOT / "ui" / "storage" / "uploads" / f"repo-descriptor-{int(__import__('time').time())}.json"
+                upload_path.parent.mkdir(parents=True, exist_ok=True)
+                upload_path.write_text(json.dumps(descriptor, indent=2) + "\n")
+                upload = upload_path
+            else:
+                upload = save_upload(filename, content)
+            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz"]}
+            jid = create_job(workflow, upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options, secrets=secrets)
             self.redirect(f"/jobs/{jid}")
         except Exception as exc:
             self.send_html("Upload error", f"<div class='card'><h2>Upload error</h2><pre>{esc(exc)}</pre></div>", 400)
@@ -154,6 +174,44 @@ class Handler(BaseHTTPRequestHandler):
         try: return self.send_json(read_status(jid))
         except FileNotFoundError: return self.send_json({"error":"not found"}, 404)
 
+
+
+    def repository_intake(self):
+        opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k, v in REPO_WORKFLOWS.items())
+        recent = [j for j in list_jobs() if j.get("workflow") in REPO_WORKFLOWS]
+        recent_rows = "".join(
+            f"<tr><td><a href='/jobs/{esc(j['job_id'])}'>{esc(j['job_id'])}</a></td><td>{esc(j.get('workflow_label'))}</td><td><span class='pill {esc(j.get('state'))}'>{esc(j.get('state'))}</span></td><td>{esc(j.get('created_at'))}</td></tr>"
+            for j in recent[:10]
+        ) or "<tr><td colspan='4' class='muted'>No repository intake jobs yet.</td></tr>"
+        body = f"""
+        <div class='card'><h2>Repository Intake</h2>
+        <p class='muted'>Build SBOMs from a repository, compare generators, scan vulnerabilities, optionally fuzz the generated SBOM, and package evidence. Static-first by default: the toolkit does not run project install/build scripts.</p>
+        <form action='/upload' method='post' enctype='multipart/form-data'>
+          <label>Workflow</label><select name='workflow'>{opts}</select>
+          <div class='grid'>
+            <div><label>Source type</label><select name='repo_source_type'><option value='upload'>Repo archive upload</option><option value='path'>Local path on this machine</option><option value='github'>GitHub HTTPS URL</option></select></div>
+            <div><label>SBOM generators</label><input name='repo_generators' value='auto' size='24'><p class='small muted'>Comma list: auto, internal, syft, cdxgen, trivy.</p></div>
+            <div><label>Fuzz generated SBOM</label><select name='repo_fuzz'><option value='0'>No</option><option value='1'>Yes</option></select></div>
+          </div>
+          <label>Repository archive upload</label><input type='file' name='sbom'>
+          <p class='small muted'>Allowed: .zip, .tar.gz/.tgz, plus SBOM file types for normal workflows. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
+          <label>Local path or GitHub URL</label><input name='repo_source' placeholder='/path/to/repo or https://github.com/org/private-repo.git' size='84'>
+          <div class='grid'>
+            <div><label>GitHub token for private repos</label><input name='github_token' type='password' placeholder='not stored on disk' size='32'><p class='small muted'>Held only in process memory for the current job and passed as GITHUB_TOKEN.</p></div>
+            <div><label>Allow remote Git clone</label><select name='repo_allow_remote'><option value='0'>No</option><option value='1'>Yes</option></select><p class='small muted'>Required for GitHub URL intake.</p></div>
+          </div>
+          <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
+          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled scanners/enrichment when available</label></p>
+          <input type='submit' value='Start repository intake'>
+        </form></div>
+        <div class='grid'>
+          <div class='card'><h3>What it does</h3><p>Detects ecosystems, generates SBOMs with available tools plus an internal static fallback, compares generated SBOMs, scans with installed local scanners, and creates evidence.</p></div>
+          <div class='card'><h3>Private GitHub repos</h3><p>Use an HTTPS GitHub URL and paste a token for this job only. The token is not written to status files, logs, or reports.</p></div>
+          <div class='card'><h3>Safety defaults</h3><p>No project code execution, no install scripts, no remote clone unless enabled, and per-job isolated storage.</p></div>
+        </div>
+        <div class='card'><h2>Recent Repository Jobs</h2><table><tr><th>Job</th><th>Workflow</th><th>Status</th><th>Created</th></tr>{recent_rows}</table></div>
+        """
+        self.send_html("Repository Intake", body)
 
     def fuzzing_lab(self):
         opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k, v in FUZZ_WORKFLOWS.items())

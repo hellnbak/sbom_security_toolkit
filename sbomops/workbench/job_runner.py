@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 STORAGE = ROOT / "ui" / "storage"
 JOBS = STORAGE / "jobs"
 UPLOADS = STORAGE / "uploads"
-ALLOWED_SUFFIXES = {".json", ".xml", ".spdx", ".txt"}
-MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+ALLOWED_SUFFIXES = {".json", ".xml", ".spdx", ".txt", ".zip", ".tgz", ".gz"}
+MAX_UPLOAD_BYTES = 250 * 1024 * 1024
 
 WORKFLOWS = {
     "analyze": "Full SBOM analysis",
@@ -33,6 +33,11 @@ WORKFLOWS = {
     "redact": "Redact SBOM",
     "scanner-compare": "Scanner comparison",
     "release-evidence": "Release evidence bundle",
+    "repo-analyze": "Repository intake: full analysis",
+    "repo-sbom": "Repository intake: generate and compare SBOMs",
+    "repo-scan": "Repository intake: vulnerability scanning",
+    "repo-fuzz": "Repository intake: fuzz generated SBOM",
+    "repo-evidence": "Repository intake: evidence bundle",
     "ai-fuzz-seeds": "AI fuzz seed suggestions",
     "ai-mutation-plan": "AI mutation plan",
     "ai-fuzz-campaign": "AI fuzz campaign draft",
@@ -82,6 +87,8 @@ WORKFLOWS = {
 }
 
 FUZZ_WORKFLOWS = {k: v for k, v in WORKFLOWS.items() if k.startswith("fuzz-") or k.startswith("ai-fuzz") or k in {"ai-mutation-plan", "ai-corpus-review", "ai-harness-repair", "ai-harness-quality-loop", "ai-seed-generator", "ai-seed-generator-test", "ai-fuzz-redteam"}}
+REPO_WORKFLOWS = {k: v for k, v in WORKFLOWS.items() if k.startswith("repo-")}
+_JOB_SECRETS: Dict[str, Dict[str, str]] = {}
 
 
 
@@ -156,7 +163,7 @@ def save_upload(filename: str, content: bytes) -> Path:
     return dest
 
 
-def create_job(workflow: str, upload: Path, *, policy: str = "policies/default-release-policy.yml", network: bool = False, options: Optional[Dict[str, str]] = None) -> str:
+def create_job(workflow: str, upload: Path, *, policy: str = "policies/default-release-policy.yml", network: bool = False, options: Optional[Dict[str, str]] = None, secrets: Optional[Dict[str, str]] = None) -> str:
     if workflow not in WORKFLOWS:
         raise ValueError(f"Unknown workflow: {workflow}")
     job_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
@@ -181,6 +188,8 @@ def create_job(workflow: str, upload: Path, *, policy: str = "policies/default-r
         "error": None,
     }
     write_status(job_id, status)
+    if secrets:
+        _JOB_SECRETS[job_id] = {k: v for k, v in secrets.items() if v}
     t = threading.Thread(target=run_job, args=(job_id,), daemon=True)
     t.start()
     return job_id
@@ -252,9 +261,27 @@ def run_job(job_id: str) -> None:
     ai_model = option(status, "ai_model", "")
     ai_goal = option(status, "ai_goal", "sbom-workbench-upload-hardening")
     dtrack_url = option(status, "dtrack_url", "http://127.0.0.1:8081")
+    repo_generators = option(status, "repo_generators", "auto")
+    repo_source_type = option(status, "repo_source_type", "upload")
+    repo_allow_remote = option(status, "repo_allow_remote", "0") == "1"
+    repo_fuzz = option(status, "repo_fuzz", "0") == "1"
     library_targets = [x.strip().lower() for x in option(status, "library_targets", "sbom,scanner,ai").split(",") if x.strip()]
     steps: List[Dict[str, Any]] = []
     try:
+
+        if workflow in {"repo-analyze", "repo-sbom", "repo-scan", "repo-fuzz", "repo-evidence"}:
+            repo_out = out / "repo-intake"
+            repo_cmd = [sys.executable, "-m", "sbomops.repo_intake", "analyze", str(sbom), "--out-dir", str(repo_out), "--generators", repo_generators, "--policy", policy]
+            if repo_source_type == "github" or repo_allow_remote:
+                repo_cmd.append("--allow-remote")
+            if workflow == "repo-sbom":
+                repo_cmd.append("--no-scan")
+            if workflow in {"repo-fuzz", "repo-evidence", "repo-analyze"} or repo_fuzz:
+                repo_cmd.append("--fuzz")
+            env = os.environ.copy()
+            if _JOB_SECRETS.get(job_id, {}).get("GITHUB_TOKEN"):
+                env["GITHUB_TOKEN"] = _JOB_SECRETS[job_id]["GITHUB_TOKEN"]
+            steps.append(run_step(job_id, "Repository intake pipeline", repo_cmd, timeout=1800, env=env))
         if workflow in {"analyze", "score"}:
             steps.append(run_step(job_id, "SBOM quality", module_cmd("sbomops.score_sbom", sbom, "--out-dir", out / "sbom-quality")))
         if workflow in {"analyze", "minimum-elements"}:
@@ -456,13 +483,14 @@ def create_evidence_zip(job_id: str) -> Path:
 
 
 def delete_job(job_id: str) -> None:
+    _JOB_SECRETS.pop(job_id, None)
     d = job_dir(job_id)
     if d.exists():
         shutil.rmtree(d)
 
 
 def scanner_status() -> List[Dict[str, Any]]:
-    tools = ["syft", "trivy", "grype", "osv-scanner", "cosign", "docker", "git"]
+    tools = ["syft", "cdxgen", "trivy", "grype", "osv-scanner", "cosign", "docker", "git"]
     rows = []
     for tool in tools:
         path = shutil.which(tool)

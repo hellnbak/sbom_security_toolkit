@@ -111,3 +111,22 @@ http://127.0.0.1:8080/fuzzing/logs
 ```
 
 This page shows recent fuzzing and AI-fuzzing jobs with their latest logs, newest first. Each job also has a detailed status page with step exit codes, workflow options, generated results, and a downloadable evidence bundle.
+
+## Repository Intake tab
+
+The local workbench includes a Repository Intake tab for starting from source code instead of a pre-built SBOM.
+
+Supported inputs:
+
+- repository `.zip` or `.tar.gz` archive upload
+- local path on the machine running the workbench
+- HTTPS GitHub URL, including private repositories when a token is provided
+
+Private GitHub token handling:
+
+- tokens pasted into the UI are held only in process memory for the current background job
+- tokens are not written to `status.json`, logs, reports, or evidence bundles
+- remote Git clone is explicit opt-in
+- the clone helper avoids placing tokens in the Git URL or command line
+
+Repository Intake workflows can generate SBOMs, compare SBOM generator output, run locally installed vulnerability scanners, optionally fuzz the generated SBOM, and create a downloadable evidence bundle.

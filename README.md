@@ -15,29 +15,55 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine. Uploaded SBOMs and generated evidence stay on disk. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: v2.1.1
+## Current release: v2.2.0
 
-This README reflects the current **v2.1.1** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+This README reflects the current **v2.2.0** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
 - **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
 - **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
 - **v2.1.0 Intelligent Fuzzing Operations:** fuzzing intelligence scoring, corpus promotion recommendations, harness quality auditing, AI harness quality loop, semantic format-diff fuzzing, vulnerability matching fuzzing, VEX logic fuzzing, evil supplier SBOM scenarios, AI red-team checks, CI fuzz dashboarding, and fuzz finding lifecycle tracking.
 - **v2.1.1 Fuzzing UI Fixes:** restored per-run time limits, added `fuzz-all-timed`, and fixed JSON-oriented fuzzing workflows so CycloneDX XML and other supported non-JSON SBOMs are normalized before semantic fuzzing.
+- **v2.2.0 Repository Intake:** build SBOMs from a local path, uploaded repo archive, or GitHub repository, including private GitHub repositories via a token; compare SBOM generators; run scanner workflows; fuzz the generated SBOM; and generate evidence from the resulting pipeline.
 
-The current focus is **local SBOM operations plus intelligent SBOM fuzzing**: upload or analyze SBOMs, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
+The current focus is **local repository-to-SBOM operations plus intelligent SBOM fuzzing**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
 
 ## What this toolkit does
 
 SBOM Security Toolkit combines workflows that are often spread across several tools:
 
+- **Repository intake:** build SBOMs from local repos, uploaded archives, or GitHub repos; detect ecosystems; compare SBOM generators; scan; fuzz generated SBOMs; and package evidence.
 - **SBOM experience:** explain, normalize, repair, diff, inventory, redact, and score SBOMs.
 - **Supplier intake:** minimum-elements checks, supplier-question generation, supplier reports, and evidence bundles.
 - **Policy and evidence:** policy-as-code checks, release evidence, checksums/signing helpers, VEX helpers, and Exploitability Decision Records.
 - **Scanner operations:** scanner availability checks, scanner comparison, scanner confidence scoring, compatibility matrix, and curated scanner truth-set testing.
-- **Local workbench UI:** upload SBOMs, launch workflows, view job status/logs, download evidence bundles, and run fuzzing workflows from the browser.
+- **Local workbench UI:** upload SBOMs or repository archives, use local paths or GitHub URLs, launch workflows, view job status/logs, download evidence bundles, and run fuzzing workflows from the browser.
 - **Fuzzing lab:** structure-preserving mutation, schema-aware generation, semantic oracles, round-trip/metamorphic checks, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, replay packs, benchmarks, coverage scaffolding, ClusterFuzzLite scaffolding, and fuzz finding lifecycle tracking.
 - **Intelligent fuzzing operations:** fuzzing intelligence scoring, corpus promotion recommendations, harness quality auditing, AI harness quality loop, AI seed-generator synthesis, grammar-mutator scaffolding, method-targeted coverage, semantic format-diff testing, vulnerability matching fuzzing, VEX logic fuzzing, evil supplier SBOM scenarios, AI red-team checks, CI fuzz result import, and local fuzzing dashboards.
 - **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, provider-neutral agent prompts, optional GLM/local model profiles, Ollama/OpenAI-compatible hooks, and AI-assisted fuzzing triage/planning.
+
+
+## Repository intake quick start
+
+Analyze a local repository and generate an evidence bundle:
+
+```bash
+make repo-intake REPO_SOURCE=./my-app
+```
+
+Generate SBOMs only using the internal static fallback plus any installed generators:
+
+```bash
+make repo-sbom REPO_SOURCE=./my-app REPO_GENERATORS=auto
+```
+
+Analyze a private GitHub repository without putting the token in the command line or logs:
+
+```bash
+export GITHUB_TOKEN=github_pat_xxx
+make repo-intake REPO_SOURCE=https://github.com/org/private-repo.git ALLOW_REMOTE=1 GITHUB_TOKEN_ENV=GITHUB_TOKEN
+```
+
+The local web UI also includes a **Repository Intake** tab for uploaded repository archives, local paths, and GitHub URLs. Pasted GitHub tokens are held only in process memory for the current job and are not written to status files, logs, or evidence bundles.
 
 ## What this is not
 
