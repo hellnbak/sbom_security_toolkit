@@ -33,11 +33,13 @@ WORKFLOWS = {
     "redact": "Redact SBOM",
     "scanner-compare": "Scanner comparison",
     "release-evidence": "Release evidence bundle",
+    "dependency-health": "Dependency health / unsupported dependency analysis",
     "repo-analyze": "Repository intake: full analysis",
     "repo-sbom": "Repository intake: generate and compare SBOMs",
     "repo-scan": "Repository intake: vulnerability scanning",
     "repo-fuzz": "Repository intake: fuzz generated SBOM",
     "repo-evidence": "Repository intake: evidence bundle",
+    "repo-dependency-health": "Repository intake: dependency health / unsupported analysis",
     "ai-fuzz-seeds": "AI fuzz seed suggestions",
     "ai-mutation-plan": "AI mutation plan",
     "ai-fuzz-campaign": "AI fuzz campaign draft",
@@ -265,19 +267,25 @@ def run_job(job_id: str) -> None:
     repo_source_type = option(status, "repo_source_type", "upload")
     repo_allow_remote = option(status, "repo_allow_remote", "0") == "1"
     repo_fuzz = option(status, "repo_fuzz", "0") == "1"
+    repo_dependency_health = option(status, "repo_dependency_health", "0") == "1"
+    stale_days = option_int(status, "stale_days", 365, low=30, high=3650)
     library_targets = [x.strip().lower() for x in option(status, "library_targets", "sbom,scanner,ai").split(",") if x.strip()]
     steps: List[Dict[str, Any]] = []
     try:
 
-        if workflow in {"repo-analyze", "repo-sbom", "repo-scan", "repo-fuzz", "repo-evidence"}:
+        if workflow in {"repo-analyze", "repo-sbom", "repo-scan", "repo-fuzz", "repo-evidence", "repo-dependency-health"}:
             repo_out = out / "repo-intake"
             repo_cmd = [sys.executable, "-m", "sbomops.repo_intake", "analyze", str(sbom), "--out-dir", str(repo_out), "--generators", repo_generators, "--policy", policy]
             if repo_source_type == "github" or repo_allow_remote:
                 repo_cmd.append("--allow-remote")
-            if workflow == "repo-sbom":
+            if workflow in {"repo-sbom", "repo-dependency-health"}:
                 repo_cmd.append("--no-scan")
             if workflow in {"repo-fuzz", "repo-evidence", "repo-analyze"} or repo_fuzz:
                 repo_cmd.append("--fuzz")
+            if workflow in {"repo-dependency-health", "repo-evidence", "repo-analyze"} or repo_dependency_health:
+                repo_cmd.extend(["--dependency-health", "--stale-days", str(stale_days)])
+                if status.get("network_enabled"):
+                    repo_cmd.append("--network")
             env = os.environ.copy()
             if _JOB_SECRETS.get(job_id, {}).get("GITHUB_TOKEN"):
                 env["GITHUB_TOKEN"] = _JOB_SECRETS[job_id]["GITHUB_TOKEN"]
@@ -298,6 +306,11 @@ def run_job(job_id: str) -> None:
             steps.append(run_step(job_id, "Redact SBOM", module_cmd("sbomops.redact", sbom, "--out", out / "redacted-sbom.json", "--hash-internal-names")))
         if workflow == "scanner-compare":
             steps.append(run_step(job_id, "Scanner compare", module_cmd("sbomops.scanner_compare", sbom, "--out-dir", out / "scanner-compare"), timeout=900))
+        if workflow == "dependency-health":
+            cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days))
+            if status.get("network_enabled"):
+                cmd.append("--network")
+            steps.append(run_step(job_id, "Dependency health / unsupported dependency analysis", cmd, timeout=900))
 
         if workflow == "ai-fuzz-seeds":
             steps.append(run_step(job_id, "AI fuzz seeds", module_cmd("ai_fuzz.tools.ai_fuzz", "--provider", ai_provider, *( ["--model", ai_model] if ai_model else [] ), "seeds", "--format", "cyclonedx", "--scenario", option(status, "scenario", "dependency-cycles"), "--count", str(count))))

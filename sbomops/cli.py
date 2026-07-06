@@ -24,6 +24,7 @@ MODULES = {
     "inventory": "sbomops.inventory",
     "repo": "sbomops.repo_intake",
     "repo-intake": "sbomops.repo_intake",
+    "dependency-health": "sbomops.dependency_health",
 
     "fuzz-plan": "fuzzing.planner.fuzz_plan",
     "fuzz-kb": "fuzzing.kb.fuzz_kb",

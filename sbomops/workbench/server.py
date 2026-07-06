@@ -131,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
                 upload = upload_path
             else:
                 upload = save_upload(filename, content)
-            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz"]}
+            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz", "repo_dependency_health", "stale_days"]}
             jid = create_job(workflow, upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options, secrets=secrets)
             self.redirect(f"/jobs/{jid}")
         except Exception as exc:
@@ -192,6 +192,8 @@ class Handler(BaseHTTPRequestHandler):
             <div><label>Source type</label><select name='repo_source_type'><option value='upload'>Repo archive upload</option><option value='path'>Local path on this machine</option><option value='github'>GitHub HTTPS URL</option></select></div>
             <div><label>SBOM generators</label><input name='repo_generators' value='auto' size='24'><p class='small muted'>Comma list: auto, internal, syft, cdxgen, trivy.</p></div>
             <div><label>Fuzz generated SBOM</label><select name='repo_fuzz'><option value='0'>No</option><option value='1'>Yes</option></select></div>
+            <div><label>Dependency health/EOL check</label><select name='repo_dependency_health'><option value='1'>Yes</option><option value='0'>No</option></select><p class='small muted'>Flags deprecated, abandoned, stale, unpinned, or unsupported-risk dependencies.</p></div>
+            <div><label>Stale threshold days</label><input name='stale_days' value='365' size='8'></div>
           </div>
           <label>Repository archive upload</label><input type='file' name='sbom'>
           <p class='small muted'>Allowed: .zip, .tar.gz/.tgz, plus SBOM file types for normal workflows. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
@@ -201,7 +203,7 @@ class Handler(BaseHTTPRequestHandler):
             <div><label>Allow remote Git clone</label><select name='repo_allow_remote'><option value='0'>No</option><option value='1'>Yes</option></select><p class='small muted'>Required for GitHub URL intake.</p></div>
           </div>
           <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
-          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled scanners/enrichment when available</label></p>
+          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled scanners/enrichment when available, including registry metadata for dependency-health checks</label></p>
           <input type='submit' value='Start repository intake'>
         </form></div>
         <div class='grid'>

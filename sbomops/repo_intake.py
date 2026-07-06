@@ -425,6 +425,8 @@ def summarize(out_dir: Path, source_meta: Dict[str, Any], detection: Dict[str, A
         lines += ["", "## Vulnerability scanning"]
         for s in scans.get("scans", []):
             lines.append(f"- {s.get('tool')}: {'available' if s.get('available') else 'not installed'} return={s.get('returncode','skipped')}")
+    if (out_dir / "dependency-health" / "dependency-health.md").exists():
+        lines += ["", "## Dependency health", f"- Unsupported/EOL risk report: `{(out_dir / 'dependency-health' / 'dependency-health.md').name}`"]
     lines += ["", "## Safety notes", "- Static-first analysis: the toolkit does not run project install/build scripts by default.", "- GitHub tokens are intended to be supplied via environment variables or transient UI process memory, not committed or written to status files."]
     md.write_text("\n".join(lines) + "\n")
     return md
@@ -467,6 +469,11 @@ def analyze_repo(args: argparse.Namespace) -> int:
             preferred = p
             break
     scans = scan_repo(repo, preferred, out_dir / "vuln-scan-results") if args.scan else None
+    if getattr(args, "dependency_health", False):
+        dh_cmd = [sys.executable, "-m", "sbomops.dependency_health", str(preferred), "--out-dir", str(out_dir / "dependency-health"), "--stale-days", str(args.stale_days)]
+        if getattr(args, "network", False):
+            dh_cmd.append("--network")
+        subprocess.run(dh_cmd, cwd=ROOT)
     # Reuse existing SBOM experience workflows on the preferred SBOM.
     subprocess.run([sys.executable, "-m", "sbomops.score_sbom", str(preferred), "--out-dir", str(out_dir / "sbom-quality")], cwd=ROOT)
     subprocess.run([sys.executable, "-m", "sbomops.minimum_elements", str(preferred), "--out-dir", str(out_dir / "minimum-elements")], cwd=ROOT)
@@ -493,7 +500,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         p.add_argument("--allow-remote", action="store_true", help="Allow HTTPS GitHub clone")
         p.add_argument("--github-token-env", default="GITHUB_TOKEN", help="Environment variable containing a GitHub token for private repos")
     p = sub.add_parser("analyze", help="Full repository intake pipeline")
-    add_common(p); p.add_argument("--scan", action="store_true", default=True); p.add_argument("--no-scan", dest="scan", action="store_false"); p.add_argument("--fuzz", action="store_true")
+    add_common(p); p.add_argument("--scan", action="store_true", default=True); p.add_argument("--no-scan", dest="scan", action="store_false"); p.add_argument("--fuzz", action="store_true"); p.add_argument("--dependency-health", action="store_true", help="Run unsupported/EOL dependency health analysis on the generated SBOM"); p.add_argument("--stale-days", type=int, default=365); p.add_argument("--network", action="store_true", help="Allow optional registry metadata enrichment for dependency health")
     p2 = sub.add_parser("detect", help="Detect ecosystems only")
     p2.add_argument("source"); p2.add_argument("--out", default="reports/repo-intake/detected-ecosystems.json")
     p2.add_argument("--allow-remote", action="store_true"); p2.add_argument("--github-token-env", default="GITHUB_TOKEN")

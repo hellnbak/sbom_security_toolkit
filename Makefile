@@ -606,7 +606,11 @@ REPO_GENERATORS ?= auto
 GITHUB_TOKEN_ENV ?= GITHUB_TOKEN
 ALLOW_REMOTE ?= 0
 
-.PHONY: repo-intake repo-sbom repo-scan repo-fuzz repo-evidence repo-detect
+.PHONY: repo-intake repo-sbom repo-scan repo-fuzz repo-evidence repo-detect dependency-health repo-dependency-health
+
+dependency-health:
+	@if [ -z "$(SBOM)" ]; then echo "Usage: make dependency-health SBOM=./bom.json [NETWORK=1] [STALE_DAYS=365]"; exit 2; fi
+	python3 -m sbomops.dependency_health $(SBOM) --out-dir reports/dependency-health --stale-days $${STALE_DAYS:-365} $(if $(filter 1,$(NETWORK)),--network,)
 
 repo-detect:
 	python3 -m sbomops.repo_intake detect $(REPO_SOURCE) --out $(REPO_OUT)/detected-ecosystems.json $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
@@ -622,3 +626,6 @@ repo-fuzz:
 
 repo-evidence repo-intake:
 	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --fuzz $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+
+repo-dependency-health:
+	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --no-scan --dependency-health $(if $(filter 1,$(NETWORK)),--network,) $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)

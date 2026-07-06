@@ -15,24 +15,25 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine. Uploaded SBOMs and generated evidence stay on disk. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: v2.2.0
+## Current release: v2.2.1
 
-This README reflects the current **v2.2.0** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+This README reflects the current **v2.2.1** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
 - **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
 - **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
 - **v2.1.0 Intelligent Fuzzing Operations:** fuzzing intelligence scoring, corpus promotion recommendations, harness quality auditing, AI harness quality loop, semantic format-diff fuzzing, vulnerability matching fuzzing, VEX logic fuzzing, evil supplier SBOM scenarios, AI red-team checks, CI fuzz dashboarding, and fuzz finding lifecycle tracking.
 - **v2.1.1 Fuzzing UI Fixes:** restored per-run time limits, added `fuzz-all-timed`, and fixed JSON-oriented fuzzing workflows so CycloneDX XML and other supported non-JSON SBOMs are normalized before semantic fuzzing.
 - **v2.2.0 Repository Intake:** build SBOMs from a local path, uploaded repo archive, or GitHub repository, including private GitHub repositories via a token; compare SBOM generators; run scanner workflows; fuzz the generated SBOM; and generate evidence from the resulting pipeline.
+- **v2.2.1 Dependency Health:** identify deprecated, abandoned, stale, unpinned, or unsupported-risk open source dependencies from uploaded SBOMs or generated repository SBOMs, with optional registry enrichment and conservative stale-maintenance heuristics.
 
-The current focus is **local repository-to-SBOM operations plus intelligent SBOM fuzzing**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
+The current focus is **local repository-to-SBOM operations, dependency health review, plus intelligent SBOM fuzzing**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
 
 ## What this toolkit does
 
 SBOM Security Toolkit combines workflows that are often spread across several tools:
 
-- **Repository intake:** build SBOMs from local repos, uploaded archives, or GitHub repos; detect ecosystems; compare SBOM generators; scan; fuzz generated SBOMs; and package evidence.
-- **SBOM experience:** explain, normalize, repair, diff, inventory, redact, and score SBOMs.
+- **Repository intake:** build SBOMs from local repos, uploaded archives, or GitHub repos; detect ecosystems; compare SBOM generators; scan; fuzz generated SBOMs; check dependency health/EOL risk; and package evidence.
+- **SBOM experience:** explain, normalize, repair, diff, inventory, redact, score SBOMs, and analyze dependency support/maintenance health.
 - **Supplier intake:** minimum-elements checks, supplier-question generation, supplier reports, and evidence bundles.
 - **Policy and evidence:** policy-as-code checks, release evidence, checksums/signing helpers, VEX helpers, and Exploitability Decision Records.
 - **Scanner operations:** scanner availability checks, scanner comparison, scanner confidence scoring, compatibility matrix, and curated scanner truth-set testing.
@@ -109,6 +110,29 @@ make sbom-minimum-elements SBOM=./bom.json
 make policy-check SBOM=./bom.json POLICY=policies/default-release-policy.yml
 make report SBOM=./bom.json
 ```
+
+
+### Dependency health / unsupported dependency review
+
+Analyze an existing SBOM for deprecated, abandoned, stale, unpinned, or unsupported-risk dependencies:
+
+```bash
+make dependency-health SBOM=./bom.json
+```
+
+Enable optional registry enrichment for ecosystems currently supported by the lightweight checker, such as npm, PyPI, crates.io, and Packagist:
+
+```bash
+make dependency-health SBOM=./bom.json NETWORK=1 STALE_DAYS=365
+```
+
+Run dependency health as part of repository intake:
+
+```bash
+make repo-dependency-health REPO_SOURCE=./my-app
+```
+
+Unsupported detection is conservative. Explicit signals such as registry deprecation/abandonment metadata or SBOM EOL/support properties are treated as stronger evidence. Heuristics such as “no observed update for 365 days” are treated as review triggers, not automatic proof that a package is unsupported. Some mature libraries are stable and intentionally change rarely.
 
 ### Review a supplier SBOM
 

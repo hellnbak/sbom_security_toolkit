@@ -1,3 +1,22 @@
+## v2.2.1 - Dependency Health and Unsupported Dependency Review
+
+Adds a conservative dependency health analysis layer for uploaded SBOMs and repository-generated SBOMs.
+
+Highlights:
+
+- New `dependency-health` workflow for CycloneDX JSON/XML and SPDX JSON SBOMs.
+- New `repo-dependency-health` workflow for repository-generated SBOMs.
+- Web UI support for repository dependency-health checks, stale-day threshold configuration, and optional registry enrichment.
+- Detection signals include explicit deprecation/abandonment/EOL metadata where available, SBOM support-status properties, last-release/update age, missing exact versions, and unpinned/range versions.
+- Optional network enrichment for npm, PyPI, crates.io, and Packagist using public registry metadata.
+- Reports generated as JSON, Markdown, and CSV.
+
+Important interpretation rule:
+
+- No updates in 365 days is not automatically end-of-life. It is a review trigger. Some mature libraries intentionally change rarely. Explicit maintainer/vendor EOL or deprecation metadata should carry more weight than stale-update heuristics.
+
+---
+
 
 ## v2.2.0 - Repository Intake and SBOM Build Pipeline
 
