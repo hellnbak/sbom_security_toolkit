@@ -130,7 +130,10 @@ def read_status(job_id: str) -> Dict[str, Any]:
 def write_status(job_id: str, data: Dict[str, Any]) -> None:
     d = job_dir(job_id); d.mkdir(parents=True, exist_ok=True)
     data["updated_at"] = now()
-    status_path(job_id).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    payload = json.dumps(data, indent=2, sort_keys=True) + "\n"
+    tmp = d / "status.json.tmp"
+    tmp.write_text(payload)
+    tmp.replace(status_path(job_id))
 
 
 def append_log(job_id: str, text: str) -> None:
@@ -211,6 +214,7 @@ def run_step(job_id: str, name: str, cmd: List[str], timeout: int = 600, *, time
             append_log(job_id, proc.stdout[-12000:])
         if proc.stderr:
             append_log(job_id, proc.stderr[-12000:])
+        append_log(job_id, f"Step completed with return code {proc.returncode} in {elapsed} seconds.\n")
         return {"name": name, "cmd": cmd, "returncode": proc.returncode, "elapsed_seconds": elapsed}
     except subprocess.TimeoutExpired as exc:
         elapsed = round(time.time() - started, 2)
@@ -460,6 +464,11 @@ def run_job(job_id: str) -> None:
             steps.append(run_step(job_id, "Fuzz finding lifecycle update", [sys.executable, "fuzzing/findings_lifecycle/lifecycle.py", "--finding", option(status, "finding_id", "workbench-demo-finding"), "--state", option(status, "finding_state", "triaged"), "--notes", "Updated from local workbench"] ))
         if workflow == "fuzz-lab-dashboard":
             steps.append(run_step(job_id, "Fuzzing Lab dashboard", [sys.executable, "fuzzing/visualize/fuzzing_lab_dashboard.py", "--out", str(out / "lab-dashboard.html")]))
+
+        if workflow.startswith("fuzz-") or workflow.startswith("ai-fuzz") or workflow in {"ai-corpus-review", "ai-harness-repair", "ai-fuzz-eval", "ai-harness-quality-loop", "ai-seed-generator", "ai-seed-generator-test", "ai-fuzz-redteam"}:
+            summary = write_fuzz_activity_summary(job_id, status, steps, out)
+            append_log(job_id, f"\n=== Fuzzing activity summary ===\n{summary}\n")
+
         if workflow == "release-evidence":
             env = os.environ.copy(); env.update({"SBOM": str(sbom), "POLICY": policy, "OUT": str(out / "release-evidence")})
             cmd = ["bash", "scripts/release-evidence.sh"]
@@ -469,16 +478,76 @@ def run_job(job_id: str) -> None:
             append_log(job_id, proc.stdout[-12000:] + proc.stderr[-12000:])
         # Always generate a UI bundle from available outputs.
         steps.append(run_step(job_id, "UI bundle", module_cmd("sbomops.ui_bundle", "--reports-dir", out, "--out-dir", out / "ui")))
-        bundle = create_evidence_zip(job_id)
         failed = [s for s in steps if s.get("returncode") not in (0, None)]
-        status.update({"state": "failed" if failed else "completed", "exit_code": 1 if failed else 0, "steps": steps, "completed_at": now(), "bundle": str(bundle.relative_to(ROOT))})
+        status.update({"state": "failed" if failed else "completed", "exit_code": 1 if failed else 0, "steps": steps, "completed_at": now()})
         if failed:
             status["error"] = f"{len(failed)} step(s) failed. See logs."
+        write_status(job_id, status)
+        bundle = create_evidence_zip(job_id)
+        status.update({"bundle": str(bundle.relative_to(ROOT))})
+        write_status(job_id, status)
+        create_evidence_zip(job_id)
+        return
     except Exception as exc:
         append_log(job_id, f"\nERROR: {exc}\n")
         status.update({"state": "failed", "exit_code": 1, "error": str(exc), "steps": steps, "completed_at": now()})
     write_status(job_id, status)
 
+
+
+def write_fuzz_activity_summary(job_id: str, status: Dict[str, Any], steps: List[Dict[str, Any]], out: Path) -> str:
+    """Write a human-readable/JSON summary so fuzzing jobs do not look empty.
+
+    Some fuzzing-lab workflows are deterministic semantic/metamorphic checks rather
+    than long-running coverage fuzzers. This summary records exactly what ran,
+    how long it ran, what artifacts were produced, and which workflows are
+    time-boxed versus one-shot checks.
+    """
+    artifacts = []
+    for f in out.rglob("*"):
+        if f.is_file() and f.name not in {"index.html", "data.json"}:
+            try:
+                rel = str(f.relative_to(out))
+            except Exception:
+                rel = str(f)
+            artifacts.append({"path": rel, "bytes": f.stat().st_size})
+    duration = option_int(status, "duration_seconds", 60, low=5, high=86400)
+    workflow = status.get("workflow", "")
+    mode_note = "time-boxed multi-step fuzzing" if workflow == "fuzz-all-timed" else "single selected fuzzing workflow / semantic check"
+    summary = {
+        "job_id": job_id,
+        "workflow": workflow,
+        "workflow_label": status.get("workflow_label", workflow),
+        "mode_note": mode_note,
+        "requested_duration_seconds": duration,
+        "library_targets": option(status, "library_targets", "sbom,scanner,ai"),
+        "step_count": len(steps),
+        "steps": steps,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "guidance": "Use the Fuzzing Lab workflow 'fuzz-all-timed' to run all available fuzzing efforts for the configured time limit per step/library. Individual workflows such as metamorphic checks may finish quickly if no invariant violation is found."
+    }
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "fuzz-run-summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    md = [
+        "# Fuzzing Activity Summary",
+        "",
+        f"- Workflow: `{summary['workflow']}`",
+        f"- Mode: {mode_note}",
+        f"- Requested duration: {duration} seconds",
+        f"- Steps executed: {len(steps)}",
+        f"- Artifacts produced: {len(artifacts)}",
+        "",
+        "## Steps",
+    ]
+    for st in steps:
+        md.append(f"- {st.get('name','step')}: rc={st.get('returncode')} elapsed={st.get('elapsed_seconds','?')}s")
+    md.extend(["", "## Artifacts"])
+    for art in artifacts[:100]:
+        md.append(f"- `{art['path']}` ({art['bytes']} bytes)")
+    md.extend(["", "## Note", summary["guidance"], ""])
+    (out / "fuzz-run-summary.md").write_text("\n".join(md))
+    return json.dumps(summary, indent=2, sort_keys=True)
 
 def create_evidence_zip(job_id: str) -> Path:
     d = job_dir(job_id)

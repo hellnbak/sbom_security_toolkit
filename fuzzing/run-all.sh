@@ -24,6 +24,11 @@ esac
 
 mkdir -p "$FINDINGS" fuzzing/reports
 status=0
+if ! command -v docker >/dev/null 2>&1; then
+  echo "[skip] Docker not installed; skipping containerized language-engine fuzzing."
+  python3 fuzzing/tools/scorecard.py "$FINDINGS" --output fuzzing/reports/fuzz-scorecard.md || true
+  exit 0
+fi
 for engine in $ENGINES; do
   dir="fuzzing/engines/$engine"
   [ -d "$dir" ] || { echo "[skip] no engine: $engine"; continue; }

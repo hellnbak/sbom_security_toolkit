@@ -5,7 +5,10 @@ TARGET ?=
 CRASH ?=
 SBOM ?= vuln-scan/cyclonedx-sbom.xml
 
-.PHONY: fuzz-smoke fuzz-nightly fuzz-deep fuzz-python fuzz-js fuzz-php fuzz-repro fuzz-scorecard fuzz-corpus fuzz-differential fuzz-clean fuzz-structured fuzz-roundtrip fuzz-metamorphic fuzz-oracles fuzz-campaign fuzz-api fuzz-coverage fuzz-dedupe-crashes fuzz-regression fuzz-promote-crash fuzz-malicious-metadata validate
+.PHONY: fuzz-workflow-smoke fuzz-smoke fuzz-nightly fuzz-deep fuzz-python fuzz-js fuzz-php fuzz-repro fuzz-scorecard fuzz-corpus fuzz-differential fuzz-clean fuzz-structured fuzz-roundtrip fuzz-metamorphic fuzz-oracles fuzz-campaign fuzz-api fuzz-coverage fuzz-dedupe-crashes fuzz-regression fuzz-promote-crash fuzz-malicious-metadata validate
+
+fuzz-workflow-smoke:
+	SBOM=$(SBOM) XML_SBOM=vuln-scan/cyclonedx-sbom.xml COUNT=$(COUNT) TIME_BUDGET=$(TIME_BUDGET) scripts/smoke-fuzz-workflows.sh
 
 fuzz-smoke:
 	TIME_BUDGET=60 ./fuzzing/run-all.sh --mode smoke --findings $(FUZZ_FINDINGS)
@@ -17,16 +20,22 @@ fuzz-deep:
 	TIME_BUDGET=14400 ./fuzzing/run-all.sh --mode deep --findings $(FUZZ_FINDINGS)
 
 fuzz-python:
-	docker build -t sbom-fuzzer-python fuzzing/engines/python
-	docker run --rm -e TIME_BUDGET=$(TIME_BUDGET) -v "$(FUZZ_FINDINGS):/fuzz/findings" sbom-fuzzer-python $(TARGET)
+	@if ! command -v docker >/dev/null 2>&1; then echo "[skip] Docker not installed; skipping Python engine fuzzing."; else \
+		docker build -t sbom-fuzzer-python fuzzing/engines/python && \
+		docker run --rm -e TIME_BUDGET=$(TIME_BUDGET) -v "$(FUZZ_FINDINGS):/fuzz/findings" sbom-fuzzer-python $(TARGET); \
+	fi
 
 fuzz-js:
-	docker build -t sbom-fuzzer-javascript fuzzing/engines/javascript
-	docker run --rm -e TIME_BUDGET=$(TIME_BUDGET) -v "$(FUZZ_FINDINGS):/fuzz/findings" sbom-fuzzer-javascript $(TARGET)
+	@if ! command -v docker >/dev/null 2>&1; then echo "[skip] Docker not installed; skipping JavaScript engine fuzzing."; else \
+		docker build -t sbom-fuzzer-javascript fuzzing/engines/javascript && \
+		docker run --rm -e TIME_BUDGET=$(TIME_BUDGET) -v "$(FUZZ_FINDINGS):/fuzz/findings" sbom-fuzzer-javascript $(TARGET); \
+	fi
 
 fuzz-php:
-	docker build -t sbom-fuzzer-php fuzzing/engines/php
-	docker run --rm -e TIME_BUDGET=$(TIME_BUDGET) -v "$(FUZZ_FINDINGS):/fuzz/findings" sbom-fuzzer-php $(TARGET)
+	@if ! command -v docker >/dev/null 2>&1; then echo "[skip] Docker not installed; skipping PHP engine fuzzing."; else \
+		docker build -t sbom-fuzzer-php fuzzing/engines/php && \
+		docker run --rm -e TIME_BUDGET=$(TIME_BUDGET) -v "$(FUZZ_FINDINGS):/fuzz/findings" sbom-fuzzer-php $(TARGET); \
+	fi
 
 fuzz-repro:
 	@if [ -z "$(CRASH)" ]; then echo "Usage: make fuzz-repro CRASH=fuzzing/findings/<target>/crash-..."; exit 2; fi
@@ -46,9 +55,9 @@ FUZZ_PROFILE ?= fuzzing/campaigns/sbom-parser-hardening.yml
 REGRESSION_CORPUS ?= fuzzing/regression/corpus
 
 fuzz-structured:
-	python3 fuzzing/mutators/sbom_json_mutator.py $(SBOM) --out fuzzing/generated-corpus/structured --count $${COUNT:-50}
-	python3 fuzzing/mutators/purl_mutator.py --out fuzzing/generated-corpus/purl --count $${COUNT:-100}
-	python3 fuzzing/mutators/license_expression_mutator.py --out fuzzing/generated-corpus/licenses --count $${COUNT:-100}
+	python3 fuzzing/mutators/sbom_json_mutator.py $(SBOM) --out fuzzing/generated-corpus/structured --count $(COUNT)
+	python3 fuzzing/mutators/purl_mutator.py --out fuzzing/generated-corpus/purl --count $(COUNT)
+	python3 fuzzing/mutators/license_expression_mutator.py --out fuzzing/generated-corpus/licenses --count $(COUNT)
 
 fuzz-roundtrip:
 	python3 fuzzing/roundtrip/roundtrip_sbom.py $(SBOM) --out-dir fuzzing/reports/roundtrip
@@ -391,20 +400,20 @@ fuzz-all-local:
 	$(MAKE) fuzz-status
 
 fuzz-all-timed:
-	@echo "Running local fuzzing workflows with TIME_BUDGET=$${TIME_BUDGET:-60} seconds per step. Use SBOM=... COUNT=... EDGE=..."
-	$(MAKE) fuzz-generate-cyclonedx COUNT=$${COUNT:-5} EDGE=$(EDGE)
-	$(MAKE) fuzz-generate-spdx COUNT=$${COUNT:-5} EDGE=$(EDGE)
-	$(MAKE) fuzz-generate-vex COUNT=$${COUNT:-5}
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-structured SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-roundtrip SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-metamorphic SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-oracles SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-toolchain SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-stateful-dtrack SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-metamorphic-scanners SBOM=$(SBOM) || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-vuln-matching || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-vex-logic || true
-	TIME_BUDGET=$${TIME_BUDGET:-60} timeout $${TIME_BUDGET:-60}s $(MAKE) fuzz-evil-supplier || true
+	@echo "Running local fuzzing workflows with TIME_BUDGET=$(TIME_BUDGET) seconds per step. Use SBOM=... COUNT=... EDGE=..."
+	$(MAKE) fuzz-generate-cyclonedx COUNT=$(COUNT) EDGE=$(EDGE)
+	$(MAKE) fuzz-generate-spdx COUNT=$(COUNT) EDGE=$(EDGE)
+	$(MAKE) fuzz-generate-vex COUNT=$(COUNT)
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-structured SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-roundtrip SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-metamorphic SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-oracles SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-toolchain SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-stateful-dtrack SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-metamorphic-scanners SBOM=$(SBOM) || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-vuln-matching || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-vex-logic || true
+	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-evil-supplier || true
 	$(MAKE) fuzz-status
 
 sbom-normalize:
@@ -430,7 +439,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.1.1
+VERSION ?= 2.2.3
 
 setup:
 	./setup.sh
@@ -566,7 +575,7 @@ ai-seed-generator-test:
 	python3 -m ai_fuzz.tools.ai_seed_generator_test --generator $(GENERATOR)
 
 fuzz-grammar:
-	python3 fuzzing/grammar/run_grammar_mutator.py --grammar $(GRAMMAR) --count $${COUNT:-25} --out fuzzing/generated-corpus/grammar/$(GRAMMAR)
+	python3 fuzzing/grammar/run_grammar_mutator.py --grammar $(GRAMMAR) --count $(COUNT) --out fuzzing/generated-corpus/grammar/$(GRAMMAR)
 
 fuzz-target-coverage:
 	@if [ -z "$(TARGET)" ]; then echo "Usage: make fuzz-target-coverage TARGET=sbomops.minimum_elements:main"; exit 2; fi
@@ -582,7 +591,7 @@ fuzz-vex-logic:
 	python3 fuzzing/vex_logic/vex_logic_fuzz.py --out-dir fuzzing/generated-corpus/vex-logic
 
 fuzz-evil-supplier:
-	python3 fuzzing/evil_supplier/evil_supplier.py --out-dir test-sboms/evil-supplier fuzzing/findings_lifecycle/findings.json
+	python3 fuzzing/evil_supplier/evil_supplier.py --out-dir test-sboms/evil-supplier
 
 ai-fuzz-redteam:
 	python3 -m ai_fuzz.tools.ai_redteam --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) --out reports/ai-fuzz-redteam.json

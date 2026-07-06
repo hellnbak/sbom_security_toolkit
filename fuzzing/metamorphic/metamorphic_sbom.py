@@ -25,14 +25,28 @@ def harmless_metadata(doc):
 def minify_pretty(doc): return json.loads(json.dumps(doc,separators=(",",":")))
 TRANSFORMS={"reorder":reorder,"harmless_metadata":harmless_metadata,"minify_pretty":minify_pretty}
 
+def _stats(doc):
+    if not isinstance(doc, dict):
+        return {"type": type(doc).__name__}
+    comps = doc.get("components") or doc.get("packages") or []
+    deps = doc.get("dependencies") or doc.get("relationships") or []
+    vulns = doc.get("vulnerabilities") or []
+    return {
+        "component_count": len(comps) if isinstance(comps, list) else 0,
+        "dependency_count": len(deps) if isinstance(deps, list) else 0,
+        "vulnerability_count": len(vulns) if isinstance(vulns, list) else 0,
+        "format": doc.get("metadata", {}).get("format") or doc.get("bomFormat") or doc.get("spdxVersion") or doc.get("format") or "unknown",
+        "normalized_from_non_json": bool(doc.get("_fuzzing_note")),
+    }
+
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("sbom"); ap.add_argument("--out-dir",default="fuzzing/reports/metamorphic"); args=ap.parse_args(); p=Path(args.sbom); out=Path(args.out_dir); out.mkdir(parents=True,exist_ok=True)
-    doc=load_json_or_normalized(p); reports=[]
+    doc=load_json_or_normalized(p); reports=[]; original_stats=_stats(doc)
     for name,fn in TRANSFORMS.items():
         transformed=fn(doc); tp=out/f"{p.stem}.{name}.json"; write_json(tp, transformed)
         findings=semantic_oracles.compare(doc,transformed)
         reports.append({"transform":name,"output":str(tp),"findings":findings,"passed":not any(f["severity"]=="fail" for f in findings)})
-    report={"input":str(p),"transforms":reports,"passed":all(r["passed"] for r in reports)}
+    report={"input":str(p),"input_stats":original_stats,"transform_count":len(reports),"invariant_checks":"component/dependency/license/vulnerability preservation where available","transforms":reports,"passed":all(r["passed"] for r in reports)}
     (out/"metamorphic-report.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps(report,indent=2)); sys.exit(1 if not report["passed"] else 0)
 if __name__=="__main__": main()

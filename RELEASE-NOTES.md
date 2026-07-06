@@ -1,3 +1,20 @@
+## v2.2.3 - Fuzzing Workflow Verification and Workbench Stability
+
+- Verified the Fuzzing Lab workflows against both CycloneDX JSON and CycloneDX XML inputs.
+- Fixed `make fuzz-evil-supplier`, which previously passed an obsolete positional argument and failed.
+- Added `scripts/smoke-fuzz-workflows.sh` and `make fuzz-workflow-smoke` to exercise the major fuzzing workflows locally.
+- Made Docker-dependent `fuzz-python`, `fuzz-js`, `fuzz-php`, and `fuzz-smoke` skip cleanly when Docker is not installed instead of failing with `docker: command not found`.
+- Updated timed fuzzing Make targets so `COUNT` and `TIME_BUDGET` are propagated consistently.
+- Changed workbench status writes to atomic temp-file replacement to avoid transient partial `status.json` reads while jobs are running.
+- README updated to reflect v2.2.3 and to separate v2.2.1 dependency health from v2.2.2 fuzzing observability.
+
+## v2.2.2 - Fuzzing Observability Fixes
+
+- Added `fuzz-run-summary.json` and `fuzz-run-summary.md` to every Fuzzing Lab job.
+- Evidence bundles now capture final completed/failed job status instead of stale pre-completion state.
+- Metamorphic SBOM fuzzing reports input stats, transform count, generated artifacts, and guidance explaining deterministic semantic checks versus timed all-mode fuzzing.
+- CycloneDX XML inputs are normalized for JSON-oriented fuzzing workflows.
+
 ## v2.2.1 - Dependency Health and Unsupported Dependency Review
 
 Adds a conservative dependency health analysis layer for uploaded SBOMs and repository-generated SBOMs.
