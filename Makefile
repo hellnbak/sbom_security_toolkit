@@ -439,7 +439,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.2.4
+VERSION ?= 2.2.5
 
 setup:
 	./setup.sh

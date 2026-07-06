@@ -1,4 +1,17 @@
-# v2.2.4 - Dependency Health UI Clarity
+# v2.2.5 - Structure-Preserving Fuzzing Stability
+
+## Fixes
+
+- Fixed structure-preserving SBOM mutation when normalized CycloneDX XML components contain `hashes` as a count instead of a list.
+- Improved normalized component `bom_ref` / `bom-ref` handling during mutation.
+- Confirmed the Workbench `test-all-components` debugging workflow now passes the previously failing structure-preserving mutation step for CycloneDX XML uploads.
+
+## Notes
+
+This patch is intended to be pushed together with the unpushed v2.2.0-v2.2.4 changes. It keeps the README, CHANGELOG, release notes, package metadata, and Makefile aligned to v2.2.5.
+
+
+## v2.2.4 - Dependency Health UI Clarity
 
 - Made unsupported/out-of-date dependency analysis explicit in the Workbench workflow dropdown for uploaded SBOMs.
 - Made repository dependency-health analysis explicit in the Repository Intake workflow dropdown.

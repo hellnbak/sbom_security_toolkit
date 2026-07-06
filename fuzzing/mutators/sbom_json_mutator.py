@@ -43,14 +43,23 @@ def mutate_component(comp: dict, rng: random.Random):
     if field == "name": comp["name"] = rng.choice(EDGE_STRINGS)
     elif field == "version": comp["version"] = rng.choice(EDGE_STRINGS)
     elif field == "purl": comp["purl"] = rng.choice(PURLS)
-    elif field == "bom-ref": comp["bom-ref"] = rng.choice([comp.get("bom-ref", "ref"), "duplicate-ref", rng.choice(EDGE_STRINGS)])
+    elif field == "bom-ref":
+        existing_ref = comp.get("bom-ref") or comp.get("bom_ref") or comp.get("SPDXID") or comp.get("name") or "ref"
+        comp["bom-ref"] = rng.choice([existing_ref, "duplicate-ref", rng.choice(EDGE_STRINGS)])
     elif field == "license":
         if "licenses" in comp:
             comp["licenses"] = [{"license": {"id": rng.choice(LICENSES)}}]
         else:
             comp["licenseDeclared"] = rng.choice(LICENSES)
     elif field == "hash":
-        comp.setdefault("hashes", []).append({"alg": rng.choice(["SHA-256", "MD5", "UNKNOWN"]), "content": rng.choice(EDGE_STRINGS)})
+        # Normalized SBOMs may use hashes as a count/int, string, dict, or omit it.
+        # For structure-preserving mutation we need to preserve parseability, so coerce
+        # unexpected shapes to a CycloneDX-style list before appending.
+        existing = comp.get("hashes")
+        if not isinstance(existing, list):
+            existing = []
+            comp["hashes"] = existing
+        existing.append({"alg": rng.choice(["SHA-256", "MD5", "UNKNOWN"]), "content": rng.choice(EDGE_STRINGS)})
     elif field == "supplier":
         comp["supplier"] = {"name": rng.choice(EDGE_STRINGS)}
 

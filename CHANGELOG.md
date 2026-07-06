@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.2.5 - Structure-Preserving Fuzzing Stability
+
+- Fixed structure-preserving SBOM mutation for normalized CycloneDX XML inputs whose component `hashes` field is represented as a count/integer.
+- Improved `bom_ref` / `bom-ref` handling in the SBOM mutator.
+- Verified the Workbench `test-all-components` debugging workflow passes the previously failing mutation step.
+
+
 ## v2.2.4 - Dependency Health UI Clarity
 
 - Made unsupported/out-of-date dependency analysis easier to find in the local Workbench workflow dropdown.
