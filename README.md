@@ -15,9 +15,9 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine. Uploaded SBOMs and generated evidence stay on disk. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: v2.2.3
+## Current release: v2.2.4
 
-This README reflects the current **v2.2.3** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+This README reflects the current **v2.2.4** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
 - **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
 - **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
@@ -27,10 +27,20 @@ This README reflects the current **v2.2.3** feature set. Since the v1.9 agent-in
 - **v2.2.1 Dependency Health:** identify deprecated, abandoned, stale, unpinned, or unsupported-risk open source dependencies from uploaded SBOMs or generated repository SBOMs, with optional registry enrichment and conservative stale-maintenance heuristics.
 - **v2.2.2 Fuzzing Observability:** every Fuzzing Lab job now emits explicit run summaries and evidence bundles include final job state instead of stale running status.
 - **v2.2.3 Fuzzing Workflow Verification:** fixes the evil-supplier Make target, makes Docker-dependent language-engine fuzzing skip cleanly when Docker is unavailable, adds atomic workbench status writes, and adds a full fuzz workflow smoke-test script.
+- **v2.2.4 Dependency Health UI clarity:** makes unsupported/out-of-date dependency analysis explicit in the Workbench workflow dropdowns for both uploaded SBOMs and repository intake, including stale-threshold controls.
 
 The current focus is **local repository-to-SBOM operations, dependency health review, plus intelligent SBOM fuzzing**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
 
-**Documentation note:** this package consolidates the unpushed v2.2.0, v2.2.1, v2.2.2, and v2.2.3 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.2.3.
+**Documentation note:** this package consolidates the unpushed v2.2.0, v2.2.1, v2.2.2, v2.2.3, and v2.2.4 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.2.4.
+
+## v2.2.4 Dependency health UI clarity
+
+The Workbench now exposes unsupported/out-of-date dependency analysis more clearly in the workflow dropdowns:
+
+- Uploaded SBOM workflow: **Unsupported / out-of-date dependency analysis**
+- Repository Intake workflow: **Repository intake: unsupported / out-of-date dependency analysis**
+- Stale-threshold controls are visible next to the relevant workflows.
+- Network-enabled registry enrichment remains opt-in.
 
 ## v2.2.3 Fuzzing workflow verification fixes
 
@@ -241,7 +251,7 @@ make setup
 make test
 make validate
 make preflight-release
-make release VERSION=2.2.3
+make release VERSION=2.2.4
 ```
 
 Docker helpers are available:

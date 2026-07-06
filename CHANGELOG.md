@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.2.4 - Dependency Health UI Clarity
+
+- Made unsupported/out-of-date dependency analysis easier to find in the local Workbench workflow dropdown.
+- Added the same clarity to Repository Intake for dependency-health-only runs.
+- Added stale-threshold controls to the uploaded SBOM workflow form.
+- Updated README/release notes to reflect v2.2.4.
+
+
 All notable user-facing changes are summarized here. This changelog is aligned with `README.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py`.
 
 ## v2.2.3 - Fuzzing Workflow Verification and Workbench Stability

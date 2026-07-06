@@ -96,6 +96,8 @@ class Handler(BaseHTTPRequestHandler):
           <label>SBOM file</label><input type='file' name='sbom' required>
           <p class='small muted'>Allowed: .json, .xml, .spdx, .txt. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
           <label>Workflow</label><select name='workflow'>{opts}</select>
+          <p class='small muted'><strong>Unsupported / out-of-date dependency analysis</strong> is available in this dropdown. It checks uploaded SBOMs for deprecated, abandoned, stale, unpinned, or unsupported-risk dependencies.</p>
+          <div class='grid'><div><label>Stale threshold days</label><input name='stale_days' value='365' size='8'><p class='small muted'>Used by unsupported/out-of-date dependency analysis.</p></div></div>
           <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
           <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available</label></p>
           <input type='submit' value='Start scan'>
@@ -185,9 +187,10 @@ class Handler(BaseHTTPRequestHandler):
         ) or "<tr><td colspan='4' class='muted'>No repository intake jobs yet.</td></tr>"
         body = f"""
         <div class='card'><h2>Repository Intake</h2>
-        <p class='muted'>Build SBOMs from a repository, compare generators, scan vulnerabilities, optionally fuzz the generated SBOM, and package evidence. Static-first by default: the toolkit does not run project install/build scripts.</p>
+        <p class='muted'>Build SBOMs from a repository, compare generators, scan vulnerabilities, optionally fuzz the generated SBOM, run unsupported/out-of-date dependency analysis, and package evidence. Static-first by default: the toolkit does not run project install/build scripts.</p>
         <form action='/upload' method='post' enctype='multipart/form-data'>
           <label>Workflow</label><select name='workflow'>{opts}</select>
+          <p class='small muted'>Choose <strong>Repository intake: unsupported / out-of-date dependency analysis</strong> for a dependency-health-only run, or enable the dependency health checkbox during full repository intake.</p>
           <div class='grid'>
             <div><label>Source type</label><select name='repo_source_type'><option value='upload'>Repo archive upload</option><option value='path'>Local path on this machine</option><option value='github'>GitHub HTTPS URL</option></select></div>
             <div><label>SBOM generators</label><input name='repo_generators' value='auto' size='24'><p class='small muted'>Comma list: auto, internal, syft, cdxgen, trivy.</p></div>

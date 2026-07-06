@@ -1,3 +1,11 @@
+# v2.2.4 - Dependency Health UI Clarity
+
+- Made unsupported/out-of-date dependency analysis explicit in the Workbench workflow dropdown for uploaded SBOMs.
+- Made repository dependency-health analysis explicit in the Repository Intake workflow dropdown.
+- Added stale-threshold controls to the uploaded-SBOM workflow form.
+- Clarified that dependency-health checks identify deprecated, abandoned, stale, unpinned, or unsupported-risk dependencies.
+- Network-backed registry enrichment remains opt-in.
+
 ## v2.2.3 - Fuzzing Workflow Verification and Workbench Stability
 
 - Verified the Fuzzing Lab workflows against both CycloneDX JSON and CycloneDX XML inputs.
