@@ -17,6 +17,7 @@ MODULES = {
     "ai-fuzz": "ai_fuzz.tools.ai_fuzz",
     "ai-review": "ai_fuzz.tools.review_queue",
     "ai-provider-test": "ai_fuzz.tools.provider_test",
+    "ai-fuzz-analysis": "sbomops.ai_fuzz_analysis",
     "normalize": "sbomops.normalize",
     "explain": "sbomops.explain",
     "repair": "sbomops.repair",
@@ -25,6 +26,9 @@ MODULES = {
     "repo": "sbomops.repo_intake",
     "repo-intake": "sbomops.repo_intake",
     "dependency-health": "sbomops.dependency_health",
+    "project": "sbomops.project_ops",
+    "release-decision": "sbomops.project_ops",
+    "cloud": "sbomops.cloud",
 
     "fuzz-plan": "fuzzing.planner.fuzz_plan",
     "fuzz-kb": "fuzzing.kb.fuzz_kb",

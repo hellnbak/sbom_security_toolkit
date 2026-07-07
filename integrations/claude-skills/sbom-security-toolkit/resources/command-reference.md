@@ -58,6 +58,7 @@ make ai-fuzz-seeds FORMAT=cyclonedx SCENARIO=dependency-cycles
 make ai-mutation-plan SBOM=./bom.json
 make ai-crash-triage CRASH=./path/to/crash
 make ai-fuzz-campaign GOAL=sbom-parser-hardening
+make ai-provider-test AI_PROVIDER=bedrock AI_MODEL="$BEDROCK_MODEL_ID"
 make ai-provider-test AI_PROVIDER=glm AI_MODEL=glm-5.2
 make ai-review-list
 ```

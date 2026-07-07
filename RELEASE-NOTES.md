@@ -1,3 +1,68 @@
+# v2.3.0 - Project Risk Dashboard, All-Actions Scan, and Self-Hosted Cloud Mode
+
+This release consolidates the unpushed v2.2.x work and adds v2.3 project-risk operations plus optional self-hosted cloud-capable deployment scaffolding. Local-first mode remains the default. Cloud mode is opt-in for teams that need shared history, scheduled scans, retained evidence, and separated background workers.
+
+## Added in v2.3.0
+
+- Local project workspaces, project history recording, delta reports, and trend dashboards.
+- Release-decision workflow, evidence viewer, GitHub Actions workflow generator, policy tuning helper, dependency owner template, and AI executive-summary scaffold.
+- Workbench Projects page.
+- Main SBOM workflow option: Full SBOM analysis + every action + all fuzzing scenarios.
+- UI controls for fuzz time per step/library and fuzz targets for the all-actions scan.
+- Optional self-hosted cloud mode scaffolding:
+  - `docker/docker-compose.cloud.yml`
+  - Postgres, Redis, MinIO/S3-compatible object storage, web/API, generic worker, and fuzzing worker services
+  - `cloud/.env.example`
+  - `sst cloud init-config`
+  - `sst cloud doctor`
+  - `sst cloud schedule-template`
+  - `make cloud-config`, `make cloud-doctor`, `make cloud-compose-up`, and `make cloud-worker-smoke`
+- AWS self-hosting notes and starter IAM policy examples under `cloud/aws/`.
+- `docs/cloud/CLOUD-MODE.md`.
+
+## Cloud-mode safety model
+
+- Cloud mode is self-hosted and opt-in.
+- Local mode remains the default.
+- Fuzzing should run in worker containers, not inline in the API container.
+- Do not execute repository code or install scripts by default.
+- Do not send SBOMs/source to external AI providers unless explicitly enabled.
+- Do not log GitHub tokens, AWS credentials, or provider secrets.
+- Use IAM roles, Secrets Manager, KMS, TLS, and private networking for production self-hosted deployments.
+
+## Also included from the consolidated v2.2.x line
+
+- Repository intake and SBOM build pipeline.
+- Dependency health / unsupported dependency review.
+- Fuzzing observability and final evidence status fixes.
+- Fuzzing workflow verification and stability fixes.
+- Dependency-health UI dropdown clarity.
+- Structure-preserving CycloneDX XML fuzzing fix.
+- AI-enhanced Full SBOM Analysis and Bedrock provider support.
+
+---
+
+# v2.3.0 - AI-Enhanced Full SBOM Analysis and Bedrock Provider
+
+This patch integrates AI-assisted fuzz case generation into Full SBOM Analysis and exposes AWS Bedrock as an optional AI provider in the local Workbench.
+
+## Added
+
+- Full SBOM Analysis option to enable AI-assisted fuzz case generation.
+- Suggest-only mode for review-gated AI fuzz ideas.
+- Generate-and-run mode that creates deterministic fuzz cases, validates them, and runs safe semantic checks.
+- AWS Bedrock provider option in the main SBOM analysis UI and Fuzzing Lab.
+- Optional Bedrock provider implementation using boto3/Bedrock Converse API.
+- Bedrock integration docs and `requirements-ai-aws.txt`.
+- `make ai-fuzz-analysis` and `sst ai-fuzz-analysis`.
+
+## Safety
+
+- AI fuzzing is opt-in.
+- Bedrock credentials are resolved by the AWS SDK and are not stored by the toolkit.
+- AI output remains advisory and review-gated.
+- Generated cases are deterministic and validated before execution.
+
 # v2.2.5 - Structure-Preserving Fuzzing Stability
 
 ## Fixes

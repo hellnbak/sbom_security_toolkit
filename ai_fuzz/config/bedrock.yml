@@ -1,0 +1,13 @@
+# Optional AWS Bedrock provider profile for AI-assisted fuzzing.
+# The toolkit never stores AWS credentials. boto3 resolves credentials from the
+# normal AWS SDK chain: instance profile, environment, AWS profile, SSO, etc.
+provider: bedrock
+model: ${BEDROCK_MODEL_ID:-set-your-bedrock-model-id}
+region: ${AWS_REGION:-us-east-1}
+redact_before_prompt: true
+review_required: true
+network_default: opt_in
+notes:
+  - Set BEDROCK_MODEL_ID or pass --model from the UI/CLI.
+  - Use an EC2 instance role, AWS profile, or other standard AWS SDK credential source.
+  - AI output is advisory and is not automatically promoted to regression corpus.

@@ -21,7 +21,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -71,6 +71,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/jobs/"): return self.job(path.split("/", 2)[2])
         if path == "/scanners": return self.scanners()
         if path == "/repository": return self.repository_intake()
+        if path == "/projects": return self.projects_page()
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
         if path == "/fuzzing/dashboard": return self.fuzzing_dashboard()
@@ -96,8 +97,22 @@ class Handler(BaseHTTPRequestHandler):
           <label>SBOM file</label><input type='file' name='sbom' required>
           <p class='small muted'>Allowed: .json, .xml, .spdx, .txt. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
           <label>Workflow</label><select name='workflow'>{opts}</select>
+          <p class='small muted'><strong>Use “Full SBOM analysis + every action + all fuzzing scenarios”</strong> when you want every possible analysis action plus the broad timed fuzzing suite in one job.</p>
           <p class='small muted'><strong>Unsupported / out-of-date dependency analysis</strong> is available in this dropdown. It checks uploaded SBOMs for deprecated, abandoned, stale, unpinned, or unsupported-risk dependencies.</p>
-          <div class='grid'><div><label>Stale threshold days</label><input name='stale_days' value='365' size='8'><p class='small muted'>Used by unsupported/out-of-date dependency analysis.</p></div></div>
+          <div class='grid'><div><label>Stale threshold days</label><input name='stale_days' value='365' size='8'><p class='small muted'>Used by unsupported/out-of-date dependency analysis.</p></div><div><label>Fuzz time per step/library</label><input name='duration_seconds' value='60' size='8'><p class='small muted'>Used by the all-actions/all-fuzz workflow and AI fuzz execution.</p></div><div><label>Fuzz targets</label><input name='library_targets' value='sbom,scanner,ai' size='28'><p class='small muted'>For all-actions runs. Examples: sbom,scanner,ai or all.</p></div><div><label>Project ID</label><input name='project_id' value='uploaded-sbom' size='24'><p class='small muted'>Optional history workspace for project record/delta/trend.</p></div></div>
+          <div class='card'>
+            <h3>Optional AI-assisted fuzz cases for Full SBOM Analysis</h3>
+            <p class='small muted'>When enabled for <strong>Full SBOM analysis</strong>, the workbench asks the configured provider for SBOM-specific fuzz case ideas, validates deterministic cases, and can run only safe generated cases. AI output is advisory and review-gated.</p>
+            <p><label><input type='checkbox' name='ai_analysis_enabled' value='1'> Enable AI-assisted fuzz case generation during Full SBOM Analysis</label></p>
+            <div class='grid'>
+              <div><label>AI fuzz mode</label><select name='ai_analysis_mode'><option value='suggest'>Suggest only</option><option value='generate-run'>Generate and run validated cases</option></select></div>
+              <div><label>AI provider</label><select name='ai_provider'><option value='none'>prompt-only / none</option><option value='bedrock'>AWS Bedrock</option><option value='glm'>GLM local/OpenAI-compatible</option><option value='ollama'>Ollama-compatible</option><option value='openai-compatible'>OpenAI-compatible</option></select></div>
+              <div><label>AI model</label><input name='ai_model' placeholder='Bedrock model ID, glm-5.2, etc.' size='32'></div>
+              <div><label>Max generated cases</label><input name='ai_max_cases' value='5' size='8'></div>
+              <div><label>Time budget per case</label><input name='duration_seconds' value='30' size='8'></div>
+              <div><label>AI scenario</label><input name='scenario' value='sbom-analysis-targeted-edge-cases' size='34'></div>
+            </div>
+          </div>
           <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
           <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available</label></p>
           <input type='submit' value='Start scan'>
@@ -133,7 +148,7 @@ class Handler(BaseHTTPRequestHandler):
                 upload = upload_path
             else:
                 upload = save_upload(filename, content)
-            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz", "repo_dependency_health", "stale_days"]}
+            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz", "repo_dependency_health", "stale_days", "ai_analysis_enabled", "ai_analysis_mode", "ai_max_cases", "project_id"]}
             jid = create_job(workflow, upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options, secrets=secrets)
             self.redirect(f"/jobs/{jid}")
         except Exception as exc:
@@ -241,7 +256,7 @@ class Handler(BaseHTTPRequestHandler):
             <div><label>Dependency-Track URL</label><input name='dtrack_url' value='http://127.0.0.1:8081' size='28'></div>
           </div>
           <div class='grid'>
-            <div><label>AI provider</label><select name='ai_provider'><option value='none'>prompt-only / none</option><option value='glm'>GLM local/OpenAI-compatible</option><option value='ollama'>Ollama-compatible</option><option value='openai-compatible'>OpenAI-compatible</option></select></div>
+            <div><label>AI provider</label><select name='ai_provider'><option value='none'>prompt-only / none</option><option value='bedrock'>AWS Bedrock</option><option value='glm'>GLM local/OpenAI-compatible</option><option value='ollama'>Ollama-compatible</option><option value='openai-compatible'>OpenAI-compatible</option></select><p class='small muted'>Bedrock uses the host AWS SDK credentials/role and does not store tokens in job files.</p></div>
             <div><label>AI model</label><input name='ai_model' placeholder='glm-5.2' size='20'></div>
             <div><label>AI scenario</label><input name='scenario' value='dependency-cycles' size='24'></div>
             <div><label>AI goal</label><input name='ai_goal' value='scanner-disagreement-hardening' size='28'></div>
@@ -258,7 +273,7 @@ class Handler(BaseHTTPRequestHandler):
         <div class='grid'>
           <div class='card'><h3>Recommended starters</h3><p><strong>Round-trip</strong>, <strong>semantic oracles</strong>, <strong>structured mutations</strong>, <strong>fuzz-all-local</strong>, and <strong>fuzz-all-timed</strong> are good safe first runs. Use <strong>fuzz-all-timed</strong> when you want every available local fuzzing effort to run with a user-set time limit per step/library.</p></div>
           <div class='card'><h3>Scanner workflows</h3><p>Toolchain, compatibility, truth-set, and metamorphic scanner workflows depend on locally installed scanners.</p></div>
-          <div class='card'><h3>AI-assisted workflows</h3><p>Prompt-only mode works without keys. GLM/Ollama/OpenAI-compatible endpoints are optional and review-gated.</p></div>
+          <div class='card'><h3>AI-assisted workflows</h3><p>Prompt-only mode works without keys. Bedrock, GLM, Ollama, and OpenAI-compatible endpoints are optional and review-gated.</p></div>
         </div>
         <div class='card'><h2>Recent Fuzzing Jobs</h2><table><tr><th>Job</th><th>Workflow</th><th>Status</th><th>Created</th></tr>{recent_rows}</table><p><a class='btn secondary' href='/fuzzing/logs'>Open fuzzing logs</a> <a class='btn secondary' href='/fuzzing/dashboard'>Open fuzzing dashboard</a></p></div>
         """
@@ -293,6 +308,26 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 cards.append(f"<div class='card'><h2>{esc(label)}</h2><p class='muted'>No data yet. Run the matching workflow from the Fuzzing Lab.</p></div>")
         self.send_html("Fuzzing dashboard", "<div class='card'><h2>Fuzzing Lab Dashboard</h2><p class='muted'>Local-only view of fuzzing intelligence, corpus promotion, compatibility, AI safety, and finding lifecycle artifacts.</p><p><a class='btn' href='/fuzzing'>Start fuzzing job</a> <a class='btn secondary' href='/fuzzing/logs'>Open logs</a></p></div>" + "".join(cards))
+
+    def projects_page(self):
+        try:
+            from sbomops.project_ops import list_projects
+            projects = list_projects()
+        except Exception:
+            projects = []
+        rows = "".join(f"<tr><td>{esc(p.get('project_id'))}</td><td>{esc(p.get('name'))}</td><td>{esc(p.get('source'))}</td><td>{esc(p.get('updated_at'))}</td></tr>" for p in projects) or "<tr><td colspan='4' class='muted'>No projects yet. Use a Project ID in an SBOM job or initialize one from the CLI.</td></tr>"
+        body = f"""
+        <div class='card'><h2>Project Risk Dashboard</h2>
+        <p class='muted'>Project workspaces track SBOM analysis history over time. Use the <strong>Project ID</strong> field on scan jobs or CLI commands such as <code>sst project record</code>.</p>
+        <table><tr><th>Project ID</th><th>Name</th><th>Source</th><th>Updated</th></tr>{rows}</table>
+        </div>
+        <div class='grid'>
+          <div class='card'><h3>Delta analysis</h3><p>Compare the latest two recorded SBOM runs for new/removed components and quality changes.</p></div>
+          <div class='card'><h3>Trend dashboard</h3><p>View project run history and quality/component trends.</p></div>
+          <div class='card'><h3>Release decision</h3><p>Generate pass/warn/block release decisions from policy, quality, dependency health, and fuzzing evidence.</p></div>
+        </div>
+        """
+        self.send_html("Projects", body)
 
     def scanners(self):
         rows = "".join(f"<tr><td>{esc(r['tool'])}</td><td class='{ 'ok' if r['available'] else 'bad'}'>{'yes' if r['available'] else 'no'}</td><td><code>{esc(r['path'])}</code></td><td>{esc(r['note'])}</td></tr>" for r in scanner_status())

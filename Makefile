@@ -101,7 +101,7 @@ validate:
 	python3 -c "import json,pathlib; [json.load(open(p)) for p in pathlib.Path('.').rglob('*.json') if '/corpus/' not in str(p) and '/malformed/' not in str(p)]; print('json ok')"
 
 
-.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts ai-fuzz-seeds ai-mutation-plan ai-oracle-suggest ai-crash-triage ai-regression-test ai-fuzz-harness ai-coverage-suggest ai-fuzz-campaign ai-explain-disagreement ai-review-list ai-review-accept ai-review-reject ai-provider-test test sst demo-good demo-bad demo-supplier demo-fuzzing demo
+.PHONY: analyze sbom-score sbom-minimum-elements policy-check supplier-intake supplier-questions vex-template vex-validate vex-merge vex-explain prioritize scanner-confidence scanner-compare openssf-scorecard repo-posture guac-export guac-demo report release-evidence ui ui-bundle ui-server ui-clean redact-sbom watch-sbom exploitability-record validate-edr checksums sign-artifacts verify-artifacts ai-fuzz-seeds ai-mutation-plan ai-oracle-suggest ai-crash-triage ai-regression-test ai-fuzz-harness ai-coverage-suggest ai-fuzz-campaign ai-explain-disagreement ai-review-list ai-review-accept ai-review-reject ai-provider-test ai-fuzz-analysis test sst demo-good demo-bad demo-supplier demo-fuzzing demo
 
 POLICY ?= policies/default-release-policy.yml
 VULNS ?=
@@ -118,6 +118,9 @@ FORMAT ?= cyclonedx
 SCENARIO ?= dependency-cycles
 AI_PROVIDER ?= none
 AI_MODEL ?=
+AI_ANALYSIS_MODE ?= suggest
+AI_MAX_CASES ?= 5
+AI_TIME_BUDGET ?= 30
 GOAL ?= sbom-parser-hardening
 COVERAGE ?= fuzzing/reports/fuzz-coverage.md
 ITEM ?=
@@ -267,6 +270,10 @@ ai-review-reject:
 
 ai-provider-test:
 	python3 -m ai_fuzz.tools.provider_test --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),)
+
+ai-fuzz-analysis:
+	@if [ -z "$(SBOM)" ]; then echo "Usage: make ai-fuzz-analysis SBOM=./bom.json AI_PROVIDER=bedrock AI_MODEL=<model-id> AI_ANALYSIS_MODE=suggest|generate-run"; exit 2; fi
+	python3 -m sbomops.ai_fuzz_analysis $(SBOM) --out-dir reports/ai-assisted-fuzz-analysis --provider $(AI_PROVIDER) $(if $(AI_MODEL),--model $(AI_MODEL),) --mode $(AI_ANALYSIS_MODE) --max-cases $(AI_MAX_CASES) --time-budget $(AI_TIME_BUDGET)
 
 test:
 	python3 -m unittest discover -s tests -v
@@ -439,7 +446,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.2.5
+VERSION ?= 2.3.0
 
 setup:
 	./setup.sh
@@ -638,3 +645,70 @@ repo-evidence repo-intake:
 
 repo-dependency-health:
 	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --no-scan --dependency-health $(if $(filter 1,$(NETWORK)),--network,) $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+
+# v2.3 project risk dashboard and full all-actions scan workflows
+.PHONY: project-init project-list project-record project-delta project-trend release-decision ci-generate policy-tune owners-template ai-executive-summary evidence-index project-watch
+PROJECT_ID ?= demo-project
+RUN_DIR ?= reports/latest
+EVIDENCE_DIR ?= reports/latest
+CI_OUT ?= .github/workflows/sbom-security-toolkit.yml
+OWNERS_OUT ?= owners.yml
+
+project-init:
+	python3 -m sbomops.project_ops init $(PROJECT_ID) --source "$(REPO_SOURCE)" --policy $(POLICY) --ai-provider $(AI_PROVIDER) --fuzz-profile "$(LIBRARY_TARGETS)"
+
+project-list:
+	python3 -m sbomops.project_ops list
+
+project-record:
+	python3 -m sbomops.project_ops record $(PROJECT_ID) --sbom $(SBOM) --run-dir $(RUN_DIR) --note "$(NOTE)"
+
+project-delta:
+	python3 -m sbomops.project_ops delta $(PROJECT_ID) --out-dir $(REPORTS)/project-delta
+
+project-trend:
+	python3 -m sbomops.project_ops trend $(PROJECT_ID) --out-dir $(REPORTS)/project-trend
+
+release-decision:
+	python3 -m sbomops.project_ops release-decision --sbom $(SBOM) --out-dir $(REPORTS)/release-decision
+
+ci-generate:
+	python3 -m sbomops.project_ops ci-generate --out $(CI_OUT)
+
+policy-tune:
+	python3 -m sbomops.project_ops policy-tune --out policies/generated/generated-release-policy.yml --stale-days $(STALE_DAYS)
+
+owners-template:
+	python3 -m sbomops.project_ops owners-template --out $(OWNERS_OUT)
+
+ai-executive-summary:
+	python3 -m sbomops.project_ops ai-summary --input-dir $(EVIDENCE_DIR) --out-dir $(REPORTS)/ai-executive-summary
+
+evidence-index:
+	python3 -m sbomops.project_ops evidence-index $(EVIDENCE_DIR) --out-dir $(REPORTS)/evidence-viewer
+
+project-watch:
+	@echo "Add this cron entry locally if desired:"; echo "0 6 * * * cd $(PWD) && make repo-intake REPO_SOURCE=$(REPO_SOURCE) REPORTS=reports/watch/$$(date +\%Y\%m\%d)"
+
+# v2.3 cloud-capable self-hosted mode additions
+.PHONY: cloud-config cloud-doctor cloud-schedule-template cloud-compose-up cloud-compose-down cloud-worker-smoke
+CLOUD_CONFIG ?= cloud/sst-cloud-config.json
+CLOUD_SCHEDULE ?= cloud/run-scheduled-scan.sh
+
+cloud-config:
+	python3 -m sbomops.cloud init-config --output $(CLOUD_CONFIG)
+
+cloud-doctor:
+	python3 -m sbomops.cloud doctor --out reports/cloud-doctor.json
+
+cloud-schedule-template:
+	python3 -m sbomops.cloud schedule-template --output $(CLOUD_SCHEDULE)
+
+cloud-compose-up:
+	docker compose -f docker/docker-compose.cloud.yml up --build
+
+cloud-compose-down:
+	docker compose -f docker/docker-compose.cloud.yml down
+
+cloud-worker-smoke:
+	python3 -m sbomops.cloud worker

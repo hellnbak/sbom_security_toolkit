@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SstEvidenceBucketAccess",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::REPLACE_WITH_BUCKET",
+        "arn:aws:s3:::REPLACE_WITH_BUCKET/*"
+      ]
+    },
+    {
+      "Sid": "OptionalBedrockInvoke",
+      "Effect": "Allow",
+      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OptionalSecretsRead",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue"],
+      "Resource": "arn:aws:secretsmanager:*:*:secret:sbom-security-toolkit/*"
+    }
+  ]
+}

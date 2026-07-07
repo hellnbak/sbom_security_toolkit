@@ -24,6 +24,7 @@ MAX_UPLOAD_BYTES = 250 * 1024 * 1024
 
 WORKFLOWS = {
     "analyze": "Full SBOM analysis",
+    "analyze-everything": "Full SBOM analysis + every action + all fuzzing scenarios",
     "score": "SBOM quality score",
     "minimum-elements": "CISA/NTIA minimum elements",
     "policy": "Policy check",
@@ -43,6 +44,9 @@ WORKFLOWS = {
     "ai-fuzz-seeds": "AI fuzz seed suggestions",
     "ai-mutation-plan": "AI mutation plan",
     "ai-fuzz-campaign": "AI fuzz campaign draft",
+    "project-record": "Project history: record this SBOM run",
+    "project-delta": "Project history: delta report",
+    "project-trend": "Project history: trend dashboard",
 
     # Fuzzing Lab workflows exposed in the local web UI.
     "fuzz-lab-plan": "Fuzzing Lab: recommended next plan",
@@ -266,6 +270,9 @@ def run_job(job_id: str) -> None:
     ai_provider = option(status, "ai_provider", "none")
     ai_model = option(status, "ai_model", "")
     ai_goal = option(status, "ai_goal", "sbom-workbench-upload-hardening")
+    ai_analysis_enabled = option(status, "ai_analysis_enabled", "0") == "1"
+    ai_analysis_mode = option(status, "ai_analysis_mode", "suggest")
+    ai_max_cases = option_int(status, "ai_max_cases", 5, low=1, high=25)
     dtrack_url = option(status, "dtrack_url", "http://127.0.0.1:8081")
     repo_generators = option(status, "repo_generators", "auto")
     repo_source_type = option(status, "repo_source_type", "upload")
@@ -294,17 +301,17 @@ def run_job(job_id: str) -> None:
             if _JOB_SECRETS.get(job_id, {}).get("GITHUB_TOKEN"):
                 env["GITHUB_TOKEN"] = _JOB_SECRETS[job_id]["GITHUB_TOKEN"]
             steps.append(run_step(job_id, "Repository intake pipeline", repo_cmd, timeout=1800, env=env))
-        if workflow in {"analyze", "score"}:
+        if workflow in {"analyze", "analyze-everything", "score"}:
             steps.append(run_step(job_id, "SBOM quality", module_cmd("sbomops.score_sbom", sbom, "--out-dir", out / "sbom-quality")))
-        if workflow in {"analyze", "minimum-elements"}:
+        if workflow in {"analyze", "analyze-everything", "minimum-elements"}:
             steps.append(run_step(job_id, "Minimum elements", module_cmd("sbomops.minimum_elements", sbom, "--out-dir", out / "minimum-elements")))
-        if workflow in {"analyze", "policy"}:
+        if workflow in {"analyze", "analyze-everything", "policy"}:
             steps.append(run_step(job_id, "Policy check", module_cmd("sbomops.policy_check", sbom, "--policy", policy, "--out-dir", out / "policy")))
-        if workflow in {"analyze", "supplier-intake"}:
+        if workflow in {"analyze", "analyze-everything", "supplier-intake"}:
             steps.append(run_step(job_id, "Supplier intake", module_cmd("sbomops.supplier_intake", sbom, "--out-dir", out / "supplier-intake")))
-        if workflow in {"analyze", "supplier-questions"}:
+        if workflow in {"analyze", "analyze-everything", "supplier-questions"}:
             steps.append(run_step(job_id, "Supplier questions", module_cmd("sbomops.supplier_questions", sbom, "--out-dir", out / "supplier-questions")))
-        if workflow in {"analyze", "report"}:
+        if workflow in {"analyze", "analyze-everything", "report"}:
             steps.append(run_step(job_id, "Report bundle", module_cmd("sbomops.report", sbom, "--out-dir", out / "bundle")))
         if workflow == "redact":
             steps.append(run_step(job_id, "Redact SBOM", module_cmd("sbomops.redact", sbom, "--out", out / "redacted-sbom.json", "--hash-internal-names")))
@@ -315,6 +322,61 @@ def run_job(job_id: str) -> None:
             if status.get("network_enabled"):
                 cmd.append("--network")
             steps.append(run_step(job_id, "Dependency health / unsupported dependency analysis", cmd, timeout=900))
+
+        if workflow == "analyze-everything":
+            dep_cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days))
+            if status.get("network_enabled"):
+                dep_cmd.append("--network")
+            steps.append(run_step(job_id, "Dependency health / unsupported dependency analysis", dep_cmd, timeout=900))
+            steps.append(run_step(job_id, "Scanner compare", module_cmd("sbomops.scanner_compare", sbom, "--out-dir", out / "scanner-compare"), timeout=900))
+            # Run the broad local fuzzing suite with the user-selected per-step time budget.
+            for target in library_targets:
+                target = target.strip().lower()
+                if target in {"sbom", "all"}:
+                    for step_name, cmd in [
+                        ("Everything fuzz: structure mutations", [sys.executable, "fuzzing/mutators/sbom_json_mutator.py", str(sbom), "--out", str(out / "everything-fuzz" / "structured"), "--count", str(min(count, 25))]),
+                        ("Everything fuzz: round-trip", [sys.executable, "fuzzing/roundtrip/roundtrip_sbom.py", str(sbom), "--out-dir", str(out / "everything-fuzz" / "roundtrip")]),
+                        ("Everything fuzz: metamorphic", [sys.executable, "fuzzing/metamorphic/metamorphic_sbom.py", str(sbom), "--out-dir", str(out / "everything-fuzz" / "metamorphic")]),
+                        ("Everything fuzz: semantic oracles", [sys.executable, "fuzzing/oracles/semantic_oracles.py", str(sbom), "--out", str(out / "everything-fuzz" / "semantic-oracles.json")]),
+                        ("Everything fuzz: semantic format diff", [sys.executable, "fuzzing/semantic_format_diff/semantic_format_diff.py", str(sbom), "--out", str(out / "everything-fuzz" / "semantic-format-diff.json")]),
+                    ]:
+                        steps.append(run_step(job_id, step_name, cmd, timeout=duration_seconds, timeout_ok=True))
+                if target in {"scanner", "all"}:
+                    for step_name, cmd in [
+                        ("Everything fuzz: toolchain", [sys.executable, "fuzzing/toolchain/fuzz_toolchain.py", str(sbom), "--out", str(out / "everything-fuzz" / "toolchain.json")]),
+                        ("Everything fuzz: scanner metamorphic", [sys.executable, "fuzzing/scanner-metamorphic/metamorphic_scanners.py", str(sbom), "--out-dir", str(out / "everything-fuzz" / "scanner-metamorphic")]),
+                        ("Everything fuzz: vulnerability matching", [sys.executable, "fuzzing/vuln_matching/vuln_matching_fuzz.py", "--out-dir", str(out / "everything-fuzz" / "vuln-matching")]),
+                    ]:
+                        steps.append(run_step(job_id, step_name, cmd, timeout=duration_seconds, timeout_ok=True))
+                if target in {"ai", "all"}:
+                    ai_cmd = module_cmd("sbomops.ai_fuzz_analysis", sbom, "--out-dir", out / "everything-fuzz" / "ai-assisted", "--provider", ai_provider, "--mode", ai_analysis_mode if ai_analysis_enabled else "suggest", "--max-cases", str(ai_max_cases), "--time-budget", str(duration_seconds), "--scenario", option(status, "scenario", "everything-sbom-fuzzing"))
+                    if ai_model:
+                        ai_cmd.extend(["--model", ai_model])
+                    steps.append(run_step(job_id, "Everything fuzz: AI-assisted case generation", ai_cmd, timeout=max(120, duration_seconds * max(1, ai_max_cases)), timeout_ok=False))
+            steps.append(run_step(job_id, "Release decision", module_cmd("sbomops.project_ops", "release-decision", "--sbom", sbom, "--out-dir", out / "release-decision")))
+            steps.append(run_step(job_id, "AI executive summary scaffold", module_cmd("sbomops.project_ops", "ai-summary", "--input-dir", out, "--out-dir", out / "ai-executive-summary"), timeout=30, timeout_ok=True))
+
+        if workflow == "project-record":
+            steps.append(run_step(job_id, "Project record", module_cmd("sbomops.project_ops", "record", option(status, "project_id", "uploaded-sbom"), "--sbom", sbom, "--run-dir", out, "--note", "workbench run")))
+        if workflow == "project-delta":
+            steps.append(run_step(job_id, "Project delta", module_cmd("sbomops.project_ops", "delta", option(status, "project_id", "uploaded-sbom"), "--out-dir", out / "project-delta")))
+        if workflow == "project-trend":
+            steps.append(run_step(job_id, "Project trend", module_cmd("sbomops.project_ops", "trend", option(status, "project_id", "uploaded-sbom"), "--out-dir", out / "project-trend")))
+
+        if workflow in {"analyze", "analyze-everything"} and ai_analysis_enabled:
+            ai_cmd = module_cmd(
+                "sbomops.ai_fuzz_analysis",
+                sbom,
+                "--out-dir", out / "ai-assisted-fuzz-analysis",
+                "--provider", ai_provider,
+                "--mode", ai_analysis_mode,
+                "--max-cases", str(ai_max_cases),
+                "--time-budget", str(duration_seconds),
+                "--scenario", option(status, "scenario", "sbom-analysis-targeted-edge-cases"),
+            )
+            if ai_model:
+                ai_cmd.extend(["--model", ai_model])
+            steps.append(run_step(job_id, "AI-assisted fuzz case generation for Full SBOM Analysis", ai_cmd, timeout=max(120, duration_seconds * max(1, min(ai_max_cases, 25)) + 60), timeout_ok=False))
 
         if workflow == "ai-fuzz-seeds":
             steps.append(run_step(job_id, "AI fuzz seeds", module_cmd("ai_fuzz.tools.ai_fuzz", "--provider", ai_provider, *( ["--model", ai_model] if ai_model else [] ), "seeds", "--format", "cyclonedx", "--scenario", option(status, "scenario", "dependency-cycles"), "--count", str(count))))
@@ -465,7 +527,7 @@ def run_job(job_id: str) -> None:
         if workflow == "fuzz-lab-dashboard":
             steps.append(run_step(job_id, "Fuzzing Lab dashboard", [sys.executable, "fuzzing/visualize/fuzzing_lab_dashboard.py", "--out", str(out / "lab-dashboard.html")]))
 
-        if workflow.startswith("fuzz-") or workflow.startswith("ai-fuzz") or workflow in {"ai-corpus-review", "ai-harness-repair", "ai-fuzz-eval", "ai-harness-quality-loop", "ai-seed-generator", "ai-seed-generator-test", "ai-fuzz-redteam"}:
+        if workflow.startswith("fuzz-") or workflow.startswith("ai-fuzz") or (workflow in {"analyze", "analyze-everything"} and ai_analysis_enabled) or workflow == "analyze-everything" or workflow in {"ai-corpus-review", "ai-harness-repair", "ai-fuzz-eval", "ai-harness-quality-loop", "ai-seed-generator", "ai-seed-generator-test", "ai-fuzz-redteam"}:
             summary = write_fuzz_activity_summary(job_id, status, steps, out)
             append_log(job_id, f"\n=== Fuzzing activity summary ===\n{summary}\n")
 
@@ -478,6 +540,10 @@ def run_job(job_id: str) -> None:
             append_log(job_id, proc.stdout[-12000:] + proc.stderr[-12000:])
         # Always generate a UI bundle from available outputs.
         steps.append(run_step(job_id, "UI bundle", module_cmd("sbomops.ui_bundle", "--reports-dir", out, "--out-dir", out / "ui")))
+        project_id = option(status, "project_id", "")
+        if project_id:
+            steps.append(run_step(job_id, "Project history record", module_cmd("sbomops.project_ops", "record", project_id, "--sbom", sbom, "--run-dir", out, "--note", status.get("workflow_label", workflow))))
+
         failed = [s for s in steps if s.get("returncode") not in (0, None)]
         status.update({"state": "failed" if failed else "completed", "exit_code": 1 if failed else 0, "steps": steps, "completed_at": now()})
         if failed:

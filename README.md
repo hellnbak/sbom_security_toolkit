@@ -1,6 +1,6 @@
 # SBOM Security Toolkit
 
-**SBOM Security Toolkit** is a local-first, source-available workbench for SBOM security operations, supplier SBOM intake, release evidence, and SBOM-focused fuzzing research.
+**SBOM Security Toolkit** is a local-first, cloud-capable, source-available workbench for SBOM security operations, supplier SBOM intake, release evidence, and SBOM-focused fuzzing research.
 
 It is meant to help security teams, product-security engineers, AppSec teams, maintainers, and researchers answer practical questions:
 
@@ -12,12 +12,12 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 - Can malformed, ambiguous, or adversarial SBOMs cause crashes, timeouts, silent component drops, VEX loss, policy bypasses, or scanner disagreement?
 - Can AI help generate fuzzing ideas and triage results without taking over security decisions?
 
-The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine. Uploaded SBOMs and generated evidence stay on disk. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, or OpenAI-compatible providers can be enabled when you choose to use them.
+The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine by default. Uploaded SBOMs and generated evidence stay on disk. For teams, the toolkit is now also **cloud-capable by choice**: optional self-hosted server mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, and cloud deployment guidance while preserving the same safety defaults. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, Bedrock, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: v2.2.5
+## Current release: v2.3.0
 
-This README reflects the current **v2.2.5** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+This README reflects the current **v2.3.0** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
 - **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
 - **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
@@ -29,10 +29,57 @@ This README reflects the current **v2.2.5** feature set. Since the v1.9 agent-in
 - **v2.2.3 Fuzzing Workflow Verification:** fixes the evil-supplier Make target, makes Docker-dependent language-engine fuzzing skip cleanly when Docker is unavailable, adds atomic workbench status writes, and adds a full fuzz workflow smoke-test script.
 - **v2.2.4 Dependency Health UI clarity:** makes unsupported/out-of-date dependency analysis explicit in the Workbench workflow dropdowns for both uploaded SBOMs and repository intake, including stale-threshold controls.
 - **v2.2.5 Structure-preserving fuzzing stability:** fixes CycloneDX XML mutation failures when normalized component hash metadata is represented as a count, and verifies the Workbench test-all-components flow passes the mutation step.
+- **v2.2.6 AI-enhanced analysis and Bedrock provider:** Full SBOM Analysis can optionally generate AI-assisted fuzz case suggestions or run validated deterministic cases; the Fuzzing Lab and analysis UI now include AWS Bedrock as a provider option.
+- **v2.3.0 Project risk dashboard, full all-actions scan, and self-hosted cloud mode:** adds local project workspaces, history recording, delta/trend reporting, evidence-bundle viewer, release decision workflow, CI workflow generator, policy tuning helper, dependency owner template, AI executive-summary scaffold, a Workbench dropdown option for “Full SBOM analysis + every action + all fuzzing scenarios” with configurable fuzz time per step/library, and optional self-hosted cloud-mode scaffolding with Postgres, Redis, object storage, workers, and deployment guidance.
 
-The current focus is **local repository-to-SBOM operations, dependency health review, plus intelligent SBOM fuzzing**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, and exercise SBOM parsers/scanners with semantic fuzzing workflows from either the CLI or local web UI.
+The current focus is **repository-to-SBOM operations, dependency health review, intelligent SBOM fuzzing, and project risk tracking**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, exercise SBOM parsers/scanners with semantic fuzzing workflows, and optionally deploy the workbench in a self-hosted cloud mode for team usage and scheduled/background jobs.
 
-**Documentation note:** this package consolidates the unpushed v2.2.0, v2.2.1, v2.2.2, v2.2.3, v2.2.4, and v2.2.5 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.2.5.
+**Documentation note:** this package consolidates the unpushed v2.2.0 through v2.3.0 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.3.0.
+
+## v2.3.0 Project risk dashboard, all-actions scan, and cloud-capable deployment
+
+v2.3.0 turns one-off analysis jobs into a lightweight project-risk workflow. The Workbench now has a **Projects** page, project IDs on scan jobs, local history recording, delta/trend helpers, release-decision output, a GitHub Actions workflow generator, policy tuning helper, dependency owner template, evidence viewer, and AI executive-summary scaffold. This package also adds optional **self-hosted cloud mode** scaffolding for teams that want Postgres-backed history, Redis-style queues, S3-compatible evidence storage, separated workers, and scheduled/background scans while keeping local mode as the default.
+
+The main SBOM workflow dropdown also includes **Full SBOM analysis + every action + all fuzzing scenarios**. This mode runs the normal SBOM analysis pipeline, unsupported/out-of-date dependency analysis, scanner comparison, release-decision output, optional AI fuzz case generation, and broad timed fuzzing. The UI exposes a **Fuzz time per step/library** control and a **Fuzz targets** field such as `sbom,scanner,ai` or `all`.
+
+```bash
+make release-decision SBOM=./bom.json
+make project-record PROJECT_ID=my-api SBOM=./bom.json RUN_DIR=reports/latest
+make project-delta PROJECT_ID=my-api
+make project-trend PROJECT_ID=my-api
+make ci-generate
+make policy-tune STALE_DAYS=365
+make owners-template
+make ai-executive-summary EVIDENCE_DIR=reports/latest
+```
+
+
+### Optional self-hosted cloud mode
+
+Local mode remains the default and safest way to run the toolkit. Cloud mode is opt-in and intended for self-hosted team deployments where you want shared project history, scheduled scans, retained evidence bundles, and long-running fuzzing workers.
+
+```bash
+make cloud-config
+make cloud-doctor
+cp cloud/.env.example cloud/.env
+# edit cloud/.env first
+set -a; source cloud/.env; set +a
+make cloud-compose-up
+```
+
+Cloud mode includes Docker Compose scaffolding for the Workbench API/UI, generic workers, fuzzing workers, Postgres, Redis, and MinIO/S3-compatible object storage. The toolkit does not require managed SaaS, and cloud mode should be deployed behind authentication, TLS, and a private network or reverse proxy. See `docs/cloud/CLOUD-MODE.md`.
+
+## v2.2.6 AI-enhanced Full SBOM Analysis and Bedrock support
+
+Full SBOM Analysis has an optional AI-assisted fuzzing phase. When enabled, the toolkit asks the configured AI provider for SBOM-specific fuzzing ideas, creates deterministic reviewable cases, validates them, and can run the safe generated cases. The default remains disabled/suggest-only so private SBOMs are not sent to external providers unless the user opts in.
+
+The AI provider dropdown includes **AWS Bedrock** in both the main SBOM analysis form and the Fuzzing Lab. Bedrock uses the host AWS SDK credential chain, such as an EC2 instance role or AWS profile; the toolkit does not store AWS credentials in job status, logs, reports, or evidence bundles.
+
+```bash
+make ai-provider-test AI_PROVIDER=bedrock AI_MODEL="$BEDROCK_MODEL_ID"
+make ai-fuzz-analysis SBOM=./bom.json AI_PROVIDER=bedrock AI_MODEL="$BEDROCK_MODEL_ID" AI_ANALYSIS_MODE=suggest
+make ai-fuzz-analysis SBOM=./bom.json AI_PROVIDER=bedrock AI_MODEL="$BEDROCK_MODEL_ID" AI_ANALYSIS_MODE=generate-run
+```
 
 ## v2.2.5 Structure-preserving fuzzing stability
 
@@ -59,7 +106,9 @@ SBOM Security Toolkit combines workflows that are often spread across several to
 - **Supplier intake:** minimum-elements checks, supplier-question generation, supplier reports, and evidence bundles.
 - **Policy and evidence:** policy-as-code checks, release evidence, checksums/signing helpers, VEX helpers, and Exploitability Decision Records.
 - **Scanner operations:** scanner availability checks, scanner comparison, scanner confidence scoring, compatibility matrix, and curated scanner truth-set testing.
-- **Local workbench UI:** upload SBOMs or repository archives, use local paths or GitHub URLs, launch workflows, view job status/logs, download evidence bundles, and run fuzzing workflows from the browser.
+- **Local workbench UI:** upload SBOMs or repository archives, use local paths or GitHub URLs, launch workflows, view job status/logs, download evidence bundles, run fuzzing workflows from the browser, and use the Projects page for history/trends.
+- **Project risk operations:** project workspaces, history recording, delta/trend reporting, release decision workflow, GitHub Actions generator, policy tuning, owner mapping template, evidence viewer, and AI executive-summary scaffold.
+- **Cloud-capable deployment:** optional self-hosted Docker Compose stack, cloud config helpers, cloud doctor, scheduled-scan template, worker scaffold, S3-compatible evidence storage guidance, and AWS IAM/Secrets Manager/Bedrock notes.
 - **Fuzzing lab:** structure-preserving mutation, schema-aware generation, semantic oracles, round-trip/metamorphic checks, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, replay packs, benchmarks, coverage scaffolding, ClusterFuzzLite scaffolding, and fuzz finding lifecycle tracking.
 - **Intelligent fuzzing operations:** fuzzing intelligence scoring, corpus promotion recommendations, harness quality auditing, AI harness quality loop, AI seed-generator synthesis, grammar-mutator scaffolding, method-targeted coverage, semantic format-diff testing, vulnerability matching fuzzing, VEX logic fuzzing, evil supplier SBOM scenarios, AI red-team checks, CI fuzz result import, and local fuzzing dashboards.
 - **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, provider-neutral agent prompts, optional GLM/local model profiles, Ollama/OpenAI-compatible hooks, and AI-assisted fuzzing triage/planning.
@@ -188,6 +237,7 @@ make fuzz-lab-dashboard
 ### Use AI-assisted fuzzing safely
 
 ```bash
+make ai-provider-test AI_PROVIDER=bedrock AI_MODEL="$BEDROCK_MODEL_ID"
 make ai-provider-test AI_PROVIDER=glm AI_MODEL=glm-5.2
 make ai-fuzz-seeds AI_PROVIDER=none FORMAT=cyclonedx SCENARIO=dependency-cycles
 make ai-harness-quality-loop TARGET=sbomops/minimum_elements.py AI_PROVIDER=none
@@ -195,7 +245,7 @@ make ai-seed-generator GOAL=vex-logic-errors AI_PROVIDER=none
 make ai-fuzz-redteam AI_PROVIDER=none
 ```
 
-`AI_PROVIDER=none` is prompt-only mode and requires no API key. Optional provider aliases include `glm`, `ollama`, and `openai-compatible`.
+`AI_PROVIDER=none` is prompt-only mode and requires no API key. Optional provider aliases include `bedrock`, `glm`, `ollama`, and `openai-compatible`.
 
 ## Local workbench UI
 
@@ -255,7 +305,7 @@ make setup
 make test
 make validate
 make preflight-release
-make release VERSION=2.2.5
+make release VERSION=2.3.0
 ```
 
 Docker helpers are available:

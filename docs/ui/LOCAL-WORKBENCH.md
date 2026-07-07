@@ -30,7 +30,7 @@ http://127.0.0.1:8080
 - Delete local job output
 - Check optional scanner/tool availability
 - Launch Fuzzing Lab workflows from the browser
-- Configure fuzzing options such as seed count, edge-case type, budget profile, AI provider/model, and local Dependency-Track URL
+- Configure fuzzing options such as seed count, edge-case type, budget profile, AI provider/model, including optional AWS Bedrock, and local Dependency-Track URL
 - Review recent fuzzing logs on `/fuzzing/logs`
 
 ## Safety model
@@ -100,7 +100,7 @@ The Fuzzing Lab lets you upload a seed SBOM and run local fuzzing workflows from
 - replay-pack generation,
 - AI-assisted corpus review, harness repair prompts, mutation plans, fuzz campaigns, and provider evaluation.
 
-The Fuzzing Lab form supports workflow options such as seed count, time limit per fuzzing step/library, run target groups, edge-case profile, budget profile, local Dependency-Track URL, AI provider/model, AI scenario/goal, and harness target. Use the timed all-fuzzing workflow when you want the workbench to run all available local fuzzing modes with the same per-step time budget. AI-assisted workflows remain advisory and review-gated.
+The Fuzzing Lab form supports workflow options such as seed count, time limit per fuzzing step/library, run target groups, edge-case profile, budget profile, local Dependency-Track URL, AI provider/model, including optional AWS Bedrock, AI scenario/goal, and harness target. Use the timed all-fuzzing workflow when you want the workbench to run all available local fuzzing modes with the same per-step time budget. AI-assisted workflows remain advisory and review-gated.
 
 ### Fuzzing logs
 
@@ -130,3 +130,8 @@ Private GitHub token handling:
 - the clone helper avoids placing tokens in the Git URL or command line
 
 Repository Intake workflows can generate SBOMs, compare SBOM generator output, run locally installed vulnerability scanners, optionally fuzz the generated SBOM, and create a downloadable evidence bundle.
+
+
+## AI-assisted fuzz cases for Full SBOM Analysis
+
+The upload workflow can optionally enable AI-assisted fuzz case generation for Full SBOM Analysis. Modes are `suggest` and `generate-run`. Provider choices include prompt-only, AWS Bedrock, GLM, Ollama, and OpenAI-compatible endpoints. AI output is advisory; generated cases are validated before execution and are not promoted automatically.

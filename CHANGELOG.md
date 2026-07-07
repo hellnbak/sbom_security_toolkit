@@ -1,28 +1,46 @@
 # Changelog
 
+## v2.3.0 - Project Risk Dashboard, All-Actions Scan, and Self-Hosted Cloud Mode
+
+- Added local project workspaces, project history recording, delta reports, and trend dashboards.
+- Added release-decision workflow, evidence viewer, GitHub Actions workflow generator, policy tuning helper, dependency owner template, and AI executive-summary scaffold.
+- Added Workbench Projects page.
+- Added main SBOM workflow option: Full SBOM analysis + every action + all fuzzing scenarios.
+- Added UI controls for fuzz time per step/library and fuzz targets for the all-actions scan.
+- Added optional self-hosted cloud mode scaffolding while preserving local-first defaults.
+- Added `docker/docker-compose.cloud.yml` with Workbench API/UI, generic worker, fuzzing worker, Postgres, Redis, and MinIO/S3-compatible object storage.
+- Added `cloud/.env.example`, `docs/cloud/CLOUD-MODE.md`, and AWS self-hosting policy notes under `cloud/aws/`.
+- Added `sst cloud init-config`, `sst cloud doctor`, `sst cloud schedule-template`, `make cloud-config`, `make cloud-doctor`, `make cloud-compose-up`, and `make cloud-worker-smoke`.
+- README updated to describe local-first plus cloud-capable deployment.
+
+## v2.2.6 - AI-Enhanced Full SBOM Analysis and Bedrock Provider
+
+- Added optional AI-assisted fuzz case generation to Full SBOM Analysis.
+- Added suggest-only and generate-and-run-validated-cases modes.
+- Added deterministic validation/execution for AI-derived fuzz cases.
+- Added AWS Bedrock as an optional AI provider in the Fuzzing Lab and main analysis UI.
+- Added Bedrock provider support through boto3 when installed and configured.
+- Added Bedrock docs and optional AWS AI requirements file.
+- Added `make ai-fuzz-analysis` and `sst ai-fuzz-analysis`.
+
 ## v2.2.5 - Structure-Preserving Fuzzing Stability
 
 - Fixed structure-preserving SBOM mutation for normalized CycloneDX XML inputs whose component `hashes` field is represented as a count/integer.
 - Improved `bom_ref` / `bom-ref` handling in the SBOM mutator.
 - Verified the Workbench `test-all-components` debugging workflow passes the previously failing mutation step.
 
-
 ## v2.2.4 - Dependency Health UI Clarity
 
 - Made unsupported/out-of-date dependency analysis easier to find in the local Workbench workflow dropdown.
 - Added the same clarity to Repository Intake for dependency-health-only runs.
 - Added stale-threshold controls to the uploaded SBOM workflow form.
-- Updated README/release notes to reflect v2.2.4.
-
-
-All notable user-facing changes are summarized here. This changelog is aligned with `README.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py`.
 
 ## v2.2.3 - Fuzzing Workflow Verification and Workbench Stability
 
 - Verified major Fuzzing Lab workflows against CycloneDX JSON and CycloneDX XML inputs.
 - Added `scripts/smoke-fuzz-workflows.sh` and `make fuzz-workflow-smoke` for local regression coverage of fuzzing modes.
 - Fixed `make fuzz-evil-supplier`, which used an obsolete argument.
-- Made Docker-dependent fuzzing modes (`fuzz-python`, `fuzz-js`, `fuzz-php`, and `fuzz-smoke`) skip cleanly when Docker is unavailable.
+- Made Docker-dependent fuzzing modes skip cleanly when Docker is unavailable.
 - Fixed timed fuzzing variable propagation for `TIME_BUDGET` and `COUNT`.
 - Changed workbench status writes to atomic replacement so the UI does not read partially written `status.json` files.
 
@@ -30,7 +48,7 @@ All notable user-facing changes are summarized here. This changelog is aligned w
 
 - Added `fuzz-run-summary.json` and `fuzz-run-summary.md` to every Fuzzing Lab job.
 - Evidence bundles now include final completed/failed job status instead of stale `running` status.
-- Metamorphic SBOM fuzzing now reports input stats, transform count, generated artifacts, and guidance explaining deterministic semantic checks versus timed all-mode fuzzing.
+- Metamorphic SBOM fuzzing reports input stats, transform count, generated artifacts, and guidance explaining deterministic semantic checks versus timed all-mode fuzzing.
 - CycloneDX XML inputs are normalized before JSON-oriented semantic fuzzing workflows.
 
 ## v2.2.1 - Dependency Health and Unsupported Dependency Review

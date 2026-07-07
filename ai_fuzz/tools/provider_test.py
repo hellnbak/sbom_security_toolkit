@@ -16,7 +16,7 @@ def main() -> int:
         prog="ai-provider-test",
         description="Test an optional AI provider configuration without running a fuzzing workflow.",
     )
-    parser.add_argument("--provider", default=os.environ.get("AI_FUZZ_PROVIDER", "none"), help="none, ollama, openai-compatible, or glm")
+    parser.add_argument("--provider", default=os.environ.get("AI_FUZZ_PROVIDER", "none"), help="none, bedrock, ollama, openai-compatible, or glm")
     parser.add_argument("--model", default=None, help="Override provider model name")
     parser.add_argument("--prompt", default="Return the single word OK.", help="Small prompt used for provider validation")
     parser.add_argument("--out", default="reports/ai-provider-test.json", help="Where to write provider test result JSON")

@@ -1,0 +1,96 @@
+services:
+  sbom-workbench:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["python", "-m", "sbomops.workbench.server", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      - "${SST_BIND_ADDR:-127.0.0.1}:8080:8080"
+    environment:
+      SST_DEPLOYMENT_MODE: server
+      SST_STORAGE_BACKEND: ${SST_STORAGE_BACKEND:-s3}
+      SST_OBJECT_BUCKET: ${SST_OBJECT_BUCKET:-sbom-security-toolkit}
+      SST_OBJECT_PREFIX: ${SST_OBJECT_PREFIX:-sst/}
+      DATABASE_URL: postgresql://sst:${POSTGRES_PASSWORD:-change-me}@postgres:5432/sst
+      REDIS_URL: redis://redis:6379/0
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      SST_AUTH_ENABLED: ${SST_AUTH_ENABLED:-false}
+      SST_ADMIN_USER: ${SST_ADMIN_USER:-admin}
+      SST_ADMIN_PASSWORD: ${SST_ADMIN_PASSWORD:-change-me}
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    volumes:
+      - ../ui/storage:/app/ui/storage
+      - ../reports:/app/reports
+
+  sbom-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["python", "-m", "sbomops.cloud", "worker"]
+    environment:
+      SST_DEPLOYMENT_MODE: server
+      SST_WORKER_QUEUE: default
+      SST_STORAGE_BACKEND: ${SST_STORAGE_BACKEND:-s3}
+      SST_OBJECT_BUCKET: ${SST_OBJECT_BUCKET:-sbom-security-toolkit}
+      DATABASE_URL: postgresql://sst:${POSTGRES_PASSWORD:-change-me}@postgres:5432/sst
+      REDIS_URL: redis://redis:6379/0
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    volumes:
+      - ../ui/storage:/app/ui/storage
+      - ../reports:/app/reports
+
+  sbom-fuzz-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["python", "-m", "sbomops.cloud", "worker"]
+    environment:
+      SST_DEPLOYMENT_MODE: server
+      SST_WORKER_QUEUE: fuzzing
+      DATABASE_URL: postgresql://sst:${POSTGRES_PASSWORD:-change-me}@postgres:5432/sst
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ../ui/storage:/app/ui/storage
+      - ../reports:/app/reports
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sst
+      POSTGRES_USER: sst
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - sst-postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - sst-redis:/data
+
+  minio:
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin-change-me}
+    ports:
+      - "${SST_BIND_ADDR:-127.0.0.1}:9000:9000"
+      - "${SST_BIND_ADDR:-127.0.0.1}:9001:9001"
+    volumes:
+      - sst-minio:/data
+
+volumes:
+  sst-postgres:
+  sst-redis:
+  sst-minio:

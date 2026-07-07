@@ -28,9 +28,9 @@ def configured_provider(explicit: Optional[str] = None) -> str:
 def provider_defaults(provider: Optional[str], model: Optional[str] = None) -> tuple[str, str]:
     """Resolve provider aliases and safe default model names.
 
-    The `glm` alias is intentionally mapped to an OpenAI-compatible local endpoint.
-    Users can point GLM_BASE_URL or OPENAI_COMPATIBLE_BASE_URL at whichever local
-    runtime exposes their GLM model. Use the exact model name exposed by that runtime.
+    Providers are optional. If a provider is unavailable or misconfigured, callers
+    should fall back to prompt/review artifacts instead of failing closed in a
+    way that hides useful fuzzing context.
     """
     provider_name = configured_provider(provider)
     if provider_name in {"glm", "glm-5", "glm-5.2", "zai", "zhipu"}:
@@ -39,6 +39,8 @@ def provider_defaults(provider: Optional[str], model: Optional[str] = None) -> t
         return "ollama", model or os.environ.get("AI_FUZZ_MODEL") or os.environ.get("GLM_MODEL") or "llama3.1"
     if provider_name in {"openai", "openai-compatible", "compatible"}:
         return "openai-compatible", model or os.environ.get("AI_FUZZ_MODEL") or "local-model"
+    if provider_name in {"bedrock", "amazon-bedrock", "aws-bedrock", "aws"}:
+        return "bedrock", model or os.environ.get("BEDROCK_MODEL_ID") or os.environ.get("AWS_BEDROCK_MODEL_ID") or os.environ.get("AI_FUZZ_MODEL") or "bedrock-model-id"
     if provider_name in {"", "none", "prompt", "prompt-only"}:
         return "none", model or "none"
     return provider_name, model or os.environ.get("AI_FUZZ_MODEL") or "local-model"
@@ -51,7 +53,8 @@ def complete(prompt: str, *, provider: Optional[str] = None, model: Optional[str
       - none: no network call, returns empty advisory text
       - ollama: POST to OLLAMA_HOST/api/generate, default http://127.0.0.1:11434
       - openai-compatible: POST to OPENAI_COMPATIBLE_BASE_URL/chat/completions
-      - glm: OpenAI-compatible local GLM profile; default model glm-5.2 and base URL GLM_BASE_URL or http://127.0.0.1:8000/v1
+      - glm: OpenAI-compatible local GLM profile; default model glm-5.2
+      - bedrock: optional AWS Bedrock provider using boto3 Converse API
     """
     provider_name, model_name = provider_defaults(provider, model)
     if provider_name == "none":
@@ -62,6 +65,8 @@ def complete(prompt: str, *, provider: Optional[str] = None, model: Optional[str
         return _openai_compatible(prompt, model=model_name, timeout=timeout)
     if provider_name == "glm":
         return _openai_compatible(prompt, model=model_name, timeout=timeout, provider_label="glm")
+    if provider_name == "bedrock":
+        return _bedrock(prompt, model=model_name, timeout=timeout)
     raise ProviderError(f"Unsupported AI_FUZZ_PROVIDER: {provider_name}")
 
 
@@ -101,6 +106,38 @@ def _openai_compatible(prompt: str, *, model: str, timeout: int, provider_label:
         return ProviderResult(provider=provider_label, model=model, text=text, used_network=True)
     except Exception as exc:
         return ProviderResult(provider=provider_label, model=model, text="", used_network=True, error=str(exc))
+
+
+def _bedrock(prompt: str, *, model: str, timeout: int) -> ProviderResult:
+    """Call AWS Bedrock in an optional/dependency-light way.
+
+    boto3 is intentionally optional so the toolkit still installs and tests
+    without AWS dependencies. Bedrock credentials/region are resolved by the
+    normal AWS SDK provider chain; no keys or tokens are stored by the toolkit.
+    """
+    if model == "bedrock-model-id":
+        return ProviderResult(provider="bedrock", model=model, text="", used_network=True, error="Set BEDROCK_MODEL_ID, AWS_BEDROCK_MODEL_ID, AI_FUZZ_MODEL, or pass --model.")
+    try:
+        import boto3  # type: ignore
+        from botocore.config import Config  # type: ignore
+    except Exception as exc:
+        return ProviderResult(provider="bedrock", model=model, text="", used_network=True, error=f"boto3/botocore not installed: {exc}")
+    region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("BEDROCK_REGION") or "us-east-1"
+    try:
+        client = boto3.client("bedrock-runtime", region_name=region, config=Config(read_timeout=timeout, connect_timeout=min(timeout, 10)))
+        response = client.converse(
+            modelId=model,
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            system=[{"text": "You are assisting defensive fuzzing of SBOM parsers. Return concise, reviewable artifacts only."}],
+            inferenceConfig={"temperature": 0.2, "maxTokens": 1600},
+        )
+        chunks = []
+        for item in response.get("output", {}).get("message", {}).get("content", []):
+            if "text" in item:
+                chunks.append(item["text"])
+        return ProviderResult(provider="bedrock", model=model, text="\n".join(chunks), used_network=True)
+    except Exception as exc:
+        return ProviderResult(provider="bedrock", model=model, text="", used_network=True, error=str(exc))
 
 
 def render_or_call(provider: str, prompt: str, *, model: str = "") -> str:
