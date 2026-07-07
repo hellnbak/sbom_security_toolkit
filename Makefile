@@ -316,7 +316,7 @@ demo:
 	$(MAKE) watch-sbom SBOM=test-sboms/clean/minimal-cyclonedx.json VULNS=test-sboms/vulnerable/sample-trivy-report.json
 
 # v1.7 coverage-guided fuzzing lab and SBOM experience improvements
-.PHONY: fuzz-generate-cyclonedx fuzz-generate-spdx fuzz-generate-vex fuzz-generate-dtrack-payloads fuzz-afl-cyclonedx fuzz-afl-spdx fuzz-afl-purl fuzz-afl-license fuzz-toolchain fuzz-stateful-dtrack fuzz-metamorphic-scanners fuzz-budget ai-corpus-review ai-harness-repair fuzz-bugclass fuzz-advisory fuzz-status fuzz-conversion fuzz-all-local fuzz-all-timed sbom-normalize sbom-explain sbom-repair sbom-diff sbom-inventory sbom-experience
+.PHONY: fuzz-generate-cyclonedx fuzz-generate-spdx fuzz-generate-vex fuzz-generate-dtrack-payloads fuzz-afl-cyclonedx fuzz-afl-spdx fuzz-afl-purl fuzz-afl-license fuzz-toolchain fuzz-stateful-dtrack fuzz-metamorphic-scanners fuzz-budget ai-corpus-review ai-harness-repair fuzz-bugclass fuzz-advisory fuzz-status fuzz-conversion fuzz-all-local fuzz-all-timed test-all-components sbom-normalize sbom-explain sbom-repair sbom-diff sbom-inventory sbom-experience
 
 COUNT ?= 25
 EDGE ?= valid-edge
@@ -407,21 +407,12 @@ fuzz-all-local:
 	$(MAKE) fuzz-status
 
 fuzz-all-timed:
-	@echo "Running local fuzzing workflows with TIME_BUDGET=$(TIME_BUDGET) seconds per step. Use SBOM=... COUNT=... EDGE=..."
-	$(MAKE) fuzz-generate-cyclonedx COUNT=$(COUNT) EDGE=$(EDGE)
-	$(MAKE) fuzz-generate-spdx COUNT=$(COUNT) EDGE=$(EDGE)
-	$(MAKE) fuzz-generate-vex COUNT=$(COUNT)
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-structured SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-roundtrip SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-metamorphic SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-oracles SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-toolchain SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-stateful-dtrack SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-metamorphic-scanners SBOM=$(SBOM) || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-vuln-matching || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-vex-logic || true
-	TIME_BUDGET=$(TIME_BUDGET) timeout $(TIME_BUDGET)s $(MAKE) fuzz-evil-supplier || true
-	$(MAKE) fuzz-status
+	@echo "Running local fuzzing workflows with TIME_BUDGET=$(TIME_BUDGET) seconds per step. Use SBOM=... COUNT=... EDGE=... LIBRARY_TARGETS=sbom,scanner,ai or all."
+	python3 scripts/run-timed-fuzz-suite.py --sbom $(SBOM) --time-budget $(TIME_BUDGET) --count $(COUNT) --edge $(EDGE) --targets "$(LIBRARY_TARGETS)" --out-dir reports/fuzzing/timed
+
+# Workbench/debug parity target: exercise the broad SBOM component checks without requiring external scanners.
+test-all-components:
+	python3 scripts/run-timed-fuzz-suite.py --sbom $(SBOM) --time-budget $(TIME_BUDGET) --count $(COUNT) --edge $(EDGE) --targets "sbom" --out-dir reports/fuzzing/test-all-components
 
 sbom-normalize:
 	python3 -m sbomops.normalize $(SBOM) --out $(REPORTS)/sbom-experience/normalized.json

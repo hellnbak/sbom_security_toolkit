@@ -1,0 +1,9 @@
+owners:
+  npm:
+    react: frontend-team
+    express: platform-team
+  pypi:
+    django: backend-team
+    requests: platform-team
+  unknown:
+    '*': security-team

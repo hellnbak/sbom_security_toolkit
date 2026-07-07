@@ -42,6 +42,8 @@ v2.3.0 turns one-off analysis jobs into a lightweight project-risk workflow. The
 
 The main SBOM workflow dropdown also includes **Full SBOM analysis + every action + all fuzzing scenarios**. This mode runs the normal SBOM analysis pipeline, unsupported/out-of-date dependency analysis, scanner comparison, release-decision output, optional AI fuzz case generation, and broad timed fuzzing. The UI exposes a **Fuzz time per step/library** control and a **Fuzz targets** field such as `sbom,scanner,ai` or `all`.
 
+The v2.3.0 validation refresh also adds a shared timed fuzzing runner (`scripts/run-timed-fuzz-suite.py`) used by both `make fuzz-all-timed` and the Workbench. The Fuzzing Lab includes a `test-all-components` debug workflow for exercising the core SBOM fuzzing components with the same input handling used by the UI.
+
 ```bash
 make release-decision SBOM=./bom.json
 make project-record PROJECT_ID=my-api SBOM=./bom.json RUN_DIR=reports/latest

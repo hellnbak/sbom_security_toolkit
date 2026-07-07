@@ -794,3 +794,7 @@ make fuzz-generate-cyclonedx EDGE=dependency-cycle COUNT=25
 make fuzz-toolchain SBOM=test-sboms/clean/minimal-cyclonedx.json
 make sbom-experience SBOM=test-sboms/clean/minimal-cyclonedx.json
 ```
+
+## v2.3.0 validation refresh - timed fuzzing runner hardening
+
+This refresh keeps the version at v2.3.0 and adds a shared timed fuzzing runner used by Make and the Workbench. It also exposes the `test-all-components` debug workflow in the Fuzzing Lab, aligns `make fuzz-all-timed` with the UI's target-selection model, and improves repeatable validation of core fuzzing workflows.

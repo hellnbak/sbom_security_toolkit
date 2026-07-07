@@ -78,3 +78,10 @@
 ## Earlier releases
 
 See `RELEASE-NOTES.md` for the full historical release narrative covering v1.x, v2.0.x, and v2.1.0.
+
+### v2.3.0 validation refresh - timed fuzzing runner hardening
+
+- Added `scripts/run-timed-fuzz-suite.py` as the shared CLI/Workbench runner for broad time-boxed fuzzing.
+- Added Workbench `test-all-components` debug workflow parity so the previously referenced debug flow is available in the UI.
+- Updated `make fuzz-all-timed` to route through the shared timed runner and honor `LIBRARY_TARGETS` such as `sbom`, `scanner`, `ai`, or `all`.
+- Verified core SBOM, repository-intake, dependency-health, project, cloud, and Workbench fuzzing paths in a clean package workspace.

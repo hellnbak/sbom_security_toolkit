@@ -1,0 +1,9 @@
+name: generated-release-policy
+fail_on:
+  cisa_kev: true
+  critical_without_vex: true
+  unsupported_dependencies: true
+  stale_dependencies_days_gt: 365
+warn_on:
+  scanner_disagreement: true
+  missing_dependency_graph: true

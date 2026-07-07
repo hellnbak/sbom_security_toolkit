@@ -31,6 +31,8 @@ class WorkbenchFuzzingLabTests(unittest.TestCase):
             'fuzz-toolchain',
             'fuzz-generate-cyclonedx',
             'fuzz-all-local',
+            'fuzz-all-timed',
+            'test-all-components',
             'ai-fuzz-eval',
         ]
         for workflow in expected:
