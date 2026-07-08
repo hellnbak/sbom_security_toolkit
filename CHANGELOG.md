@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.3.1 - GUI-managed configuration
+
+- Added Workbench Settings page for policy, AI provider, fuzzing profile, project default, and cloud setting configuration.
+- Added generated YAML preview and import support for GUI-managed configuration.
+- Added `sbomops.config_manager` and `sst config ...` commands.
+- Added Make helpers for generating and validating common configuration files.
+- Updated README and release notes for the configuration UX refresh.
+
+
 ## v2.3.0 - Project Risk Dashboard, All-Actions Scan, and Self-Hosted Cloud Mode
 
 - Added local project workspaces, project history recording, delta reports, and trend dashboards.

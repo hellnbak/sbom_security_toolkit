@@ -29,6 +29,7 @@ MODULES = {
     "project": "sbomops.project_ops",
     "release-decision": "sbomops.project_ops",
     "cloud": "sbomops.cloud",
+    "config": "sbomops.config_manager",
 
     "fuzz-plan": "fuzzing.planner.fuzz_plan",
     "fuzz-kb": "fuzzing.kb.fuzz_kb",

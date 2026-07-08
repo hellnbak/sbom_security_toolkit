@@ -7,6 +7,7 @@ import json
 import mimetypes
 import re
 import urllib.parse
+import yaml
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, Tuple
@@ -15,13 +16,18 @@ from .job_runner import (
     ROOT, JOBS, WORKFLOWS, FUZZ_WORKFLOWS, REPO_WORKFLOWS, create_job, delete_job, list_jobs, read_status, save_upload,
     scanner_status, status_path, logs_path, job_dir, storage_init, MAX_UPLOAD_BYTES
 )
+from sbomops.config_manager import (
+    AI_DIR, CLOUD_DIR, FUZZ_DIR, POLICY_DIR, PROJECT_DIR, build_ai_provider_config,
+    build_cloud_settings_config, build_fuzzing_profile_config, build_policy_config,
+    build_project_defaults_config, import_config, list_configs, safe_slug, write_yaml
+)
 
 CSS = """
-:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#172033;background:#f6f7fb}body{margin:0}.top{background:#111827;color:white;padding:18px 28px}.wrap{max-width:1100px;margin:24px auto;padding:0 18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}h1,h2{margin:.2rem 0 1rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.btn,button,input[type=submit]{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;display:inline-block;cursor:pointer}.btn.secondary{background:#374151}.btn.danger,button.danger{background:#dc2626}.muted{color:#6b7280}.pill{border-radius:999px;padding:4px 9px;font-size:12px;background:#e5e7eb}.completed{background:#dcfce7;color:#14532d}.failed{background:#fee2e2;color:#7f1d1d}.running,.queued{background:#dbeafe;color:#1e3a8a}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e5e7eb;text-align:left;padding:10px}code,pre{background:#f3f4f6;border-radius:8px}pre{padding:14px;overflow:auto;max-height:520px}.nav a{color:white;margin-right:16px}input,select{padding:9px;border:1px solid #d1d5db;border-radius:8px}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:#166534}.bad{color:#991b1b}
+:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#172033;background:#f6f7fb}body{margin:0}.top{background:#111827;color:white;padding:18px 28px}.wrap{max-width:1100px;margin:24px auto;padding:0 18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}h1,h2{margin:.2rem 0 1rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.btn,button,input[type=submit]{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;display:inline-block;cursor:pointer}.btn.secondary{background:#374151}.btn.danger,button.danger{background:#dc2626}.muted{color:#6b7280}.pill{border-radius:999px;padding:4px 9px;font-size:12px;background:#e5e7eb}.completed{background:#dcfce7;color:#14532d}.failed{background:#fee2e2;color:#7f1d1d}.running,.queued{background:#dbeafe;color:#1e3a8a}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e5e7eb;text-align:left;padding:10px}code,pre{background:#f3f4f6;border-radius:8px}pre{padding:14px;overflow:auto;max-height:520px}.nav a{color:white;margin-right:16px}input,select,textarea{padding:9px;border:1px solid #d1d5db;border-radius:8px}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:#166534}.bad{color:#991b1b}
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -72,6 +78,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/scanners": return self.scanners()
         if path == "/repository": return self.repository_intake()
         if path == "/projects": return self.projects_page()
+        if path == "/settings": return self.settings_page()
+        if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
         if path == "/fuzzing/dashboard": return self.fuzzing_dashboard()
@@ -81,6 +89,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/upload": return self.upload()
+        if self.path == "/settings/save": return self.settings_save()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -191,6 +200,172 @@ class Handler(BaseHTTPRequestHandler):
         try: return self.send_json(read_status(jid))
         except FileNotFoundError: return self.send_json({"error":"not found"}, 404)
 
+
+
+
+
+    def parse_urlencoded(self) -> Dict[str, str]:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length).decode("utf-8", errors="replace")
+        return {k: v[-1] if v else "" for k, v in urllib.parse.parse_qs(raw, keep_blank_values=True).items()}
+
+    def bool_field(self, fields: Dict[str, str], name: str) -> bool:
+        return fields.get(name) in {"1", "true", "on", "yes"}
+
+    def settings_page(self):
+        configs = list_configs()
+        sections = []
+        for title, rows in configs.items():
+            body_rows = "".join(
+                f"<tr><td>{esc(r['name'])}</td><td><code>{esc(r['path'])}</code></td><td>{esc(r['bytes'])}</td><td><a href='/settings/view/{esc(urllib.parse.quote(r['path']))}'>view</a></td></tr>"
+                for r in rows
+            ) or "<tr><td colspan='4' class='muted'>No generated files yet.</td></tr>"
+            sections.append(f"<h3>{esc(title.replace('_',' ').title())}</h3><table><tr><th>Name</th><th>Path</th><th>Bytes</th><th>Preview</th></tr>{body_rows}</table>")
+        body = f"""
+        <div class='card'><h2>GUI-managed configuration</h2>
+        <p class='muted'>The Workbench can now generate and manage the YAML files that were previously path-only advanced inputs. YAML remains available for GitOps and power users, but normal users can configure policies, AI providers, fuzzing profiles, project defaults, and cloud settings from this page.</p>
+        </div>
+        <div class='card'><h2>Policy Builder</h2>
+        <form method='post' action='/settings/save'>
+          <input type='hidden' name='kind' value='policy'>
+          <div class='grid'><div><label>Policy name</label><input name='name' value='release-policy'></div><div><label>Stale dependency days</label><input name='stale_days' value='365'></div></div>
+          <div class='grid'>
+            <label><input type='checkbox' name='fail_on_critical' value='1' checked> Fail on critical vulnerabilities</label>
+            <label><input type='checkbox' name='fail_on_high' value='1'> Fail on high vulnerabilities</label>
+            <label><input type='checkbox' name='fail_on_cisa_kev' value='1' checked> Fail on CISA KEV</label>
+            <label><input type='checkbox' name='fail_on_exploit_available' value='1'> Fail on exploit available</label>
+            <label><input type='checkbox' name='fail_on_unsupported' value='1' checked> Fail on unsupported dependencies</label>
+            <label><input type='checkbox' name='warn_on_scanner_disagreement' value='1' checked> Warn on scanner disagreement</label>
+            <label><input type='checkbox' name='fail_on_vex_contradiction' value='1' checked> Fail on VEX contradiction</label>
+            <label><input type='checkbox' name='require_supplier' value='1'> Require supplier</label>
+            <label><input type='checkbox' name='require_license' value='1'> Require license</label>
+            <label><input type='checkbox' name='require_version' value='1' checked> Require version</label>
+            <label><input type='checkbox' name='require_dependency_graph' value='1'> Require dependency graph</label>
+            <label><input type='checkbox' name='network_enrichment' value='1'> Allow registry enrichment</label>
+          </div>
+          <input type='submit' value='Save policy YAML'>
+        </form></div>
+        <div class='card'><h2>AI Provider Manager</h2>
+        <form method='post' action='/settings/save'>
+          <input type='hidden' name='kind' value='ai-provider'>
+          <div class='grid'>
+            <div><label>Name</label><input name='name' value='default-ai'></div>
+            <div><label>Provider</label><select name='provider'><option value='none'>Disabled / prompt-only</option><option value='bedrock' selected>AWS Bedrock</option><option value='ollama'>Ollama</option><option value='glm'>GLM</option><option value='openai-compatible'>OpenAI-compatible</option></select></div>
+            <div><label>Model</label><input name='model' placeholder='Bedrock model ID or local model'></div>
+            <div><label>AWS region</label><input name='region' value='us-east-1'></div>
+            <div><label>Endpoint URL</label><input name='endpoint_url' placeholder='for Ollama/GLM/OpenAI-compatible'></div>
+            <div><label>API key env var</label><input name='api_key_env' placeholder='OPENAI_API_KEY'></div>
+            <div><label>Default mode</label><select name='default_mode'><option value='suggest'>Suggest only</option><option value='generate-run'>Generate and run validated cases</option></select></div>
+            <div><label>Max cases</label><input name='max_cases' value='5'></div>
+            <div><label>Time budget seconds</label><input name='time_budget' value='30'></div>
+          </div>
+          <p class='small muted'>Secrets are not stored by this UI. Bedrock uses the AWS SDK credential chain or instance role; OpenAI-compatible providers should use environment variables or external secret managers.</p>
+          <input type='submit' value='Save AI provider YAML'>
+        </form></div>
+        <div class='card'><h2>Fuzzing Profile Builder</h2>
+        <form method='post' action='/settings/save'>
+          <input type='hidden' name='kind' value='fuzzing-profile'>
+          <div class='grid'>
+            <div><label>Profile name</label><input name='name' value='release-smoke'></div>
+            <div><label>Targets</label><input name='targets' value='sbom,scanner,ai'></div>
+            <div><label>Duration per target</label><input name='duration' value='60'></div>
+            <div><label>Seed count</label><input name='seed_count' value='10'></div>
+            <div><label>Max AI cases</label><input name='max_ai_cases' value='5'></div>
+            <div><label>AI mode</label><select name='ai_mode'><option value='disabled'>Disabled</option><option value='suggest' selected>Suggest</option><option value='generate-run'>Generate and run validated cases</option></select></div>
+            <label><input type='checkbox' name='run_generated_cases' value='1'> Run generated validated cases</label>
+          </div>
+          <input type='submit' value='Save fuzzing profile YAML'>
+        </form></div>
+        <div class='card'><h2>Project Defaults</h2>
+        <form method='post' action='/settings/save'>
+          <input type='hidden' name='kind' value='project-defaults'>
+          <div class='grid'>
+            <div><label>Project ID</label><input name='project_id' value='default-project'></div>
+            <div><label>Policy path</label><input name='policy' value='policies/generated/release-policy.yml'></div>
+            <div><label>AI provider path</label><input name='ai_provider' value='configs/generated/ai-providers/default-ai.yml'></div>
+            <div><label>Fuzzing profile path</label><input name='fuzzing_profile' value='configs/generated/fuzzing-profiles/release-smoke.yml'></div>
+            <div><label>Stale days</label><input name='stale_days' value='365'></div>
+            <div><label>Evidence retention days</label><input name='evidence_retention_days' value='90'></div>
+            <div><label>Schedule</label><input name='schedule' value='manual'></div>
+            <div><label>Release behavior</label><select name='release_behavior'><option value='warn'>Warn</option><option value='block'>Block</option><option value='pass'>Pass</option></select></div>
+          </div>
+          <input type='submit' value='Save project defaults YAML'>
+        </form></div>
+        <div class='card'><h2>Cloud Settings</h2>
+        <form method='post' action='/settings/save'>
+          <input type='hidden' name='kind' value='cloud-settings'>
+          <div class='grid'>
+            <div><label>Name</label><input name='name' value='self-hosted'></div>
+            <div><label>Storage backend</label><select name='storage_backend'><option value='local'>Local filesystem</option><option value='s3'>S3</option><option value='minio'>MinIO</option></select></div>
+            <div><label>S3 bucket</label><input name='s3_bucket' placeholder='bucket name'></div>
+            <div><label>S3 prefix</label><input name='s3_prefix' value='sbom-security-toolkit'></div>
+            <div><label>Database</label><select name='database_backend'><option value='postgres'>Postgres</option><option value='local'>Local</option></select></div>
+            <div><label>Queue</label><select name='queue_backend'><option value='redis'>Redis</option><option value='in-process'>In-process</option></select></div>
+            <div><label>Evidence retention days</label><input name='evidence_retention_days' value='90'></div>
+          </div>
+          <div class='grid'>
+            <label><input type='checkbox' name='worker_sbom' value='1' checked> SBOM worker</label>
+            <label><input type='checkbox' name='worker_vulnerability' value='1' checked> Vulnerability worker</label>
+            <label><input type='checkbox' name='worker_fuzzing' value='1' checked> Fuzzing worker</label>
+            <label><input type='checkbox' name='worker_ai' value='1' checked> AI worker</label>
+            <label><input type='checkbox' name='worker_report' value='1' checked> Report worker</label>
+          </div>
+          <input type='submit' value='Save cloud settings YAML'>
+        </form></div>
+        <div class='card'><h2>Import existing YAML</h2>
+        <form method='post' action='/settings/save'>
+          <input type='hidden' name='kind' value='import'>
+          <div class='grid'><div><label>Config type</label><select name='import_kind'><option value='policy'>Policy</option><option value='ai-provider'>AI provider</option><option value='fuzzing-profile'>Fuzzing profile</option><option value='project-defaults'>Project defaults</option><option value='cloud-settings'>Cloud settings</option></select></div><div><label>Name</label><input name='name' value='imported-config'></div></div>
+          <label>YAML</label><textarea name='raw_yaml' placeholder='paste existing YAML here'></textarea>
+          <input type='submit' value='Import YAML'>
+        </form></div>
+        <div class='card'><h2>Generated configuration files</h2>{''.join(sections)}</div>
+        """
+        self.send_html("Settings", body)
+
+    def settings_view(self, encoded_path: str):
+        rel = urllib.parse.unquote(encoded_path)
+        path = (ROOT / rel).resolve()
+        allowed = [POLICY_DIR.resolve(), AI_DIR.resolve(), FUZZ_DIR.resolve(), PROJECT_DIR.resolve(), CLOUD_DIR.resolve()]
+        if not any(str(path).startswith(str(base)) for base in allowed) or not path.exists() or not path.is_file():
+            return self.send_html("Config not found", "<div class='card'><h2>Config not found</h2></div>", 404)
+        body = f"<div class='card'><h2>{esc(rel)}</h2><pre>{esc(path.read_text(errors='replace'))}</pre><p><a class='btn secondary' href='/settings'>Back to settings</a></p></div>"
+        self.send_html("Config preview", body)
+
+    def settings_save(self):
+        try:
+            fields = self.parse_urlencoded()
+            kind = fields.get("kind", "")
+            class NS: pass
+            args = NS()
+            if kind == "policy":
+                args.name = fields.get("name", "release-policy")
+                args.stale_days = int(fields.get("stale_days", "365") or 365)
+                for name in ["fail_on_critical", "fail_on_high", "fail_on_cisa_kev", "fail_on_exploit_available", "fail_on_unsupported", "warn_on_scanner_disagreement", "fail_on_vex_contradiction", "require_supplier", "require_license", "require_version", "require_dependency_graph", "network_enrichment"]:
+                    setattr(args, name, self.bool_field(fields, name))
+                path = write_yaml(POLICY_DIR / f"{safe_slug(args.name)}.yml", build_policy_config(args))
+            elif kind == "ai-provider":
+                args.name = fields.get("name", "default-ai"); args.provider = fields.get("provider", "none"); args.model = fields.get("model", ""); args.region = fields.get("region", "us-east-1"); args.endpoint_url = fields.get("endpoint_url", ""); args.api_key_env = fields.get("api_key_env", ""); args.default_mode = fields.get("default_mode", "suggest"); args.max_cases = int(fields.get("max_cases", "5") or 5); args.time_budget = int(fields.get("time_budget", "30") or 30)
+                path = write_yaml(AI_DIR / f"{safe_slug(args.name)}.yml", build_ai_provider_config(args))
+            elif kind == "fuzzing-profile":
+                args.name = fields.get("name", "release-smoke"); args.targets = fields.get("targets", "sbom,scanner,ai"); args.duration = int(fields.get("duration", "60") or 60); args.seed_count = int(fields.get("seed_count", "10") or 10); args.max_ai_cases = int(fields.get("max_ai_cases", "5") or 5); args.ai_mode = fields.get("ai_mode", "suggest"); args.run_generated_cases = self.bool_field(fields, "run_generated_cases")
+                path = write_yaml(FUZZ_DIR / f"{safe_slug(args.name)}.yml", build_fuzzing_profile_config(args))
+            elif kind == "project-defaults":
+                args.project_id = fields.get("project_id", "default-project"); args.policy = fields.get("policy", "policies/generated/release-policy.yml"); args.ai_provider = fields.get("ai_provider", "configs/generated/ai-providers/default-ai.yml"); args.fuzzing_profile = fields.get("fuzzing_profile", "configs/generated/fuzzing-profiles/release-smoke.yml"); args.stale_days = int(fields.get("stale_days", "365") or 365); args.evidence_retention_days = int(fields.get("evidence_retention_days", "90") or 90); args.schedule = fields.get("schedule", "manual"); args.release_behavior = fields.get("release_behavior", "warn")
+                path = write_yaml(PROJECT_DIR / f"{safe_slug(args.project_id)}.yml", build_project_defaults_config(args))
+            elif kind == "cloud-settings":
+                args.name = fields.get("name", "self-hosted"); args.storage_backend = fields.get("storage_backend", "local"); args.s3_bucket = fields.get("s3_bucket", ""); args.s3_prefix = fields.get("s3_prefix", "sbom-security-toolkit"); args.database_backend = fields.get("database_backend", "postgres"); args.queue_backend = fields.get("queue_backend", "redis"); args.evidence_retention_days = int(fields.get("evidence_retention_days", "90") or 90)
+                for name in ["worker_sbom", "worker_vulnerability", "worker_fuzzing", "worker_ai", "worker_report"]:
+                    setattr(args, name, self.bool_field(fields, name))
+                path = write_yaml(CLOUD_DIR / f"{safe_slug(args.name)}.yml", build_cloud_settings_config(args))
+            elif kind == "import":
+                path = import_config(fields.get("import_kind", "policy"), fields.get("name", "imported-config"), fields.get("raw_yaml", ""))
+            else:
+                raise ValueError(f"Unsupported settings kind: {kind}")
+            rel = path.relative_to(ROOT)
+            self.send_html("Config saved", f"<div class='card'><h2>Saved configuration</h2><p>Wrote <code>{esc(rel)}</code>.</p><pre>{esc(path.read_text(errors='replace'))}</pre><p><a class='btn' href='/settings'>Back to settings</a></p></div>")
+        except Exception as exc:
+            self.send_html("Settings error", f"<div class='card'><h2>Settings error</h2><pre>{esc(exc)}</pre></div>", 400)
 
 
     def repository_intake(self):

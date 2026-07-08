@@ -1,4 +1,4 @@
-# v2.3.0 - Project Risk Dashboard, All-Actions Scan, and Self-Hosted Cloud Mode
+# v2.3.1 - GUI-Managed Configuration
 
 This release consolidates the unpushed v2.2.x work and adds v2.3 project-risk operations plus optional self-hosted cloud-capable deployment scaffolding. Local-first mode remains the default. Cloud mode is opt-in for teams that need shared history, scheduled scans, retained evidence, and separated background workers.
 

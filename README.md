@@ -15,9 +15,9 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine by default. Uploaded SBOMs and generated evidence stay on disk. For teams, the toolkit is now also **cloud-capable by choice**: optional self-hosted server mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, and cloud deployment guidance while preserving the same safety defaults. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, Bedrock, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: v2.3.0
+## Current release: v2.3.1
 
-This README reflects the current **v2.3.0** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+This README reflects the current **v2.3.1** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
 - **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
 - **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
@@ -31,10 +31,49 @@ This README reflects the current **v2.3.0** feature set. Since the v1.9 agent-in
 - **v2.2.5 Structure-preserving fuzzing stability:** fixes CycloneDX XML mutation failures when normalized component hash metadata is represented as a count, and verifies the Workbench test-all-components flow passes the mutation step.
 - **v2.2.6 AI-enhanced analysis and Bedrock provider:** Full SBOM Analysis can optionally generate AI-assisted fuzz case suggestions or run validated deterministic cases; the Fuzzing Lab and analysis UI now include AWS Bedrock as a provider option.
 - **v2.3.0 Project risk dashboard, full all-actions scan, and self-hosted cloud mode:** adds local project workspaces, history recording, delta/trend reporting, evidence-bundle viewer, release decision workflow, CI workflow generator, policy tuning helper, dependency owner template, AI executive-summary scaffold, a Workbench dropdown option for “Full SBOM analysis + every action + all fuzzing scenarios” with configurable fuzz time per step/library, and optional self-hosted cloud-mode scaffolding with Postgres, Redis, object storage, workers, and deployment guidance.
+- **v2.3.1 GUI-managed configuration:** adds a Workbench Settings page so users can create, validate, preview, import, and export the YAML configuration files that were previously path-only advanced inputs, including release policies, AI providers, fuzzing profiles, project defaults, and cloud settings.
 
-The current focus is **repository-to-SBOM operations, dependency health review, intelligent SBOM fuzzing, and project risk tracking**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, exercise SBOM parsers/scanners with semantic fuzzing workflows, and optionally deploy the workbench in a self-hosted cloud mode for team usage and scheduled/background jobs.
+The current focus is **repository-to-SBOM operations, GUI-managed configuration, dependency health review, intelligent SBOM fuzzing, and project risk tracking**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, exercise SBOM parsers/scanners with semantic fuzzing workflows, and optionally deploy the workbench in a self-hosted cloud mode for team usage and scheduled/background jobs.
 
-**Documentation note:** this package consolidates the unpushed v2.2.0 through v2.3.0 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.3.0.
+**Documentation note:** this package consolidates the unpushed v2.2.0 through v2.3.1 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.3.1.
+
+
+## v2.3.1 GUI-managed configuration
+
+v2.3.1 turns YAML path fields into GUI-managed configuration. The Workbench now includes a **Settings** page for creating, validating, previewing, and importing the configuration files that power the CLI and UI. YAML remains the storage format so teams can keep GitOps workflows, code review, and repeatable automation, but users no longer need to hand-edit files for common setup.
+
+The Settings page currently manages:
+
+- **Policy Builder**: fail/warn rules for critical/high vulnerabilities, CISA KEV, exploit availability, unsupported dependencies, scanner disagreement, VEX contradiction, missing supplier/license/version, missing dependency graph, and stale dependency thresholds.
+- **AI Provider Manager**: Disabled/prompt-only, Bedrock, Ollama, GLM, and OpenAI-compatible provider definitions with model, endpoint, region, default mode, max generated cases, and time budget. The GUI does not store API keys or AWS secrets.
+- **Fuzzing Profile Builder**: targets, per-target duration, seed count, AI mode, max AI cases, and whether validated generated cases should run.
+- **Project Defaults**: default policy, AI provider, fuzzing profile, stale-days threshold, evidence retention, schedule label, and release-decision behavior.
+- **Cloud Settings**: local/S3/MinIO storage selection, Postgres/local database mode, Redis/in-process queue mode, evidence retention, and worker enablement flags.
+- **YAML import/preview**: paste an existing YAML configuration into the GUI and save it into the generated configuration tree.
+
+Generated files are written under:
+
+```text
+policies/generated/
+configs/generated/ai-providers/
+configs/generated/fuzzing-profiles/
+configs/generated/project-defaults/
+configs/generated/cloud/
+```
+
+CLI and Make helpers are also available:
+
+```bash
+sst config list
+sst config validate policies/generated/release-policy.yml
+make config-policy CONFIG_NAME=release-policy STALE_DAYS=365
+make config-ai-provider CONFIG_NAME=bedrock-default CONFIG_PROVIDER=bedrock CONFIG_MODEL=anthropic.claude-3-5-sonnet-20240620-v1:0
+make config-fuzzing-profile CONFIG_NAME=release-smoke CONFIG_TARGETS=sbom,scanner,ai CONFIG_DURATION=60
+make config-project-defaults CONFIG_PROJECT_ID=my-api
+make config-cloud-settings CONFIG_NAME=self-hosted CONFIG_STORAGE_BACKEND=s3 CONFIG_S3_BUCKET=my-bucket
+```
+
+Secrets are intentionally not stored in generated YAML. Bedrock uses the AWS SDK credential chain or instance role; OpenAI-compatible providers should use environment variables such as `OPENAI_API_KEY` or an external secret manager.
 
 ## v2.3.0 Project risk dashboard, all-actions scan, and cloud-capable deployment
 
@@ -307,7 +346,7 @@ make setup
 make test
 make validate
 make preflight-release
-make release VERSION=2.3.0
+make release VERSION=2.3.1
 ```
 
 Docker helpers are available:

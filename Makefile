@@ -437,7 +437,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.3.0
+VERSION ?= 2.3.1
 
 setup:
 	./setup.sh
@@ -703,3 +703,37 @@ cloud-compose-down:
 
 cloud-worker-smoke:
 	python3 -m sbomops.cloud worker
+
+.PHONY: config-list config-validate config-policy config-ai-provider config-fuzzing-profile config-project-defaults config-cloud-settings
+CONFIG_PATH ?=
+CONFIG_NAME ?= gui-policy
+CONFIG_PROVIDER ?= bedrock
+CONFIG_MODEL ?=
+CONFIG_REGION ?= us-east-1
+CONFIG_TARGETS ?= sbom,scanner,ai
+CONFIG_DURATION ?= 60
+CONFIG_PROJECT_ID ?= default-project
+CONFIG_STORAGE_BACKEND ?= local
+CONFIG_S3_BUCKET ?=
+
+config-list:
+	python3 -m sbomops.config_manager list
+
+config-validate:
+	@if [ -z "$(CONFIG_PATH)" ]; then echo "Usage: make config-validate CONFIG_PATH=policies/generated/gui-policy.yml"; exit 2; fi
+	python3 -m sbomops.config_manager validate $(CONFIG_PATH)
+
+config-policy:
+	python3 -m sbomops.config_manager policy --name $(CONFIG_NAME) --fail-on-critical --fail-on-cisa-kev --fail-on-unsupported --require-version --stale-days $(STALE_DAYS)
+
+config-ai-provider:
+	python3 -m sbomops.config_manager ai-provider --name $(CONFIG_NAME) --provider $(CONFIG_PROVIDER) --model "$(CONFIG_MODEL)" --region $(CONFIG_REGION)
+
+config-fuzzing-profile:
+	python3 -m sbomops.config_manager fuzzing-profile --name $(CONFIG_NAME) --targets "$(CONFIG_TARGETS)" --duration $(CONFIG_DURATION)
+
+config-project-defaults:
+	python3 -m sbomops.config_manager project-defaults --project-id $(CONFIG_PROJECT_ID)
+
+config-cloud-settings:
+	python3 -m sbomops.config_manager cloud-settings --name $(CONFIG_NAME) --storage-backend $(CONFIG_STORAGE_BACKEND) --s3-bucket "$(CONFIG_S3_BUCKET)" --worker-sbom --worker-vulnerability --worker-fuzzing --worker-ai --worker-report
