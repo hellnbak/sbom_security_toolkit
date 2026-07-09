@@ -898,3 +898,13 @@ findings-export:
 
 findings-smoke remediation-smoke:
 	python3 -m sbomops.findings smoke --sbom $(or $(SBOM),test-sboms/example-spdx-2.3.json) --project $(FINDINGS_PROJECT)
+
+# v2.7.1 report viewer
+.PHONY: reports-index reports-view
+REPORT_ID ?=
+reports-index:
+	python3 -m sbomops.reports_viewer index
+
+reports-view:
+	@if [ -z "$(REPORT_ID)" ]; then echo "Usage: make reports-view REPORT_ID=reports/report-index.md"; exit 2; fi
+	python3 -m sbomops.reports_viewer view "$(REPORT_ID)"

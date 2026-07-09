@@ -153,7 +153,7 @@ def export_sarif(args: argparse.Namespace) -> Dict[str, Any]:
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.7.0", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
+            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.7.1", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
             "automationDetails": {"id": getattr(args, "project", "") or "local"},
             "results": results,
             "properties": {"created_at": now(), "source": "sst export sarif"},

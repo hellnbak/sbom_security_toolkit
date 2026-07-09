@@ -17,7 +17,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.7.0 — Findings & Remediation Operations**
+Current release: **v2.7.1 — Findings & Remediation Operations + Reports Viewer**
 
 ---
 
@@ -99,6 +99,21 @@ sst workbench --host 127.0.0.1 --port 8080
 ---
 
 ## Common workflows
+
+### View reports in the Workbench
+
+Use the **Reports** page to view generated reports directly in the Workbench instead of downloading the full evidence bundle every time. The page indexes reports from `reports/`, `release-evidence/`, `ui/storage/jobs/*/results`, `findings/`, `fuzzing/reports/`, and `projects/`.
+
+```bash
+make reports-index
+sst reports index
+
+# Preview a specific report by workspace-relative path
+sst reports view reports/report-index.md
+```
+
+Supported previews include JSON, SARIF, Markdown, text, CSV, YAML, XML, and HTML-style artifacts. Evidence bundles remain available for archival/export, but day-to-day review can happen from the UI.
+
 
 ### Analyze a project or SBOM
 
@@ -482,6 +497,14 @@ See `DATA-SAFETY.md` and `SECURITY.md`.
 ---
 
 ## Version history
+
+### v2.7.1 — Workbench Reports Viewer
+
+- Added a Workbench **Reports** page for browsing generated reports without downloading full evidence bundles.
+- Added report indexing across job results, evidence outputs, project history, findings, fuzzing reports, and integration exports.
+- Added JSON/SARIF/Markdown/text/CSV/YAML/XML/HTML preview support with safe workspace-relative path handling.
+- Added `sst reports index`, `sst reports view`, `make reports-index`, and `make reports-view`.
+
 
 Detailed release notes live in `CHANGELOG.md` and `RELEASE-NOTES.md`. This README keeps the evergreen introduction and usage guide first, then summarizes each major toolkit release below.
 

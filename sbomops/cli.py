@@ -34,6 +34,8 @@ MODULES = {
     "integrations": "sbomops.integrations",
     "findings": "sbomops.findings",
     "remediation": "sbomops.findings",
+    "reports-viewer": "sbomops.reports_viewer",
+    "reports": "sbomops.reports_viewer",
     "export": "sbomops.integrations",
     "vex": "sbomops.integrations",
 

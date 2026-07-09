@@ -28,7 +28,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -83,6 +83,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/admin": return self.admin_page()
         if path == "/integrations": return self.integrations_page()
         if path == "/findings": return self.findings_page()
+        if path == "/reports": return self.reports_page()
+        if path.startswith("/reports/view/"): return self.reports_view(path.split("/", 3)[3])
         if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
@@ -97,6 +99,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/admin/save": return self.admin_save()
         if self.path == "/integrations/save": return self.integrations_save()
         if self.path == "/findings/save": return self.findings_save()
+        if self.path == "/reports/refresh": return self.reports_refresh()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -183,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
         steps = "".join(f"<tr><td>{esc(x.get('name'))}</td><td>{esc(x.get('returncode'))}</td><td>{esc(x.get('elapsed_seconds',''))}</td></tr>" for x in s.get("steps", [])) or "<tr><td colspan='3' class='muted'>No completed steps yet.</td></tr>"
         result_links = self.result_links(jid)
         refresh = "<meta http-equiv='refresh' content='3'>" if s.get("state") in {"queued", "running"} else ""
-        body = f"{refresh}<div class='card'><h2>Job {esc(jid)}</h2><p><span class='pill {esc(s.get('state'))}'>{esc(s.get('state'))}</span> {esc(s.get('workflow_label'))}</p><p class='muted'>Input: <code>{esc(s.get('input_file'))}</code></p><p><a class='btn' href='/download/{esc(jid)}'>Download evidence bundle</a> <a class='btn secondary' href='/api/jobs/{esc(jid)}'>JSON status</a></p><form method='post' action='/delete/{esc(jid)}'><button class='danger'>Delete job</button></form></div><div class='card'><h2>Workflow Options</h2>{options_html}</div><div class='card'><h2>Steps</h2><table><tr><th>Step</th><th>Exit</th><th>Seconds</th></tr>{steps}</table></div><div class='card'><h2>Results</h2>{result_links}</div><div class='card'><h2>Logs</h2><pre>{esc(logs[-20000:])}</pre></div>"
+        body = f"{refresh}<div class='card'><h2>Job {esc(jid)}</h2><p><span class='pill {esc(s.get('state'))}'>{esc(s.get('state'))}</span> {esc(s.get('workflow_label'))}</p><p class='muted'>Input: <code>{esc(s.get('input_file'))}</code></p><p><a class='btn' href='/download/{esc(jid)}'>Download evidence bundle</a> <a class='btn secondary' href='/reports'>View reports</a> <a class='btn secondary' href='/api/jobs/{esc(jid)}'>JSON status</a></p><form method='post' action='/delete/{esc(jid)}'><button class='danger'>Delete job</button></form></div><div class='card'><h2>Workflow Options</h2>{options_html}</div><div class='card'><h2>Steps</h2><table><tr><th>Step</th><th>Exit</th><th>Seconds</th></tr>{steps}</table></div><div class='card'><h2>Results</h2>{result_links}</div><div class='card'><h2>Logs</h2><pre>{esc(logs[-20000:])}</pre></div>"
         self.send_html("Job", body)
 
     def options_table(self, options: Dict[str, str]) -> str:
@@ -214,6 +217,69 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+
+
+    def reports_page(self):
+        try:
+            from sbomops import reports_viewer
+            result = reports_viewer.index_reports(argparse.Namespace(roots=None, out=str(reports_viewer.REPORT_INDEX), markdown=str(reports_viewer.REPORT_INDEX_MD)))
+            index = json.loads(reports_viewer.REPORT_INDEX.read_text(encoding="utf-8")) if reports_viewer.REPORT_INDEX.exists() else {"reports": []}
+            reports = index.get("reports", [])
+        except Exception as exc:
+            return self.send_html("Reports", f"<div class='card'><h2>Reports error</h2><pre>{esc(exc)}</pre></div>", 500)
+        categories = {}
+        for r in reports:
+            categories.setdefault(r.get("category", "Reports"), []).append(r)
+        sections = []
+        for category, rows in sorted(categories.items()):
+            body_rows = "".join(
+                f"<tr><td><a href='/reports/view/{esc(urllib.parse.quote(r.get('path',''), safe=''))}'>{esc(r.get('title'))}</a></td><td><code>{esc(r.get('path'))}</code></td><td>{esc(r.get('size_bytes'))}</td><td>{esc(r.get('modified_at'))}</td></tr>"
+                for r in rows[:200]
+            )
+            sections.append(f"<div class='card'><h2>{esc(category)}</h2><table><tr><th>Report</th><th>Path</th><th>Bytes</th><th>Modified</th></tr>{body_rows}</table></div>")
+        if not sections:
+            sections.append("<div class='card'><p class='muted'>No reports found yet. Run a scan, findings export, integration export, fuzzing workflow, or project dashboard first.</p></div>")
+        body = f"""
+        <div class='card'><h2>Reports</h2>
+        <p class='muted'>View generated reports directly in the Workbench without downloading the full evidence bundle. This page indexes reports from <code>reports/</code>, <code>release-evidence/</code>, <code>ui/storage/jobs/*/results</code>, <code>findings/</code>, <code>fuzzing/reports/</code>, and <code>projects/</code>.</p>
+        <p><form method='post' action='/reports/refresh'><button>Refresh report index</button></form></p>
+        <p class='small muted'>Indexed reports: {esc(result.get('reports', len(reports)))}. Index file: <code>reports/report-index.json</code>. Markdown index: <code>reports/report-index.md</code>.</p>
+        </div>
+        {''.join(sections)}
+        """
+        self.send_html("Reports", body)
+
+    def reports_view(self, encoded_report_id: str):
+        try:
+            from sbomops import reports_viewer
+            report_id = urllib.parse.unquote(encoded_report_id)
+            data = reports_viewer.read_report(report_id)
+            r = data.get("report", {})
+            text = data.get("text", "")
+            parsed = data.get("parsed")
+            if parsed is not None:
+                rendered = f"<pre>{esc(json.dumps(parsed, indent=2, sort_keys=False))}</pre>"
+            else:
+                rendered = f"<pre>{esc(text)}</pre>"
+            trunc = "<p class='small bad'>Preview truncated. Download the evidence bundle or open the file on disk for the full content.</p>" if data.get("truncated") else ""
+            body = f"""
+            <div class='card'><h2>{esc(r.get('title'))}</h2>
+            <p><a class='btn secondary' href='/reports'>Back to reports</a></p>
+            <table><tr><th>Category</th><td>{esc(r.get('category'))}</td></tr><tr><th>Path</th><td><code>{esc(r.get('path'))}</code></td></tr><tr><th>Bytes</th><td>{esc(r.get('size_bytes'))}</td></tr><tr><th>Modified</th><td>{esc(r.get('modified_at'))}</td></tr></table>
+            {trunc}</div>
+            <div class='card'><h2>Preview</h2>{rendered}</div>
+            """
+            self.send_html("Report", body)
+        except Exception as exc:
+            self.send_html("Report error", f"<div class='card'><h2>Report error</h2><pre>{esc(exc)}</pre><p><a class='btn' href='/reports'>Back to reports</a></p></div>", 400)
+
+    def reports_refresh(self):
+        try:
+            from sbomops import reports_viewer
+            result = reports_viewer.index_reports(argparse.Namespace(roots=None, out=str(reports_viewer.REPORT_INDEX), markdown=str(reports_viewer.REPORT_INDEX_MD)))
+            self.send_html("Reports refreshed", f"<div class='card'><h2>Report index refreshed</h2><pre>{esc(json.dumps(result, indent=2, sort_keys=True))}</pre><p><a class='btn' href='/reports'>View reports</a></p></div>")
+        except Exception as exc:
+            self.send_html("Reports error", f"<div class='card'><h2>Reports error</h2><pre>{esc(exc)}</pre></div>", 400)
 
     def findings_page(self):
         try:
