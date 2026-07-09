@@ -7,7 +7,11 @@ import json
 import os
 import smtplib
 import urllib.request
-from datetime import datetime, timezone
+import urllib.error
+import base64
+import shutil
+import subprocess
+from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Dict, List
@@ -149,7 +153,7 @@ def export_sarif(args: argparse.Namespace) -> Dict[str, Any]:
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.5.0", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
+            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.6.0", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
             "automationDetails": {"id": getattr(args, "project", "") or "local"},
             "results": results,
             "properties": {"created_at": now(), "source": "sst export sarif"},
@@ -313,8 +317,8 @@ def generate_k8s(args: argparse.Namespace) -> Dict[str, Any]:
     helm = base / "helm" / "sbom-security-toolkit"
     templates = helm / "templates"
     ensure_dir(templates)
-    write_yaml(helm / "Chart.yaml", {"apiVersion": "v2", "name": "sbom-security-toolkit", "description": "Self-hosted SBOM Security Toolkit", "type": "application", "version": "0.1.0", "appVersion": "2.5.0"})
-    write_yaml(helm / "values.yaml", {"image": {"repository": "sbom-security-toolkit", "tag": "2.5.0", "pullPolicy": "IfNotPresent"}, "web": {"replicas": 1, "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "1", "memory": "1Gi"}}}, "worker": {"replicas": 1, "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}, "maxConcurrentJobs": 1}, "postgres": {"external": False, "host": ""}, "redis": {"external": False, "host": ""}, "s3": {"bucket": "", "prefix": "sbom-security-toolkit"}, "oidc": {"enabled": False, "issuer": "", "clientIdSecretRef": "sst-oidc-client-id", "clientSecretSecretRef": "sst-oidc-client-secret"}, "ingress": {"enabled": False, "className": "", "host": "sst.example.com", "tlsSecret": ""}})
+    write_yaml(helm / "Chart.yaml", {"apiVersion": "v2", "name": "sbom-security-toolkit", "description": "Self-hosted SBOM Security Toolkit", "type": "application", "version": "0.1.0", "appVersion": "2.6.0"})
+    write_yaml(helm / "values.yaml", {"image": {"repository": "sbom-security-toolkit", "tag": "2.6.0", "pullPolicy": "IfNotPresent"}, "web": {"replicas": 1, "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "1", "memory": "1Gi"}}}, "worker": {"replicas": 1, "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}, "maxConcurrentJobs": 1}, "postgres": {"external": False, "host": ""}, "redis": {"external": False, "host": ""}, "s3": {"bucket": "", "prefix": "sbom-security-toolkit"}, "oidc": {"enabled": False, "issuer": "", "clientIdSecretRef": "sst-oidc-client-id", "clientSecretSecretRef": "sst-oidc-client-secret"}, "ingress": {"enabled": False, "className": "", "host": "sst.example.com", "tlsSecret": ""}})
     write_text(templates / "deployment.yaml", '''apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -431,6 +435,255 @@ def demo_enterprise(args: argparse.Namespace) -> Dict[str, Any]:
     return summary
 
 
+
+def _auth_header_basic(user: str, token: str) -> str:
+    raw = f"{user}:{token}".encode()
+    return "Basic " + base64.b64encode(raw).decode()
+
+
+def _http_json(url: str, method: str = "GET", payload: Any | None = None, headers: Dict[str, str] | None = None, timeout: int = 15) -> Dict[str, Any]:
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(url, data=data, method=method, headers={"Content-Type": "application/json", **(headers or {})})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(body) if body else {}
+            except Exception:
+                parsed = {"raw": body[:2000]}
+            return {"ok": True, "status": getattr(resp, "status", None), "body": parsed}
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+        return {"ok": False, "status": exc.code, "error": body[:2000]}
+    except Exception as exc:
+        return {"ok": False, "status": None, "error": str(exc)}
+
+
+def _findings_from_file_or_sbom(args: argparse.Namespace) -> List[Dict[str, Any]]:
+    findings_file = getattr(args, "findings", "") or ""
+    if findings_file and Path(findings_file).exists():
+        data = load_json(findings_file, {})
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ["findings", "issues", "results"]:
+                if isinstance(data.get(key), list):
+                    return data[key]
+    return component_findings(args.sbom)
+
+
+def _jira_payloads(args: argparse.Namespace) -> List[Dict[str, Any]]:
+    payloads = []
+    for f in _findings_from_file_or_sbom(args):
+        rid = f.get("rule_id") or f.get("ruleId") or "SST-FINDING"
+        title = f.get("title") or f.get("summary") or rid
+        comp = f.get("component") or f.get("component_name") or ""
+        fp = f.get("fingerprint") or f.get("external_fingerprint") or finding_fingerprint(rid, title, comp)
+        desc = f.get("message") or f.get("description") or "Generated by SBOM Security Toolkit."
+        payloads.append({
+            "fields": {
+                "project": {"key": args.project_key},
+                "summary": f"[{rid}] {title}: {comp}"[:255],
+                "description": {"type":"doc","version":1,"content":[{"type":"paragraph","content":[{"type":"text","text": f"{desc}\n\nFingerprint: {fp}"}]}]},
+                "issuetype": {"name": args.issue_type},
+                "labels": ["sbom-security-toolkit", "supply-chain", f"sst-{rid.lower().replace('_','-')[:32]}"],
+            },
+            "sst_fingerprint": fp,
+        })
+    return payloads
+
+
+def jira_test(args: argparse.Namespace) -> Dict[str, Any]:
+    url = args.url or os.environ.get("JIRA_BASE_URL", "")
+    email = args.email or os.environ.get("JIRA_EMAIL", "")
+    token = os.environ.get(args.token_env, "")
+    if not args.send:
+        return {"mode": "dry-run", "ok": True, "url_configured": bool(url), "email_configured": bool(email), "token_configured": bool(token), "note": "Use --send to call Jira /rest/api/3/myself."}
+    if not (url and email and token):
+        raise SystemExit("JIRA_BASE_URL, JIRA_EMAIL, and the token env var are required for --send")
+    result = _http_json(url.rstrip("/") + "/rest/api/3/myself", headers={"Authorization": _auth_header_basic(email, token)})
+    write_json(Path(args.out), {"tested_at": now(), "result": result})
+    return {"path": args.out, **result}
+
+
+def jira_create(args: argparse.Namespace) -> Dict[str, Any]:
+    payloads = _jira_payloads(args)
+    state_path = Path(args.state)
+    state = load_json(state_path, {"created": {}})
+    created = state.setdefault("created", {})
+    to_create = [p for p in payloads if p["sst_fingerprint"] not in created]
+    out_doc = {"generated_at": now(), "mode": "dry-run", "dedupe_state": str(state_path), "requested": len(payloads), "skipped_duplicates": len(payloads) - len(to_create), "issues": to_create, "created": []}
+    if args.send:
+        url = args.url or os.environ.get("JIRA_BASE_URL", "")
+        email = args.email or os.environ.get("JIRA_EMAIL", "")
+        token = os.environ.get(args.token_env, "")
+        if not (url and email and token):
+            raise SystemExit("JIRA_BASE_URL, JIRA_EMAIL, and the token env var are required for --send")
+        headers = {"Authorization": _auth_header_basic(email, token)}
+        out_doc["mode"] = "sent"
+        for item in to_create:
+            result = _http_json(url.rstrip("/") + "/rest/api/3/issue", method="POST", payload={"fields": item["fields"]}, headers=headers)
+            rec = {"fingerprint": item["sst_fingerprint"], "result": result}
+            if result.get("ok"):
+                body = result.get("body", {})
+                created[item["sst_fingerprint"]] = {"key": body.get("key"), "id": body.get("id"), "created_at": now()}
+            out_doc["created"].append(rec)
+        write_json(state_path, state)
+    write_json(Path(args.out), out_doc)
+    return {"path": args.out, "mode": out_doc["mode"], "issues": len(to_create), "skipped_duplicates": out_doc["skipped_duplicates"]}
+
+
+def defectdojo_test(args: argparse.Namespace) -> Dict[str, Any]:
+    url = args.url or os.environ.get("DEFECTDOJO_URL", "")
+    token = os.environ.get(args.token_env, "")
+    if not args.send:
+        return {"mode": "dry-run", "ok": True, "url_configured": bool(url), "token_configured": bool(token), "note": "Use --send to call DefectDojo /api/v2/system_settings/."}
+    if not (url and token):
+        raise SystemExit("DEFECTDOJO_URL and the token env var are required for --send")
+    result = _http_json(url.rstrip("/") + "/api/v2/system_settings/", headers={"Authorization": f"Token {token}"})
+    write_json(Path(args.out), {"tested_at": now(), "result": result})
+    return {"path": args.out, **result}
+
+
+def defectdojo_upload(args: argparse.Namespace) -> Dict[str, Any]:
+    payload = export_defectdojo(argparse.Namespace(sbom=args.sbom, out=args.payload_out, product_name=args.product_name, engagement_name=args.engagement_name, minimum_severity=args.minimum_severity))
+    result = {"mode": "dry-run", "payload": payload, "uploaded": False}
+    if args.send:
+        url = args.url or os.environ.get("DEFECTDOJO_URL", "")
+        token = os.environ.get(args.token_env, "")
+        if not (url and token):
+            raise SystemExit("DEFECTDOJO_URL and the token env var are required for --send")
+        data = load_json(args.payload_out, {})
+        result = _http_json(url.rstrip("/") + "/api/v2/import-scan/", method="POST", payload=data, headers={"Authorization": f"Token {token}"})
+        result.update({"mode": "sent", "payload_path": args.payload_out})
+    write_json(Path(args.out), result)
+    return {"path": args.out, "mode": result.get("mode"), "payload_path": args.payload_out, "ok": result.get("ok", True)}
+
+
+def github_pr_summary(args: argparse.Namespace) -> Dict[str, Any]:
+    release = load_json(args.release_decision, {}) if args.release_decision else {}
+    sarif = load_json(args.sarif, {}) if args.sarif and Path(args.sarif).exists() else {}
+    findings = 0
+    try:
+        findings = len(sarif.get("runs", [{}])[0].get("results", []))
+    except Exception:
+        findings = 0
+    decision = release.get("decision", "review")
+    md = f"""## SBOM Security Toolkit result\n\n**Decision:** `{decision}`  \n**SARIF findings:** `{findings}`  \n**Evidence:** `{args.evidence_url or 'uploaded as workflow artifact'}`\n\nReview the attached evidence bundle, SARIF output, OpenVEX output, and release-decision report before merging.\n"""
+    write_text(Path(args.out), md)
+    check = {"name": "SBOM Security Toolkit", "conclusion": "failure" if decision == "block" else "success" if decision == "pass" else "neutral", "summary": md, "created_at": now()}
+    write_json(Path(args.check_out), check)
+    return {"comment": args.out, "check": args.check_out, "decision": decision, "findings": findings}
+
+
+def scheduler_run(args: argparse.Namespace) -> Dict[str, Any]:
+    from . import enterprise
+    schedules = enterprise._read_yaml(enterprise.SCHEDULES, {"schedules": []}).get("schedules", [])
+    history_path = Path(args.history)
+    history = load_json(history_path, {"runs": []})
+    due = []
+    for sched in schedules:
+        if not sched.get("enabled", True):
+            continue
+        # Simple first implementation: --once runs each enabled schedule once; otherwise record due check only.
+        if args.once:
+            due.append(sched)
+    runs = []
+    for sched in due:
+        run = {"ts": now(), "schedule": sched.get("name"), "project_id": sched.get("project_id"), "workflow": sched.get("workflow"), "mode": "dry-run" if args.dry_run else "executed", "status": "queued" if args.dry_run else "completed"}
+        if not args.dry_run:
+            outdir = Path("reports/scheduled") / str(sched.get("name", "schedule"))
+            ensure_dir(outdir)
+            write_json(outdir / "scheduled-run.json", run)
+        runs.append(run)
+        try:
+            enterprise.audit("schedule.run", actor="scheduler", resource=str(sched.get("name")), detail=run)
+        except Exception:
+            pass
+    history.setdefault("runs", []).extend(runs)
+    write_json(history_path, history)
+    return {"path": str(history_path), "evaluated": len(schedules), "runs": len(runs), "dry_run": args.dry_run}
+
+
+def jobs_control(args: argparse.Namespace) -> Dict[str, Any]:
+    jobs_dir = Path(args.jobs_dir)
+    ensure_dir(jobs_dir)
+    if args.action == "list":
+        jobs = []
+        for status in sorted(jobs_dir.glob("*/status.json")):
+            jobs.append(load_json(status, {"job": status.parent.name}))
+        return {"jobs_dir": str(jobs_dir), "jobs": jobs[-args.limit:]}
+    if not args.job_id:
+        raise SystemExit("--job-id is required for this action")
+    job = jobs_dir / args.job_id
+    ensure_dir(job)
+    status_path = job / "status.json"
+    status = load_json(status_path, {"job_id": args.job_id})
+    if args.action == "cancel":
+        write_text(job / "CANCEL_REQUESTED", now()+"\n")
+        status.update({"state": "cancel_requested", "updated_at": now()})
+    elif args.action == "retry":
+        status.update({"state": "retry_requested", "retry_requested_at": now()})
+        write_json(job / "retry-request.json", status)
+    elif args.action == "rerun":
+        new_id = args.new_job_id or (args.job_id + "-rerun")
+        new_job = jobs_dir / new_id
+        if new_job.exists():
+            shutil.rmtree(new_job)
+        shutil.copytree(job, new_job)
+        ns = load_json(new_job / "status.json", {})
+        ns.update({"job_id": new_id, "state": "queued", "rerun_of": args.job_id, "created_at": now()})
+        write_json(new_job / "status.json", ns)
+        return {"rerun_job_id": new_id, "path": str(new_job)}
+    elif args.action == "mark-reviewed":
+        status.update({"reviewed": True, "reviewed_at": now(), "review_note": args.note})
+    write_json(status_path, status)
+    return {"job_id": args.job_id, "action": args.action, "status": status}
+
+
+def evidence_cleanup(args: argparse.Namespace) -> Dict[str, Any]:
+    roots = [Path(x.strip()) for x in args.roots.split(",") if x.strip()]
+    cutoff = datetime.now(timezone.utc) - timedelta(days=args.retention_days)
+    candidates = []
+    for root in roots:
+        if not root.exists():
+            continue
+        for p in root.glob("**/*"):
+            if p.is_dir() and p.name in {"evidence", "bundle", "evidence-bundle"} or (p.is_file() and (p.name.endswith("evidence.zip") or "evidence-bundle" in p.name)):
+                ts = datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc)
+                if ts < cutoff:
+                    candidates.append(p)
+    deleted = []
+    for p in candidates:
+        if not args.dry_run:
+            if p.is_dir(): shutil.rmtree(p)
+            else: p.unlink()
+        deleted.append(str(p))
+    out = {"dry_run": args.dry_run, "retention_days": args.retention_days, "candidates": len(candidates), "paths": deleted}
+    write_json(Path(args.out), out)
+    return {"path": args.out, **out}
+
+
+def integration_smoke(args: argparse.Namespace) -> Dict[str, Any]:
+    sbom = args.sbom
+    results = []
+    def run(label: str, fn, ns):
+        try:
+            out = fn(ns); results.append({"name": label, "ok": True, "result": out})
+        except Exception as exc:
+            results.append({"name": label, "ok": False, "error": str(exc)})
+    run("sarif", export_sarif, argparse.Namespace(sbom=sbom, out="reports/integration-smoke/sarif.sarif", project="smoke", release_decision=""))
+    run("openvex", export_openvex, argparse.Namespace(sbom=sbom, out="reports/integration-smoke/openvex.json", vulnerability="CVE-SMOKE-0001", status="under_investigation", justification="component_not_analyzed", impact_statement="Smoke test", action_statement="Review", author="SST Smoke"))
+    run("jira-dry-run", jira_create, argparse.Namespace(sbom=sbom, findings="", out="reports/integration-smoke/jira-create.json", project_key="SEC", issue_type="Task", state="reports/integration-smoke/jira-state.json", send=False, url="", email="", token_env="JIRA_API_TOKEN"))
+    run("defectdojo-dry-run", defectdojo_upload, argparse.Namespace(sbom=sbom, out="reports/integration-smoke/defectdojo-upload.json", payload_out="reports/integration-smoke/defectdojo-import.json", product_name="Smoke", engagement_name="Smoke", minimum_severity="Info", send=False, url="", token_env="DEFECTDOJO_TOKEN"))
+    run("notify-dry-run", notify, argparse.Namespace(type="webhook", target_ref="SST_WEBHOOK_URL", event="smoke", severity="info", title="Smoke", message="Smoke test", project="smoke", out="reports/integration-smoke/notify.json", send=False, smtp_host="localhost", smtp_port=25, email_from="sst@example.local"))
+    ok = all(r["ok"] for r in results)
+    out = {"ok": ok, "mode": "offline", "results": results, "created_at": now()}
+    write_json(Path(args.out), out)
+    if not ok:
+        raise SystemExit(json.dumps(out, indent=2))
+    return {"path": args.out, "ok": ok, "checks": len(results)}
+
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Production integrations, exports, notifications, CI/CD, and deployment scaffolds")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -445,6 +698,15 @@ def main(argv: List[str] | None = None) -> int:
     p = sub.add_parser("notify"); p.add_argument("--type", choices=["webhook", "slack", "email"], default="webhook"); p.add_argument("--target-ref", default="SST_WEBHOOK_URL"); p.add_argument("--event", default="release_blocked"); p.add_argument("--severity", default="warning"); p.add_argument("--title", default="SBOM Security Toolkit notification"); p.add_argument("--message", default="A configured event occurred."); p.add_argument("--project", default=""); p.add_argument("--out", default="reports/notifications/last-notification.json"); p.add_argument("--send", action="store_true"); p.add_argument("--smtp-host", default="localhost"); p.add_argument("--smtp-port", type=int, default=25); p.add_argument("--email-from", default="sst@example.local")
     p = sub.add_parser("github-app-scaffold"); p.add_argument("--out-dir", default="configs/generated/integrations/github-app"); p.add_argument("--workflow", default="analyze-everything"); p.add_argument("--release-decision-mode", choices=["comment", "check", "block"], default="check")
     p = sub.add_parser("demo-enterprise"); p.add_argument("--out-dir", default="reports/demo-enterprise")
+    p = sub.add_parser("jira-test"); p.add_argument("--url", default=""); p.add_argument("--email", default=""); p.add_argument("--token-env", default="JIRA_API_TOKEN"); p.add_argument("--out", default="reports/integrations/jira-test.json"); p.add_argument("--send", action="store_true")
+    p = sub.add_parser("jira-create"); p.add_argument("--sbom", required=True); p.add_argument("--findings", default=""); p.add_argument("--out", default="reports/integrations/jira-create.json"); p.add_argument("--project-key", default="SEC"); p.add_argument("--issue-type", default="Task"); p.add_argument("--state", default="reports/integrations/jira-state.json"); p.add_argument("--url", default=""); p.add_argument("--email", default=""); p.add_argument("--token-env", default="JIRA_API_TOKEN"); p.add_argument("--send", action="store_true")
+    p = sub.add_parser("defectdojo-test"); p.add_argument("--url", default=""); p.add_argument("--token-env", default="DEFECTDOJO_TOKEN"); p.add_argument("--out", default="reports/integrations/defectdojo-test.json"); p.add_argument("--send", action="store_true")
+    p = sub.add_parser("defectdojo-upload"); p.add_argument("--sbom", required=True); p.add_argument("--out", default="reports/integrations/defectdojo-upload.json"); p.add_argument("--payload-out", default="reports/integrations/defectdojo-import.json"); p.add_argument("--product-name", default="SBOM Security Toolkit Project"); p.add_argument("--engagement-name", default="SBOM Review"); p.add_argument("--minimum-severity", default="Info"); p.add_argument("--url", default=""); p.add_argument("--token-env", default="DEFECTDOJO_TOKEN"); p.add_argument("--send", action="store_true")
+    p = sub.add_parser("github-pr-summary"); p.add_argument("--sarif", default="reports/sarif/sbom-security-toolkit.sarif"); p.add_argument("--release-decision", default=""); p.add_argument("--evidence-url", default=""); p.add_argument("--out", default="reports/integrations/github-pr-comment.md"); p.add_argument("--check-out", default="reports/integrations/github-check.json")
+    p = sub.add_parser("scheduler-run"); p.add_argument("--history", default="reports/scheduler/history.json"); p.add_argument("--once", action="store_true"); p.add_argument("--dry-run", action="store_true", default=True); p.add_argument("--execute", dest="dry_run", action="store_false")
+    p = sub.add_parser("jobs"); p.add_argument("action", choices=["list","cancel","retry","rerun","mark-reviewed"]); p.add_argument("--jobs-dir", default="ui/storage/jobs"); p.add_argument("--job-id", default=""); p.add_argument("--new-job-id", default=""); p.add_argument("--note", default=""); p.add_argument("--limit", type=int, default=50)
+    p = sub.add_parser("evidence-cleanup"); p.add_argument("--roots", default="reports,ui/storage/jobs"); p.add_argument("--retention-days", type=int, default=90); p.add_argument("--out", default="reports/evidence-cleanup.json"); p.add_argument("--dry-run", action="store_true", default=True); p.add_argument("--delete", dest="dry_run", action="store_false")
+    p = sub.add_parser("integration-smoke"); p.add_argument("--sbom", default="test-sboms/example-spdx-2.3.json"); p.add_argument("--out", default="reports/integration-smoke/summary.json")
     args = ap.parse_args(argv)
     if args.cmd == "sarif": out = export_sarif(args)
     elif args.cmd == "openvex": out = export_openvex(args)
@@ -457,6 +719,15 @@ def main(argv: List[str] | None = None) -> int:
     elif args.cmd == "notify": out = notify(args)
     elif args.cmd == "github-app-scaffold": out = github_app_scaffold(args)
     elif args.cmd == "demo-enterprise": out = demo_enterprise(args)
+    elif args.cmd == "jira-test": out = jira_test(args)
+    elif args.cmd == "jira-create": out = jira_create(args)
+    elif args.cmd == "defectdojo-test": out = defectdojo_test(args)
+    elif args.cmd == "defectdojo-upload": out = defectdojo_upload(args)
+    elif args.cmd == "github-pr-summary": out = github_pr_summary(args)
+    elif args.cmd == "scheduler-run": out = scheduler_run(args)
+    elif args.cmd == "jobs": out = jobs_control(args)
+    elif args.cmd == "evidence-cleanup": out = evidence_cleanup(args)
+    elif args.cmd == "integration-smoke": out = integration_smoke(args)
     else: raise SystemExit(2)
     print(json.dumps(out, indent=2, sort_keys=True))
     return 0

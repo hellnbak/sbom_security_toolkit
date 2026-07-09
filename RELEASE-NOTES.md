@@ -1,4 +1,4 @@
-# v2.5.0 — Production Integrations + Deployment Readiness
+# v2.6.0 — Production Integrations + Deployment Readiness
 
 - Added SARIF export for GitHub code scanning and compatible security tooling.
 - Added OpenVEX generation for review-oriented vulnerability status workflows.

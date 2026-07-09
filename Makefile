@@ -437,7 +437,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.4.0
+VERSION ?= 2.6.0
 
 setup:
 	./setup.sh
@@ -805,3 +805,46 @@ notify-test:
 
 demo-enterprise:
 	python3 -m sbomops.integrations demo-enterprise --out-dir reports/demo-enterprise
+
+# v2.6 live integrations and operational workflows
+.PHONY: jira-test jira-create defectdojo-test defectdojo-upload github-pr-summary scheduler-run jobs-list job-cancel job-retry job-rerun evidence-cleanup integration-smoke
+JIRA_TOKEN_ENV ?= JIRA_API_TOKEN
+DEFECTDOJO_TOKEN_ENV ?= DEFECTDOJO_TOKEN
+JOBS_DIR ?= ui/storage/jobs
+RETENTION_DAYS ?= 90
+
+jira-test:
+	python3 -m sbomops.integrations jira-test --token-env $(JIRA_TOKEN_ENV) $(if $(SEND),--send,)
+
+jira-create:
+	python3 -m sbomops.integrations jira-create --sbom $(SBOM) --project-key $(JIRA_PROJECT_KEY) --token-env $(JIRA_TOKEN_ENV) $(if $(SEND),--send,)
+
+defectdojo-test:
+	python3 -m sbomops.integrations defectdojo-test --token-env $(DEFECTDOJO_TOKEN_ENV) $(if $(SEND),--send,)
+
+defectdojo-upload:
+	python3 -m sbomops.integrations defectdojo-upload --sbom $(SBOM) --token-env $(DEFECTDOJO_TOKEN_ENV) $(if $(SEND),--send,)
+
+github-pr-summary:
+	python3 -m sbomops.integrations github-pr-summary --sarif $(SARIF_OUT) $(if $(RELEASE_DECISION),--release-decision $(RELEASE_DECISION),)
+
+scheduler-run:
+	python3 -m sbomops.integrations scheduler-run --once $(if $(EXECUTE),--execute,--dry-run)
+
+jobs-list:
+	python3 -m sbomops.integrations jobs list --jobs-dir $(JOBS_DIR)
+
+job-cancel:
+	python3 -m sbomops.integrations jobs cancel --jobs-dir $(JOBS_DIR) --job-id $(JOB_ID)
+
+job-retry:
+	python3 -m sbomops.integrations jobs retry --jobs-dir $(JOBS_DIR) --job-id $(JOB_ID)
+
+job-rerun:
+	python3 -m sbomops.integrations jobs rerun --jobs-dir $(JOBS_DIR) --job-id $(JOB_ID) $(if $(NEW_JOB_ID),--new-job-id $(NEW_JOB_ID),)
+
+evidence-cleanup:
+	python3 -m sbomops.integrations evidence-cleanup --retention-days $(RETENTION_DAYS) $(if $(DELETE),--delete,--dry-run)
+
+integration-smoke:
+	python3 -m sbomops.integrations integration-smoke --sbom $(SBOM)

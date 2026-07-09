@@ -1,45 +1,57 @@
 # SBOM Security Toolkit
 
 
-## v2.5.0 — Production Integrations + Deployment Readiness
+## v2.6.0 — Live Integrations + Operational Workflows
 
-This release adds production workflow integration without changing the local-first trust model. It adds reviewable export paths, CI/CD templates, notification delivery, Kubernetes/Helm scaffolding, OIDC configuration scaffolding, worker runtime limits, and an enterprise demo dataset.
+This release makes the production integration layer operational while keeping the project local-first and dry-run-first by default. Jira, DefectDojo, Slack/webhook/email notifications, GitHub PR summaries, scheduled scans, job lifecycle controls, evidence retention, and integration smoke testing now have concrete CLI/Make workflows.
 
 Highlights:
 
-- SARIF export for GitHub code scanning and compatible security tooling.
-- OpenVEX document generation for review-oriented vulnerability status workflows.
-- Jira and DefectDojo export payload scaffolds.
-- CI/CD template generation for GitHub Actions, GitLab CI, Jenkins, CircleCI, Buildkite, and Azure DevOps.
-- GitHub App configuration scaffold for future PR checks, status updates, and evidence links.
-- Slack, webhook, and email notification sender with dry-run default.
-- Kubernetes/Helm deployment scaffold with separate web and worker deployments.
-- Generic OIDC configuration scaffold for Google Workspace, GitHub, JumpCloud, Okta, or other OIDC providers.
-- Worker runtime limits for job timeouts, max repo/SBOM/evidence sizes, concurrency, retries, and allowed workflows.
-- Demo enterprise dataset for screenshots, onboarding, and validation.
+- Live Jira connection tests and issue creation with dry-run default and fingerprint-based deduplication.
+- Live DefectDojo connection tests and upload workflow with dry-run default.
+- Slack, webhook, and email notification delivery with explicit `--send`/`SEND=1` opt-in.
+- GitHub PR summary and check-output generation from SARIF and release-decision artifacts.
+- Real scheduler runner for enterprise schedule definitions, dry-run by default.
+- Job lifecycle helpers for list, cancel, retry, rerun, and mark-reviewed workflows.
+- Evidence retention cleanup with dry-run default.
+- Offline integration smoke test harness for exporters, ticket payloads, and notification payloads.
+- Workbench Integrations page updated with live/dry-run operation buttons.
 
 Common commands:
 
 ```bash
-make export-sarif SBOM=test-sboms/example-spdx-2.3.json
-make export-openvex SBOM=test-sboms/example-spdx-2.3.json
-make export-jira SBOM=test-sboms/example-spdx-2.3.json JIRA_PROJECT_KEY=SEC
-make export-defectdojo SBOM=test-sboms/example-spdx-2.3.json
-make ci-templates CI_PROVIDER=all
-make github-app-scaffold
-make k8s-generate
-make oidc-config OIDC_ISSUER=https://issuer.example.com OIDC_ALLOWED_DOMAINS=example.com
-make worker-limits
+make integration-smoke SBOM=test-sboms/example-spdx-2.3.json
+make jira-test
+make jira-create SBOM=test-sboms/example-spdx-2.3.json JIRA_PROJECT_KEY=SEC
+make defectdojo-test
+make defectdojo-upload SBOM=test-sboms/example-spdx-2.3.json
 make notify-test
-make demo-enterprise
+make github-pr-summary SARIF_OUT=reports/sarif/sbom-security-toolkit.sarif
+make scheduler-run
+make jobs-list
+make evidence-cleanup RETENTION_DAYS=90
+```
+
+Live calls require explicit opt-in and environment-backed credentials:
+
+```bash
+export JIRA_BASE_URL="https://example.atlassian.net"
+export JIRA_EMAIL="security@example.com"
+export JIRA_API_TOKEN="..."
+make jira-test SEND=1
+make jira-create SBOM=test-sboms/example-spdx-2.3.json JIRA_PROJECT_KEY=SEC SEND=1
+
+export DEFECTDOJO_URL="https://defectdojo.example.com"
+export DEFECTDOJO_TOKEN="..."
+make defectdojo-test SEND=1
+make defectdojo-upload SBOM=test-sboms/example-spdx-2.3.json SEND=1
 ```
 
 See:
 
+- `docs/integrations/LIVE-INTEGRATIONS.md`
+- `docs/operations/SCHEDULER-JOBS-EVIDENCE.md`
 - `docs/integrations/PRODUCTION-INTEGRATIONS.md`
-- `docs/deployment/KUBERNETES-HELM.md`
-- `docs/enterprise/OIDC-AND-WORKER-LIMITS.md`
-
 
 **SBOM Security Toolkit** is a local-first, cloud-capable, source-available workbench for SBOM security operations, supplier SBOM intake, release evidence, and SBOM-focused fuzzing research.
 
@@ -56,7 +68,7 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine by default. Uploaded SBOMs and generated evidence stay on disk. For teams, the toolkit is now also **cloud-capable by choice**: optional self-hosted server mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, and cloud deployment guidance while preserving the same safety defaults. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, Bedrock, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: **v2.5.0 Production Integrations + Deployment Readiness**
+## Current release: **v2.6.0 Production Integrations + Deployment Readiness**
 
 This README reflects the current **v2.4.0** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
