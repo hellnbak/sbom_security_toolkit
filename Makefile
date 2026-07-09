@@ -437,7 +437,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.3.1
+VERSION ?= 2.4.0
 
 setup:
 	./setup.sh
@@ -737,3 +737,30 @@ config-project-defaults:
 
 config-cloud-settings:
 	python3 -m sbomops.config_manager cloud-settings --name $(CONFIG_NAME) --storage-backend $(CONFIG_STORAGE_BACKEND) --s3-bucket "$(CONFIG_S3_BUCKET)" --worker-sbom --worker-vulnerability --worker-fuzzing --worker-ai --worker-report
+
+# v2.4 enterprise cloud hardening helpers
+.PHONY: enterprise-health enterprise-setup enterprise-list enterprise-audit-list enterprise-schedule enterprise-notification enterprise-secret-ref enterprise-api-token
+
+enterprise-health:
+	python3 -m sbomops.enterprise health
+
+enterprise-setup:
+	python3 -m sbomops.enterprise setup-wizard --admin-username $(or $(ADMIN_USER),admin) --project-id $(or $(PROJECT_ID),default-project)
+
+enterprise-list:
+	python3 -m sbomops.enterprise list
+
+enterprise-audit-list:
+	python3 -m sbomops.enterprise audit-list --limit $(or $(LIMIT),25)
+
+enterprise-schedule:
+	python3 -m sbomops.enterprise schedule --name $(or $(SCHEDULE_NAME),nightly-full-scan) --project-id $(or $(PROJECT_ID),default-project) --workflow $(or $(WORKFLOW),analyze-everything) --cadence $(or $(CADENCE),daily)
+
+enterprise-notification:
+	python3 -m sbomops.enterprise notification --name $(or $(NOTIFICATION_NAME),security-alerts) --type $(or $(NOTIFICATION_TYPE),webhook) --target-ref $(or $(TARGET_REF),SST_WEBHOOK_URL)
+
+enterprise-secret-ref:
+	python3 -m sbomops.enterprise secret-ref --name $(or $(SECRET_NAME),github-token) --provider $(or $(SECRET_PROVIDER),env) --reference $(or $(SECRET_REFERENCE),GITHUB_TOKEN) --purpose "$(or $(SECRET_PURPOSE),private repository access)"
+
+enterprise-api-token:
+	python3 -m sbomops.enterprise api-token --name $(or $(TOKEN_NAME),ci-service-account) --owner $(or $(TOKEN_OWNER),ci) --role $(or $(TOKEN_ROLE),service-account)

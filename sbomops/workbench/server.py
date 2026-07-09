@@ -21,13 +21,14 @@ from sbomops.config_manager import (
     build_cloud_settings_config, build_fuzzing_profile_config, build_policy_config,
     build_project_defaults_config, import_config, list_configs, safe_slug, write_yaml
 )
+from sbomops import enterprise as enterprise_ops
 
 CSS = """
 :root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#172033;background:#f6f7fb}body{margin:0}.top{background:#111827;color:white;padding:18px 28px}.wrap{max-width:1100px;margin:24px auto;padding:0 18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}h1,h2{margin:.2rem 0 1rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.btn,button,input[type=submit]{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;display:inline-block;cursor:pointer}.btn.secondary{background:#374151}.btn.danger,button.danger{background:#dc2626}.muted{color:#6b7280}.pill{border-radius:999px;padding:4px 9px;font-size:12px;background:#e5e7eb}.completed{background:#dcfce7;color:#14532d}.failed{background:#fee2e2;color:#7f1d1d}.running,.queued{background:#dbeafe;color:#1e3a8a}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e5e7eb;text-align:left;padding:10px}code,pre{background:#f3f4f6;border-radius:8px}pre{padding:14px;overflow:auto;max-height:520px}.nav a{color:white;margin-right:16px}input,select,textarea{padding:9px;border:1px solid #d1d5db;border-radius:8px}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:#166534}.bad{color:#991b1b}
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -79,6 +80,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/repository": return self.repository_intake()
         if path == "/projects": return self.projects_page()
         if path == "/settings": return self.settings_page()
+        if path == "/admin": return self.admin_page()
         if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
@@ -90,6 +92,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/upload": return self.upload()
         if self.path == "/settings/save": return self.settings_save()
+        if self.path == "/admin/save": return self.admin_save()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -203,6 +206,83 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+
+
+
+    def admin_page(self):
+        status = enterprise_ops.health(argparse.Namespace())
+        state_rows = "".join(
+            f"<tr><td>{esc(c['name'])}</td><td><code>{esc(c['path'])}</code></td><td>{'yes' if c['exists'] else 'no'}</td><td>{esc(c['bytes'])}</td></tr>"
+            for c in status.get("checks", [])
+        )
+        audit_rows = "".join(
+            f"<tr><td>{esc(a.get('ts'))}</td><td>{esc(a.get('actor'))}</td><td>{esc(a.get('action'))}</td><td>{esc(a.get('resource'))}</td><td>{esc(a.get('status'))}</td></tr>"
+            for a in enterprise_ops.load_audit(25)
+        ) or "<tr><td colspan='5' class='muted'>No audit events yet.</td></tr>"
+        body = f"""
+        <div class='card'><h2>Enterprise cloud administration</h2>
+        <p class='muted'>Local-first remains the default. These controls generate self-hosted cloud configuration for users, roles, schedules, notifications, secret references, service accounts, and audit logging. Secrets are stored as references, not plaintext values.</p>
+        <p>Status: <span class='pill {esc(status.get('status'))}'>{esc(status.get('status'))}</span></p>
+        <table><tr><th>Area</th><th>Path</th><th>Exists</th><th>Bytes</th></tr>{state_rows}</table></div>
+
+        <div class='card'><h2>First-run setup wizard</h2>
+        <form method='post' action='/admin/save'><input type='hidden' name='kind' value='setup-wizard'>
+        <div class='grid'><div><label>Admin username</label><input name='admin_username' value='admin'></div><div><label>Admin email</label><input name='admin_email' placeholder='admin@example.com'></div><div><label>Project ID</label><input name='project_id' value='default-project'></div><div><label>Auth mode</label><select name='mode'><option value='local'>Local password</option><option value='oidc'>OIDC scaffold</option><option value='disabled'>Disabled / lab only</option></select></div></div>
+        <p class='small muted'>Leave password blank to generate a one-time admin password. Store it immediately.</p><input type='submit' value='Run setup wizard'></form></div>
+
+        <div class='card'><h2>User / RBAC</h2>
+        <form method='post' action='/admin/save'><input type='hidden' name='kind' value='create-user'>
+        <div class='grid'><div><label>Username</label><input name='username' value='analyst'></div><div><label>Email</label><input name='email'></div><div><label>Role</label><select name='role'><option>admin</option><option>maintainer</option><option selected>analyst</option><option>read-only</option><option>service-account</option></select></div><div><label>Password</label><input name='password' type='password' placeholder='blank generates one'></div></div><input type='submit' value='Save user'></form>
+        <hr><form method='post' action='/admin/save'><input type='hidden' name='kind' value='create-role'><div class='grid'><div><label>Role name</label><input name='name' value='security-reviewer'></div><div><label>Permissions</label><input name='permissions' value='scan:view,evidence:view,release:view'></div></div><input type='submit' value='Save role'></form></div>
+
+        <div class='card'><h2>Scheduled scans</h2>
+        <form method='post' action='/admin/save'><input type='hidden' name='kind' value='schedule'>
+        <div class='grid'><div><label>Name</label><input name='name' value='nightly-full-scan'></div><div><label>Project ID</label><input name='project_id' value='default-project'></div><div><label>Workflow</label><select name='workflow'><option value='analyze-everything'>Full SBOM analysis + every action + all fuzzing scenarios</option><option value='repo-intake'>Repository intake</option><option value='dependency-health'>Dependency health</option><option value='fuzz-all-timed'>Timed fuzzing</option></select></div><div><label>Cadence</label><select name='cadence'><option>hourly</option><option selected>daily</option><option>weekly</option><option>monthly</option></select></div></div><input type='submit' value='Save schedule'></form></div>
+
+        <div class='card'><h2>Notifications</h2>
+        <form method='post' action='/admin/save'><input type='hidden' name='kind' value='notification'>
+        <div class='grid'><div><label>Name</label><input name='name' value='security-alerts'></div><div><label>Type</label><select name='type'><option value='webhook'>Webhook</option><option value='slack'>Slack</option><option value='email'>Email</option></select></div><div><label>Target reference</label><input name='target_ref' value='SST_WEBHOOK_URL'></div><div><label>Events</label><input name='events' value='policy_failed,release_blocked,scan_failed,evidence_ready'></div></div><input type='submit' value='Save notification'></form></div>
+
+        <div class='card'><h2>Secrets and service accounts</h2>
+        <form method='post' action='/admin/save'><input type='hidden' name='kind' value='secret-ref'>
+        <div class='grid'><div><label>Name</label><input name='name' value='github-token'></div><div><label>Provider</label><select name='provider'><option value='env'>Environment variable</option><option value='aws-secrets-manager'>AWS Secrets Manager</option><option value='docker-secret'>Docker secret</option><option value='kubernetes-secret'>Kubernetes secret</option><option value='local-encrypted'>Local encrypted file</option></select></div><div><label>Reference</label><input name='reference' value='GITHUB_TOKEN'></div><div><label>Purpose</label><input name='purpose' value='private repository access'></div></div><input type='submit' value='Save secret reference'></form>
+        <hr><form method='post' action='/admin/save'><input type='hidden' name='kind' value='api-token'><div class='grid'><div><label>Token name</label><input name='name' value='ci-service-account'></div><div><label>Owner</label><input name='owner' value='ci'></div><div><label>Role</label><select name='role'><option value='service-account'>service-account</option><option value='analyst'>analyst</option><option value='maintainer'>maintainer</option></select></div></div><input type='submit' value='Create API token'></form></div>
+
+        <div class='card'><h2>Audit log</h2><table><tr><th>Time</th><th>Actor</th><th>Action</th><th>Resource</th><th>Status</th></tr>{audit_rows}</table></div>
+        """
+        self.send_html("Enterprise Admin", body)
+
+    def admin_save(self):
+        try:
+            fields = self.parse_urlencoded()
+            kind = fields.get("kind", "")
+            actor = fields.get("actor", "workbench") or "workbench"
+            if kind == "setup-wizard":
+                args = argparse.Namespace(**{"mode": fields.get("mode", "local"), "session_ttl_minutes": "480", "oidc_issuer": "", "admin_username": fields.get("admin_username", "admin"), "admin_display_name": fields.get("admin_username", "admin"), "admin_email": fields.get("admin_email", ""), "admin_password": fields.get("admin_password", ""), "project_id": fields.get("project_id", "default-project"), "actor": actor})
+                out = enterprise_ops.setup_wizard(args)
+            elif kind == "create-user":
+                args = argparse.Namespace(**{"username": fields.get("username", "analyst"), "display_name": fields.get("username", "analyst"), "email": fields.get("email", ""), "role": fields.get("role", "analyst"), "password": fields.get("password", ""), "actor": actor})
+                out = enterprise_ops.create_user(args)
+            elif kind == "create-role":
+                args = argparse.Namespace(name=fields.get("name", "custom-role"), permissions=fields.get("permissions", "scan:view"), actor=actor)
+                out = enterprise_ops.create_role(args)
+            elif kind == "schedule":
+                args = argparse.Namespace(name=fields.get("name", "daily-scan"), project_id=fields.get("project_id", "default-project"), workflow=fields.get("workflow", "analyze-everything"), cadence=fields.get("cadence", "daily"), disabled=False, policy="policies/generated/release-policy.yml", fuzzing_profile="configs/generated/fuzzing-profiles/release-smoke.yml", ai_provider="configs/generated/ai-providers/default-ai.yml", actor=actor)
+                out = enterprise_ops.create_schedule(args)
+            elif kind == "notification":
+                args = argparse.Namespace(name=fields.get("name", "alerts"), type=fields.get("type", "webhook"), target_ref=fields.get("target_ref", "SST_WEBHOOK_URL"), events=fields.get("events", "policy_failed,release_blocked,scan_failed,evidence_ready"), disabled=False, actor=actor)
+                out = enterprise_ops.create_notification(args)
+            elif kind == "secret-ref":
+                args = argparse.Namespace(name=fields.get("name", "secret"), provider=fields.get("provider", "env"), reference=fields.get("reference", ""), purpose=fields.get("purpose", "generic"), actor=actor)
+                out = enterprise_ops.create_secret_ref(args)
+            elif kind == "api-token":
+                args = argparse.Namespace(name=fields.get("name", "service-token"), owner=fields.get("owner", "service-account"), role=fields.get("role", "service-account"), expires_at=fields.get("expires_at", ""), actor=actor)
+                out = enterprise_ops.create_api_token(args)
+            else:
+                raise ValueError(f"Unsupported admin action: {kind}")
+            self.send_html("Admin saved", f"<div class='card'><h2>Saved enterprise configuration</h2><pre>{esc(json.dumps(out, indent=2, sort_keys=True))}</pre><p><a class='btn' href='/admin'>Back to admin</a></p></div>")
+        except Exception as exc:
+            self.send_html("Admin error", f"<div class='card'><h2>Admin error</h2><pre>{esc(exc)}</pre></div>", 400)
 
     def parse_urlencoded(self) -> Dict[str, str]:
         length = int(self.headers.get("Content-Length", "0"))

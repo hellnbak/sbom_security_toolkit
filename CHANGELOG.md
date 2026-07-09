@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.4.0 - Enterprise cloud hardening
+
+- Added `sbomops.enterprise` for self-hosted team controls.
+- Added `sst enterprise ...` CLI support for auth/RBAC scaffolding, users, roles, schedules, notifications, secret references, API tokens, audit logs, health checks, and first-run setup.
+- Added Workbench **Admin** page for first-run setup, user/RBAC management, scheduled scans, notifications, secret references, service-account tokens, and audit-log review.
+- Added enterprise generated config storage under `configs/generated/enterprise/`.
+- Added append-only audit logging under `ui/storage/enterprise/audit.log.jsonl`.
+- Added `docs/enterprise/ENTERPRISE-CLOUD-HARDENING.md`.
+- Added Make helpers: `enterprise-health`, `enterprise-setup`, `enterprise-list`, `enterprise-audit-list`, `enterprise-schedule`, `enterprise-notification`, `enterprise-secret-ref`, and `enterprise-api-token`.
+- Updated README and release notes to document the local-first plus self-hosted enterprise model.
+
 ## v2.3.1 - GUI-managed configuration
 
 - Added Workbench Settings page for policy, AI provider, fuzzing profile, project default, and cloud setting configuration.

@@ -15,9 +15,9 @@ It is meant to help security teams, product-security engineers, AppSec teams, ma
 The project is intentionally **local-first**. The CLI, Make targets, and web workbench run on your machine by default. Uploaded SBOMs and generated evidence stay on disk. For teams, the toolkit is now also **cloud-capable by choice**: optional self-hosted server mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, and cloud deployment guidance while preserving the same safety defaults. Optional scanners, Dependency-Track, GUAC, ClusterFuzzLite, Claude Skills, GLM/local models, Ollama, Bedrock, or OpenAI-compatible providers can be enabled when you choose to use them.
 
 
-## Current release: v2.3.1
+## Current release: v2.4.0
 
-This README reflects the current **v2.3.1** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
+This README reflects the current **v2.4.0** feature set. Since the v1.9 agent-integration release, the toolkit has added major v2.x capabilities:
 
 - **v2.0.0 Adaptive Fuzzing Platform:** fuzzing knowledge base, campaign planner, benchmark mode, scanner compatibility matrix, truth-set testing, replay packs, AI fuzz evaluation, ClusterFuzzLite scaffolding, and adaptive fuzzing workflows.
 - **v2.0.1 Fuzzing Lab UI:** browser-accessible fuzzing workflow launch, fuzzing logs, upload-driven fuzzing jobs, configurable fuzzing options, and Fuzzing Lab result pages.
@@ -32,11 +32,74 @@ This README reflects the current **v2.3.1** feature set. Since the v1.9 agent-in
 - **v2.2.6 AI-enhanced analysis and Bedrock provider:** Full SBOM Analysis can optionally generate AI-assisted fuzz case suggestions or run validated deterministic cases; the Fuzzing Lab and analysis UI now include AWS Bedrock as a provider option.
 - **v2.3.0 Project risk dashboard, full all-actions scan, and self-hosted cloud mode:** adds local project workspaces, history recording, delta/trend reporting, evidence-bundle viewer, release decision workflow, CI workflow generator, policy tuning helper, dependency owner template, AI executive-summary scaffold, a Workbench dropdown option for “Full SBOM analysis + every action + all fuzzing scenarios” with configurable fuzz time per step/library, and optional self-hosted cloud-mode scaffolding with Postgres, Redis, object storage, workers, and deployment guidance.
 - **v2.3.1 GUI-managed configuration:** adds a Workbench Settings page so users can create, validate, preview, import, and export the YAML configuration files that were previously path-only advanced inputs, including release policies, AI providers, fuzzing profiles, project defaults, and cloud settings.
+- **v2.4.0 Enterprise cloud hardening:** adds self-hosted team controls for auth/RBAC scaffolding, users, service accounts, audit logging, scheduled scan definitions, notifications, secret references, API tokens, an Admin UI, and enterprise CLI/Make helpers.
 
 The current focus is **repository-to-SBOM operations, GUI-managed configuration, dependency health review, intelligent SBOM fuzzing, and project risk tracking**: upload or analyze SBOMs, point the toolkit at a repository, generate decision-ready evidence, run scanner/toolchain comparisons, exercise SBOM parsers/scanners with semantic fuzzing workflows, and optionally deploy the workbench in a self-hosted cloud mode for team usage and scheduled/background jobs.
 
-**Documentation note:** this package consolidates the unpushed v2.2.0 through v2.3.1 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.3.1.
+**Documentation note:** this package consolidates the unpushed v2.2.0 through v2.4.0 changes into a single GitHub-ready tree. `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, `pyproject.toml`, `Makefile`, and `sbomops/__version__.py` are aligned to v2.4.0.
 
+
+
+## v2.4.0 Enterprise cloud hardening
+
+v2.4.0 keeps the toolkit **local-first** while adding the controls needed for a self-hosted team deployment. The Workbench now has an **Admin** page alongside Settings, Projects, Jobs, Repository Intake, and Fuzzing Lab. Admin operators can generate and manage users, RBAC roles, scheduled scans, notification targets, secret references, service-account API tokens, and audit logging configuration without hand-editing YAML.
+
+The enterprise controls are stored under:
+
+```text
+configs/generated/enterprise/
+ui/storage/enterprise/audit.log.jsonl
+```
+
+The Admin page supports:
+
+```text
+First-run setup wizard
+User and role management
+Scheduled scan definitions
+Webhook / Slack / email notification targets
+Secret references for env vars, AWS Secrets Manager, Docker secrets, Kubernetes secrets, and local encrypted-file placeholders
+Service-account API token generation with hash-only storage
+Audit log review
+Enterprise health/status checks
+```
+
+CLI examples:
+
+```bash
+sst enterprise setup-wizard --admin-username admin --project-id default-project
+sst enterprise create-user --username analyst --role analyst
+sst enterprise schedule --name nightly-full-scan --workflow analyze-everything --cadence daily
+sst enterprise notification --name security-alerts --type webhook --target-ref SST_WEBHOOK_URL
+sst enterprise secret-ref --name github-token --provider aws-secrets-manager --reference arn:aws:secretsmanager:us-east-1:111122223333:secret:github-token
+sst enterprise api-token --name ci-service-account --owner github-actions --role service-account
+sst enterprise audit-list --limit 25
+sst enterprise health
+```
+
+Make helpers:
+
+```bash
+make enterprise-health
+make enterprise-setup ADMIN_USER=admin PROJECT_ID=my-api
+make enterprise-schedule SCHEDULE_NAME=nightly-full-scan PROJECT_ID=my-api WORKFLOW=analyze-everything CADENCE=daily
+make enterprise-notification NOTIFICATION_NAME=security-alerts TARGET_REF=SST_WEBHOOK_URL
+make enterprise-secret-ref SECRET_NAME=github-token SECRET_PROVIDER=env SECRET_REFERENCE=GITHUB_TOKEN
+make enterprise-api-token TOKEN_NAME=ci-service-account TOKEN_OWNER=github-actions
+make enterprise-audit-list LIMIT=25
+```
+
+Security model:
+
+```text
+Secrets are stored as references, not plaintext values.
+Generated API tokens are shown once; only SHA-256 hashes are stored.
+Passwords use PBKDF2-SHA256 hashes.
+Audit logs are append-only JSON lines.
+Full SaaS multi-tenancy and OIDC enforcement are intentionally left as future layers over the self-hosted foundation.
+```
+
+See `docs/enterprise/ENTERPRISE-CLOUD-HARDENING.md` for the detailed guide.
 
 ## v2.3.1 GUI-managed configuration
 
@@ -346,7 +409,7 @@ make setup
 make test
 make validate
 make preflight-release
-make release VERSION=2.3.1
+make release VERSION=2.4.0
 ```
 
 Docker helpers are available:
