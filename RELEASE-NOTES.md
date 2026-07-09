@@ -1,5 +1,16 @@
 # Release Notes
 
+## v2.7.2 — Lifecycle Intelligence Sources
+
+- Added lifecycle intelligence to dependency-health analysis.
+- Added endoflife.date-style lifecycle source support for runtimes, operating systems, databases, frameworks, and platform components.
+- Added source/status/confidence separation for EOL, deprecated/abandoned, stale review signals, unpinned versions, and unknown lifecycle status.
+- Added offline lifecycle cache support and a tiny built-in cache for deterministic smoke tests.
+- Added `lifecycle-intelligence.json` and `lifecycle-intelligence.md` report outputs.
+- Added `sst lifecycle`, `sst lifecycle-intelligence`, and `make lifecycle-intelligence`.
+- Added Workbench lifecycle source controls for SBOM upload and repository intake workflows.
+- Added `docs/dependency-health/LIFECYCLE-INTELLIGENCE.md`.
+
 ## v2.7.1 — Workbench Reports Viewer
 
 - Added a Workbench **Reports** page to browse generated reports without downloading full evidence bundles.

@@ -281,6 +281,9 @@ def run_job(job_id: str) -> None:
     repo_fuzz = option(status, "repo_fuzz", "0") == "1"
     repo_dependency_health = option(status, "repo_dependency_health", "0") == "1"
     stale_days = option_int(status, "stale_days", 365, low=30, high=3650)
+    lifecycle_sources = option(status, "lifecycle_sources", "sbom,known,registry,endoflife")
+    lifecycle_cache = option(status, "lifecycle_cache", "")
+    offline_cache_only = option(status, "offline_cache_only", "0") == "1"
     library_targets = [x.strip().lower() for x in option(status, "library_targets", "sbom,scanner,ai").split(",") if x.strip()]
     steps: List[Dict[str, Any]] = []
     try:
@@ -295,7 +298,11 @@ def run_job(job_id: str) -> None:
             if workflow in {"repo-fuzz", "repo-evidence", "repo-analyze"} or repo_fuzz:
                 repo_cmd.append("--fuzz")
             if workflow in {"repo-dependency-health", "repo-evidence", "repo-analyze"} or repo_dependency_health:
-                repo_cmd.extend(["--dependency-health", "--stale-days", str(stale_days)])
+                repo_cmd.extend(["--dependency-health", "--stale-days", str(stale_days), "--lifecycle-sources", lifecycle_sources])
+                if lifecycle_cache:
+                    repo_cmd.extend(["--lifecycle-cache", lifecycle_cache])
+                if offline_cache_only:
+                    repo_cmd.append("--offline-cache-only")
                 if status.get("network_enabled"):
                     repo_cmd.append("--network")
             env = os.environ.copy()
@@ -319,13 +326,21 @@ def run_job(job_id: str) -> None:
         if workflow == "scanner-compare":
             steps.append(run_step(job_id, "Scanner compare", module_cmd("sbomops.scanner_compare", sbom, "--out-dir", out / "scanner-compare"), timeout=900))
         if workflow == "dependency-health":
-            cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days))
+            cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days), "--lifecycle-sources", lifecycle_sources)
+            if lifecycle_cache:
+                cmd.extend(["--lifecycle-cache", lifecycle_cache])
+            if offline_cache_only:
+                cmd.append("--offline-cache-only")
             if status.get("network_enabled"):
                 cmd.append("--network")
             steps.append(run_step(job_id, "Dependency health / unsupported dependency analysis", cmd, timeout=900))
 
         if workflow == "analyze-everything":
-            dep_cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days))
+            dep_cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days), "--lifecycle-sources", lifecycle_sources)
+            if lifecycle_cache:
+                cmd.extend(["--lifecycle-cache", lifecycle_cache])
+            if offline_cache_only:
+                cmd.append("--offline-cache-only")
             if status.get("network_enabled"):
                 dep_cmd.append("--network")
             steps.append(run_step(job_id, "Dependency health / unsupported dependency analysis", dep_cmd, timeout=900))

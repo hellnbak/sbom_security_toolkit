@@ -17,7 +17,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.7.1 — Findings & Remediation Operations + Reports Viewer**
+Current release: **v2.7.2 — Lifecycle Intelligence Sources**
 
 ---
 
@@ -29,7 +29,7 @@ Use it when you want to:
 
 - Validate supplier SBOMs before accepting them.
 - Generate and compare SBOMs from repositories.
-- Review unsupported, stale, deprecated, or abandoned dependencies.
+- Review unsupported, EOL, stale, deprecated, or abandoned dependencies with evidence-backed lifecycle signals.
 - Run policy gates and release-decision checks.
 - Produce evidence bundles for audits, vendor reviews, or release approvals.
 - Fuzz SBOM parsers, scanners, and workflows for semantic failures.
@@ -47,7 +47,7 @@ SBOM Security Toolkit combines workflows that are often spread across several to
 - **Repository intake:** build SBOMs from local repos, uploaded archives, or GitHub repos; detect ecosystems; compare SBOM generators; scan; fuzz generated SBOMs; check dependency health; and package evidence.
 - **SBOM analysis:** explain, normalize, repair, diff, inventory, redact, score, and validate SBOMs.
 - **Supplier intake:** minimum-elements checks, supplier-question generation, supplier reports, and reviewable evidence bundles.
-- **Dependency health:** identify deprecated, abandoned, stale, unpinned, or unsupported-risk open source dependencies from uploaded SBOMs or generated repository SBOMs.
+- **Dependency health and lifecycle intelligence:** identify deprecated, abandoned, stale, unpinned, unsupported-risk, or EOL open source components from uploaded SBOMs or generated repository SBOMs, with optional endoflife.date-style product lifecycle lookups, registry metadata, confidence scoring, and offline cache support.
 - **Policy and release evidence:** policy-as-code checks, release decision output, checksums/signing helpers, VEX helpers, Exploitability Decision Records, and evidence bundles.
 - **Scanner operations:** scanner availability checks, scanner comparison, scanner confidence scoring, compatibility matrix, and curated scanner truth-set testing.
 - **Project risk operations:** project workspaces, history recording, delta/trend reporting, release decision workflow, owner mapping templates, evidence viewer, and AI executive-summary scaffolding.
@@ -60,6 +60,38 @@ SBOM Security Toolkit combines workflows that are often spread across several to
 - **Findings and remediation operations:** central finding lifecycle, deduplication, owners, SLA tracking, risk acceptance, suppression, fix verification, remediation plans, ticket text, campaigns, and next-best-action queues.
 
 ---
+
+
+## Lifecycle intelligence for unsupported/EOL components
+
+v2.7.2 improves unsupported open source component detection by adding a lifecycle intelligence layer to dependency-health analysis. The toolkit now separates authoritative support signals from review heuristics:
+
+- **EOL / unsupported:** SBOM metadata, maintainer/vendor lifecycle data, or an endoflife.date-style lifecycle source indicates support has ended.
+- **Deprecated / abandoned:** registry or maintainer metadata marks a package deprecated or abandoned.
+- **Possibly unmaintained / stale:** no observed release/update for the configured threshold; this is a review trigger, not automatic EOL.
+- **Unknown:** no reliable lifecycle signal was found.
+
+Network enrichment is opt-in. Offline mode uses SBOM metadata plus a tiny built-in smoke-test cache or a user-supplied lifecycle cache file.
+
+```bash
+make dependency-health SBOM=test-sboms/example-spdx-2.3.json
+make lifecycle-intelligence SBOM=test-sboms/example-lifecycle.cdx.json OFFLINE_CACHE_ONLY=1
+make dependency-health SBOM=./bom.json NETWORK=1 LIFECYCLE_SOURCES=sbom,known,registry,endoflife
+
+sst lifecycle ./bom.json --network --lifecycle-sources sbom,known,registry,endoflife
+```
+
+Generated artifacts include:
+
+```text
+reports/dependency-health/dependency-health.json
+reports/dependency-health/dependency-health.md
+reports/dependency-health/dependency-health.csv
+reports/dependency-health/lifecycle-intelligence.json
+reports/dependency-health/lifecycle-intelligence.md
+```
+
+The Workbench upload and repository-intake forms now expose lifecycle source controls, optional lifecycle cache path, offline-cache-only mode, stale threshold, and network opt-in.
 
 ## What this is not
 
@@ -498,7 +530,19 @@ See `DATA-SAFETY.md` and `SECURITY.md`.
 
 ## Version history
 
-### v2.7.1 — Workbench Reports Viewer
+#
+## v2.7.2 — Lifecycle Intelligence Sources
+
+- Added lifecycle intelligence to dependency-health analysis.
+- Added endoflife.date-style lifecycle source support for runtimes, operating systems, databases, frameworks, and platform components.
+- Added source/status/confidence separation for EOL, deprecated/abandoned, stale review signals, unpinned versions, and unknown lifecycle status.
+- Added offline lifecycle cache support and a tiny built-in cache for deterministic smoke tests.
+- Added `lifecycle-intelligence.json` and `lifecycle-intelligence.md` report outputs.
+- Added `sst lifecycle`, `sst lifecycle-intelligence`, and `make lifecycle-intelligence`.
+- Added Workbench lifecycle source controls for SBOM upload and repository intake workflows.
+- Added `docs/dependency-health/LIFECYCLE-INTELLIGENCE.md`.
+
+## v2.7.1 — Workbench Reports Viewer
 
 - Added a Workbench **Reports** page for browsing generated reports without downloading full evidence bundles.
 - Added report indexing across job results, evidence outputs, project history, findings, fuzzing reports, and integration exports.

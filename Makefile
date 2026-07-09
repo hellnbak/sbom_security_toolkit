@@ -613,11 +613,11 @@ REPO_GENERATORS ?= auto
 GITHUB_TOKEN_ENV ?= GITHUB_TOKEN
 ALLOW_REMOTE ?= 0
 
-.PHONY: repo-intake repo-sbom repo-scan repo-fuzz repo-evidence repo-detect dependency-health repo-dependency-health
+.PHONY: repo-intake repo-sbom repo-scan repo-fuzz repo-evidence repo-detect dependency-health lifecycle-intelligence repo-dependency-health
 
 dependency-health:
 	@if [ -z "$(SBOM)" ]; then echo "Usage: make dependency-health SBOM=./bom.json [NETWORK=1] [STALE_DAYS=365]"; exit 2; fi
-	python3 -m sbomops.dependency_health $(SBOM) --out-dir reports/dependency-health --stale-days $${STALE_DAYS:-365} $(if $(filter 1,$(NETWORK)),--network,)
+	python3 -m sbomops.dependency_health $(SBOM) --out-dir reports/dependency-health --stale-days $${STALE_DAYS:-365} --lifecycle-sources $${LIFECYCLE_SOURCES:-sbom,known,registry,endoflife} $(if $(LIFECYCLE_CACHE),--lifecycle-cache $(LIFECYCLE_CACHE),) $(if $(filter 1,$(OFFLINE_CACHE_ONLY)),--offline-cache-only,) $(if $(filter 1,$(NETWORK)),--network,)
 
 repo-detect:
 	python3 -m sbomops.repo_intake detect $(REPO_SOURCE) --out $(REPO_OUT)/detected-ecosystems.json $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
@@ -634,8 +634,13 @@ repo-fuzz:
 repo-evidence repo-intake:
 	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --fuzz $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
 
+# v2.7.2 lifecycle intelligence convenience target
+lifecycle-intelligence:
+	@if [ -z "$(SBOM)" ]; then echo "Usage: make lifecycle-intelligence SBOM=./bom.json [NETWORK=1] [LIFECYCLE_SOURCES=sbom,known,registry,endoflife]"; exit 2; fi
+	python3 -m sbomops.dependency_health $(SBOM) --out-dir reports/lifecycle-intelligence --stale-days $${STALE_DAYS:-365} --lifecycle-sources $${LIFECYCLE_SOURCES:-sbom,known,registry,endoflife} $(if $(LIFECYCLE_CACHE),--lifecycle-cache $(LIFECYCLE_CACHE),) $(if $(filter 1,$(OFFLINE_CACHE_ONLY)),--offline-cache-only,) $(if $(filter 1,$(NETWORK)),--network,)
+
 repo-dependency-health:
-	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --no-scan --dependency-health $(if $(filter 1,$(NETWORK)),--network,) $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
+	python3 -m sbomops.repo_intake analyze $(REPO_SOURCE) --out-dir $(REPO_OUT) --generators $(REPO_GENERATORS) --policy $(POLICY) --no-scan --dependency-health --lifecycle-sources $${LIFECYCLE_SOURCES:-sbom,known,registry,endoflife} $(if $(LIFECYCLE_CACHE),--lifecycle-cache $(LIFECYCLE_CACHE),) $(if $(filter 1,$(OFFLINE_CACHE_ONLY)),--offline-cache-only,) $(if $(filter 1,$(NETWORK)),--network,) $(if $(filter 1,$(ALLOW_REMOTE)),--allow-remote,) --github-token-env $(GITHUB_TOKEN_ENV)
 
 # v2.3 project risk dashboard and full all-actions scan workflows
 .PHONY: project-init project-list project-record project-delta project-trend release-decision ci-generate policy-tune owners-template ai-executive-summary evidence-index project-watch

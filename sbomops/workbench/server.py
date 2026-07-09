@@ -132,8 +132,17 @@ class Handler(BaseHTTPRequestHandler):
               <div><label>AI scenario</label><input name='scenario' value='sbom-analysis-targeted-edge-cases' size='34'></div>
             </div>
           </div>
+          <div class='card'>
+            <h3>Lifecycle intelligence sources</h3>
+            <p class='small muted'>Used by unsupported / out-of-date dependency analysis. Network is still opt-in. Offline mode uses SBOM metadata plus built-in or user-provided lifecycle cache data.</p>
+            <div class='grid'>
+              <div><label>Sources</label><input name='lifecycle_sources' value='sbom,known,registry,endoflife' size='42'><p class='small muted'>Comma list: sbom, known, registry, endoflife.</p></div>
+              <div><label>Lifecycle cache path</label><input name='lifecycle_cache' placeholder='configs/lifecycle/eol-cache.json' size='42'><p class='small muted'>Optional JSON cache keyed by product slug.</p></div>
+            </div>
+            <p><label><input type='checkbox' name='offline_cache_only' value='1'> Offline cache only; do not call external lifecycle providers even when network is enabled</label></p>
+          </div>
           <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
-          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available</label></p>
+          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available, including registry metadata and endoflife.date lifecycle lookups</label></p>
           <input type='submit' value='Start scan'>
         </form></div>
         <div class='grid'><div class='card'><h3>Local-first</h3><p>No auth, no database, no cloud upload. Use on localhost only.</p></div><div class='card'><h3>Evidence bundle</h3><p>Each job produces a downloadable zip with input, logs, status, and reports.</p></div><div class='card'><h3>Safe defaults</h3><p>Filename sanitization, size/type limits, isolated per-job directories, and delete controls.</p></div></div>
@@ -167,7 +176,7 @@ class Handler(BaseHTTPRequestHandler):
                 upload = upload_path
             else:
                 upload = save_upload(filename, content)
-            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz", "repo_dependency_health", "stale_days", "ai_analysis_enabled", "ai_analysis_mode", "ai_max_cases", "project_id"]}
+            options = {k: fields.get(k, "") for k in ["count", "duration_seconds", "library_targets", "edge", "budget_profile", "ai_provider", "ai_model", "ai_goal", "scenario", "dtrack_url", "target", "grammar", "finding_id", "finding_state", "repo_generators", "repo_source_type", "repo_allow_remote", "repo_fuzz", "repo_dependency_health", "stale_days", "lifecycle_sources", "lifecycle_cache", "offline_cache_only", "ai_analysis_enabled", "ai_analysis_mode", "ai_max_cases", "project_id"]}
             jid = create_job(workflow, upload, policy=fields.get("policy", "policies/default-release-policy.yml"), network=fields.get("network") == "1", options=options, secrets=secrets)
             self.redirect(f"/jobs/{jid}")
         except Exception as exc:
@@ -664,7 +673,7 @@ class Handler(BaseHTTPRequestHandler):
             <div><label>SBOM generators</label><input name='repo_generators' value='auto' size='24'><p class='small muted'>Comma list: auto, internal, syft, cdxgen, trivy.</p></div>
             <div><label>Fuzz generated SBOM</label><select name='repo_fuzz'><option value='0'>No</option><option value='1'>Yes</option></select></div>
             <div><label>Dependency health/EOL check</label><select name='repo_dependency_health'><option value='1'>Yes</option><option value='0'>No</option></select><p class='small muted'>Flags deprecated, abandoned, stale, unpinned, or unsupported-risk dependencies.</p></div>
-            <div><label>Stale threshold days</label><input name='stale_days' value='365' size='8'></div>
+            <div><label>Stale threshold days</label><input name='stale_days' value='365' size='8'></div><div><label>Lifecycle sources</label><input name='lifecycle_sources' value='sbom,known,registry,endoflife' size='34'></div><div><label>Lifecycle cache path</label><input name='lifecycle_cache' placeholder='configs/lifecycle/eol-cache.json' size='34'></div>
           </div>
           <label>Repository archive upload</label><input type='file' name='sbom'>
           <p class='small muted'>Allowed: .zip, .tar.gz/.tgz, plus SBOM file types for normal workflows. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
@@ -674,7 +683,7 @@ class Handler(BaseHTTPRequestHandler):
             <div><label>Allow remote Git clone</label><select name='repo_allow_remote'><option value='0'>No</option><option value='1'>Yes</option></select><p class='small muted'>Required for GitHub URL intake.</p></div>
           </div>
           <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
-          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled scanners/enrichment when available, including registry metadata for dependency-health checks</label></p>
+          <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled scanners/enrichment when available, including registry metadata and endoflife.date lifecycle lookups for dependency-health checks</label></p><p><label><input type='checkbox' name='offline_cache_only' value='1'> Offline lifecycle cache only</label></p>
           <input type='submit' value='Start repository intake'>
         </form></div>
         <div class='grid'>

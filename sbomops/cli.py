@@ -26,6 +26,8 @@ MODULES = {
     "repo": "sbomops.repo_intake",
     "repo-intake": "sbomops.repo_intake",
     "dependency-health": "sbomops.dependency_health",
+    "lifecycle": "sbomops.dependency_health",
+    "lifecycle-intelligence": "sbomops.dependency_health",
     "project": "sbomops.project_ops",
     "release-decision": "sbomops.project_ops",
     "cloud": "sbomops.cloud",
