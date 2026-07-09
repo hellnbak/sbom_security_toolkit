@@ -764,3 +764,44 @@ enterprise-secret-ref:
 
 enterprise-api-token:
 	python3 -m sbomops.enterprise api-token --name $(or $(TOKEN_NAME),ci-service-account) --owner $(or $(TOKEN_OWNER),ci) --role $(or $(TOKEN_ROLE),service-account)
+
+# v2.5 production integrations and deployment readiness
+.PHONY: export-sarif export-openvex export-jira export-defectdojo ci-templates github-app-scaffold k8s-generate oidc-config worker-limits notify-test demo-enterprise
+SARIF_OUT ?= reports/sarif/sbom-security-toolkit.sarif
+OPENVEX_OUT ?= reports/openvex/openvex.json
+CI_PROVIDER ?= all
+CI_TEMPLATE_DIR ?= reports/ci-templates
+JIRA_PROJECT_KEY ?= SEC
+
+export-sarif:
+	python3 -m sbomops.integrations sarif --sbom $(SBOM) --out $(SARIF_OUT) --project $(PROJECT_ID)
+
+export-openvex:
+	python3 -m sbomops.integrations openvex --sbom $(SBOM) --out $(OPENVEX_OUT) --status $(or $(VEX_STATUS),under_investigation)
+
+export-jira:
+	python3 -m sbomops.integrations jira-export --sbom $(SBOM) --project-key $(JIRA_PROJECT_KEY)
+
+export-defectdojo:
+	python3 -m sbomops.integrations defectdojo-export --sbom $(SBOM)
+
+ci-templates:
+	python3 -m sbomops.integrations ci-generate --provider $(CI_PROVIDER) --out-dir $(CI_TEMPLATE_DIR)
+
+github-app-scaffold:
+	python3 -m sbomops.integrations github-app-scaffold
+
+k8s-generate:
+	python3 -m sbomops.integrations k8s-generate --out-dir deploy/kubernetes
+
+oidc-config:
+	python3 -m sbomops.integrations oidc-config --issuer $(or $(OIDC_ISSUER),https://issuer.example.com) --allowed-domains "$(or $(OIDC_ALLOWED_DOMAINS),example.com)"
+
+worker-limits:
+	python3 -m sbomops.integrations worker-limits
+
+notify-test:
+	python3 -m sbomops.integrations notify --type $(or $(NOTIFICATION_TYPE),webhook) --target-ref $(or $(TARGET_REF),SST_WEBHOOK_URL) --title "SBOM Security Toolkit test" --message "Notification configuration test"
+
+demo-enterprise:
+	python3 -m sbomops.integrations demo-enterprise --out-dir reports/demo-enterprise

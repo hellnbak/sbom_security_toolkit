@@ -31,6 +31,9 @@ MODULES = {
     "cloud": "sbomops.cloud",
     "config": "sbomops.config_manager",
     "enterprise": "sbomops.enterprise",
+    "integrations": "sbomops.integrations",
+    "export": "sbomops.integrations",
+    "vex": "sbomops.integrations",
 
     "fuzz-plan": "fuzzing.planner.fuzz_plan",
     "fuzz-kb": "fuzzing.kb.fuzz_kb",

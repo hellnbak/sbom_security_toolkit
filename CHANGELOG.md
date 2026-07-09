@@ -1,3 +1,17 @@
+# v2.5.0 — Production Integrations + Deployment Readiness
+
+- Added SARIF export for GitHub code scanning and compatible security tooling.
+- Added OpenVEX generation for review-oriented vulnerability status workflows.
+- Added Jira and DefectDojo export payload scaffolds.
+- Added CI/CD template generation for GitHub Actions, GitLab CI, Jenkins, CircleCI, Buildkite, and Azure DevOps.
+- Added GitHub App configuration scaffold.
+- Added Slack/webhook/email notification delivery with dry-run default.
+- Added Kubernetes/Helm deployment scaffold.
+- Added generic OIDC configuration scaffold.
+- Added worker runtime limits for cloud/self-hosted worker safety.
+- Added enterprise demo data generation.
+- Updated README and production integration documentation.
+
 # Changelog
 
 ## v2.4.0 - Enterprise cloud hardening

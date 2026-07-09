@@ -28,7 +28,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -81,6 +81,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/projects": return self.projects_page()
         if path == "/settings": return self.settings_page()
         if path == "/admin": return self.admin_page()
+        if path == "/integrations": return self.integrations_page()
         if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
@@ -93,6 +94,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/upload": return self.upload()
         if self.path == "/settings/save": return self.settings_save()
         if self.path == "/admin/save": return self.admin_save()
+        if self.path == "/integrations/save": return self.integrations_save()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -207,6 +209,51 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+
+
+
+    def integrations_page(self):
+        body = """
+        <div class='card'><h2>Production integrations</h2>
+        <p class='muted'>Generate reviewable export payloads, CI/CD templates, deployment scaffolds, notification tests, OIDC config, and worker runtime limits. Network delivery is dry-run by default unless explicitly enabled from the CLI.</p></div>
+        <div class='grid'>
+        <div class='card'><h3>SARIF / OpenVEX / ticket payloads</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='exports'><label>SBOM path on this host</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='48'><label>Jira project key</label><input name='project_key' value='SEC'><input type='submit' value='Generate exports'></form></div>
+        <div class='card'><h3>CI/CD templates</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='ci'><label>Provider</label><select name='provider'><option value='all'>All</option><option value='github'>GitHub Actions</option><option value='gitlab'>GitLab CI</option><option value='jenkins'>Jenkins</option><option value='circleci'>CircleCI</option><option value='buildkite'>Buildkite</option><option value='azure'>Azure DevOps</option></select><input type='submit' value='Generate CI templates'></form></div>
+        <div class='card'><h3>Deployment and runtime</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='deployment'><label>OIDC issuer</label><input name='issuer' value='https://issuer.example.com' size='38'><label>Allowed domains</label><input name='allowed_domains' value='example.com'><input type='submit' value='Generate Helm/OIDC/worker limits'></form></div>
+        <div class='card'><h3>Notifications</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='notification'><label>Type</label><select name='type'><option value='webhook'>Webhook</option><option value='slack'>Slack</option><option value='email'>Email</option></select><label>Target reference</label><input name='target_ref' value='SST_WEBHOOK_URL'><label>Message</label><input name='message' value='Notification configuration test' size='42'><input type='submit' value='Create dry-run notification payload'></form></div>
+        </div>
+        <div class='card'><h3>GitHub App and demo</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='github-demo'><input type='submit' value='Generate GitHub App scaffold and demo dataset'></form></div>
+        """
+        self.send_html("Integrations", body)
+
+    def integrations_save(self):
+        try:
+            import argparse as _argparse
+            from sbomops import integrations as int_ops
+            fields = self.parse_urlencoded(); kind = fields.get('kind','')
+            outputs = []
+            if kind == 'exports':
+                sbom = fields.get('sbom') or 'test-sboms/example-spdx-2.3.json'
+                outputs.append(int_ops.export_sarif(_argparse.Namespace(sbom=sbom, out='reports/sarif/sbom-security-toolkit.sarif', project='workbench', release_decision='')))
+                outputs.append(int_ops.export_openvex(_argparse.Namespace(sbom=sbom, out='reports/openvex/openvex.json', vulnerability='', status='under_investigation', justification='component_not_analyzed', impact_statement='Generated for review.', action_statement='Review before distribution.', author='SBOM Security Toolkit')))
+                outputs.append(int_ops.export_jira(_argparse.Namespace(sbom=sbom, out='reports/integrations/jira-issues.json', project_key=fields.get('project_key','SEC'), issue_type='Task')))
+                outputs.append(int_ops.export_defectdojo(_argparse.Namespace(sbom=sbom, out='reports/integrations/defectdojo-import.json', product_name='SBOM Security Toolkit Project', engagement_name='SBOM Review', minimum_severity='Info')))
+            elif kind == 'ci':
+                outputs.append(int_ops.generate_ci(_argparse.Namespace(provider=fields.get('provider','all'), out_dir='reports/ci-templates')))
+            elif kind == 'deployment':
+                outputs.append(int_ops.generate_k8s(_argparse.Namespace(out_dir='deploy/kubernetes')))
+                outputs.append(int_ops.write_oidc(_argparse.Namespace(issuer=fields.get('issuer','https://issuer.example.com'), out='configs/generated/integrations/oidc.yml', client_id_env='SST_OIDC_CLIENT_ID', client_secret_env='SST_OIDC_CLIENT_SECRET', allowed_domains=fields.get('allowed_domains',''), default_role='analyst', admin_groups='', role_claim='groups')))
+                outputs.append(int_ops.write_worker_limits(_argparse.Namespace(out='configs/generated/integrations/worker-limits.yml', max_repo_mb=500, max_sbom_mb=100, max_evidence_mb=1000, job_timeout_seconds=3600, fuzz_timeout_seconds=300, max_concurrent_jobs=1, retry_count=1, allowed_workflows='analyze,analyze-everything,repo-intake,dependency-health,fuzz-all-timed')))
+            elif kind == 'notification':
+                outputs.append(int_ops.notify(_argparse.Namespace(type=fields.get('type','webhook'), target_ref=fields.get('target_ref','SST_WEBHOOK_URL'), event='test', severity='info', title='SBOM Security Toolkit test', message=fields.get('message','Notification configuration test'), project='workbench', out='reports/notifications/last-notification.json', send=False, smtp_host='localhost', smtp_port=25, email_from='sst@example.local')))
+            elif kind == 'github-demo':
+                outputs.append(int_ops.github_app_scaffold(_argparse.Namespace(out_dir='configs/generated/integrations/github-app', workflow='analyze-everything', release_decision_mode='check')))
+                outputs.append(int_ops.demo_enterprise(_argparse.Namespace(out_dir='reports/demo-enterprise')))
+            else:
+                raise ValueError('Unsupported integration action: '+kind)
+            self.send_html('Integrations saved', f"<div class='card'><h2>Generated integration artifacts</h2><pre>{esc(json.dumps(outputs, indent=2, sort_keys=True))}</pre><p><a class='btn' href='/integrations'>Back to integrations</a></p></div>")
+        except Exception as exc:
+            self.send_html('Integrations error', f"<div class='card'><h2>Integrations error</h2><pre>{esc(exc)}</pre></div>", 400)
 
 
     def admin_page(self):
