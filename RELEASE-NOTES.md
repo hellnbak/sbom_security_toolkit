@@ -1,4 +1,16 @@
-# v2.6.0 — Production Integrations + Deployment Readiness
+# Release Notes
+
+## v2.7.0 — Findings & Remediation Operations
+
+- Added central findings store with stable fingerprints and repeated-scan deduplication.
+- Added finding lifecycle statuses, owner assignment, ticket links, and evidence metadata.
+- Added SLA reports, dashboards, exports, and next-best-action queue.
+- Added risk acceptance and suppression workflows with owner, justification, expiry, and reopen conditions.
+- Added remediation-plan generation with upgrade/replacement guidance, fix risk, verification steps, rollback notes, compensating controls, and acceptance criteria.
+- Added remediation ticket templates and fix-verification workflow.
+- Added remediation campaigns and owner routing from `owners.yml`.
+- Added Workbench Findings page plus CLI/Make targets.
+- Updated README and remediation documentation.
 
 - Added SARIF export for GitHub code scanning and compatible security tooling.
 - Added OpenVEX generation for review-oriented vulnerability status workflows.

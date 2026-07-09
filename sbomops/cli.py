@@ -32,6 +32,8 @@ MODULES = {
     "config": "sbomops.config_manager",
     "enterprise": "sbomops.enterprise",
     "integrations": "sbomops.integrations",
+    "findings": "sbomops.findings",
+    "remediation": "sbomops.findings",
     "export": "sbomops.integrations",
     "vex": "sbomops.integrations",
 

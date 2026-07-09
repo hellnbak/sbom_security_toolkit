@@ -28,7 +28,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -82,6 +82,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/settings": return self.settings_page()
         if path == "/admin": return self.admin_page()
         if path == "/integrations": return self.integrations_page()
+        if path == "/findings": return self.findings_page()
         if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
         if path == "/fuzzing/logs": return self.fuzzing_logs()
@@ -95,6 +96,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/settings/save": return self.settings_save()
         if self.path == "/admin/save": return self.admin_save()
         if self.path == "/integrations/save": return self.integrations_save()
+        if self.path == "/findings/save": return self.findings_save()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -211,6 +213,78 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+
+
+    def findings_page(self):
+        try:
+            from sbomops import findings as findings_ops
+            dash = findings_ops.dashboard(argparse.Namespace(project=""))
+            db = findings_ops.load_db()
+            recent = list(reversed(db.get("findings", [])))[:25]
+        except Exception:
+            dash = {"total": 0, "by_status": {}, "by_severity": {}, "by_owner": {}, "sla": {}}
+            recent = []
+        rows = "".join(
+            f"<tr><td><code>{esc(f.get('finding_id'))}</code></td><td>{esc(f.get('severity'))}</td><td>{esc(f.get('status'))}</td><td>{esc(f.get('owner'))}</td><td>{esc(f.get('component'))}</td><td>{esc(f.get('title'))}</td><td>{esc(f.get('due_date'))}</td></tr>"
+            for f in recent
+        ) or "<tr><td colspan='7' class='muted'>No findings imported yet. Import an SBOM below or run <code>make findings-import</code>.</td></tr>"
+        body = f"""
+        <div class='card'><h2>Findings & Remediation Operations</h2>
+        <p class='muted'>Normalize SBOM, policy, dependency-health, scanner, and fuzzing outputs into a central finding lifecycle. Generate remediation plans, owner routing, SLA reports, next-best-action queues, risk acceptances, suppressions, verification evidence, and ticket-ready remediation text.</p>
+        <div class='grid'>
+          <div class='card'><h3>Total</h3><p style='font-size:28px'>{esc(dash.get('total'))}</p></div>
+          <div class='card'><h3>SLA</h3><pre>{esc(json.dumps(dash.get('sla', {}), indent=2))}</pre></div>
+          <div class='card'><h3>By status</h3><pre>{esc(json.dumps(dash.get('by_status', {}), indent=2))}</pre></div>
+          <div class='card'><h3>By severity</h3><pre>{esc(json.dumps(dash.get('by_severity', {}), indent=2))}</pre></div>
+        </div></div>
+        <div class='grid'>
+        <div class='card'><h3>Import SBOM findings</h3><form method='post' action='/findings/save'><input type='hidden' name='kind' value='import'><label>SBOM path on this host</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='48'><label>Project</label><input name='project' value='default-project'><label>Owner</label><input name='owner' value='platform-security'><input type='submit' value='Import and dedupe findings'></form></div>
+        <div class='card'><h3>Generate remediation outputs</h3><form method='post' action='/findings/save'><input type='hidden' name='kind' value='remediation'><label>Project</label><input name='project' value='default-project'><label>Optional finding ID</label><input name='finding_id' placeholder='leave blank for project'><label>Optional fixed version</label><input name='fixed_version' placeholder='e.g. 1.2.3'><input type='submit' value='Generate remediation plans'></form></div>
+        <div class='card'><h3>Lifecycle action</h3><form method='post' action='/findings/save'><input type='hidden' name='kind' value='lifecycle'><label>Finding ID</label><input name='finding_id' required size='38'><label>Action</label><select name='action'><option value='assign'>Assign</option><option value='triaged'>Mark triaged</option><option value='in_progress'>Mark in progress</option><option value='accept'>Risk accept</option><option value='suppress'>Suppress</option></select><label>Owner</label><input name='owner' value='platform-security'><label>Reason / note</label><input name='reason' value='Reviewed by security owner.' size='42'><label>Expires at</label><input name='expires_at' value='2026-12-31'><input type='submit' value='Apply lifecycle action'></form></div>
+        <div class='card'><h3>Reports and next actions</h3><form method='post' action='/findings/save'><input type='hidden' name='kind' value='reports'><label>Project</label><input name='project' value='default-project'><input type='submit' value='Generate dashboard, SLA, next actions, export'></form></div>
+        <div class='card'><h3>Ticket template</h3><form method='post' action='/findings/save'><input type='hidden' name='kind' value='ticket'><label>Finding ID</label><input name='finding_id' required size='38'><label>Optional fixed version</label><input name='fixed_version'><input type='submit' value='Generate remediation ticket text'></form></div>
+        <div class='card'><h3>Verify fixes</h3><form method='post' action='/findings/save'><input type='hidden' name='kind' value='verify'><label>Project</label><input name='project' value='default-project'><label>Optional current SBOM path</label><input name='sbom' size='48'><input type='submit' value='Verify candidate-fixed findings'></form></div>
+        </div>
+        <div class='card'><h2>Recent findings</h2><table><tr><th>ID</th><th>Severity</th><th>Status</th><th>Owner</th><th>Component</th><th>Title</th><th>Due</th></tr>{rows}</table></div>
+        """
+        self.send_html("Findings", body)
+
+    def findings_save(self):
+        try:
+            from sbomops import findings as findings_ops
+            fields = self.parse_urlencoded()
+            kind = fields.get('kind', '')
+            outputs = []
+            if kind == 'import':
+                outputs.append(findings_ops.import_sbom(argparse.Namespace(sbom=fields.get('sbom','test-sboms/example-spdx-2.3.json'), project=fields.get('project','default-project'), owner=fields.get('owner',''))))
+            elif kind == 'remediation':
+                outputs.append(findings_ops.generate_remediation(argparse.Namespace(project=fields.get('project',''), finding_id=fields.get('finding_id',''), fixed_version=fields.get('fixed_version',''), include_closed=True)))
+            elif kind == 'lifecycle':
+                action = fields.get('action','triaged')
+                fid = fields.get('finding_id','')
+                if action == 'assign':
+                    outputs.append(findings_ops.update_finding(argparse.Namespace(finding_id=fid, status='assigned', owner=fields.get('owner',''), ticket_url='')))
+                elif action == 'accept':
+                    outputs.append(findings_ops.accept_or_suppress(argparse.Namespace(finding_id=fid, reason=fields.get('reason',''), owner=fields.get('owner',''), expires_at=fields.get('expires_at',''), conditions='reopen if exploitability or fixed version changes'), 'risk_accepted'))
+                elif action == 'suppress':
+                    outputs.append(findings_ops.accept_or_suppress(argparse.Namespace(finding_id=fid, reason=fields.get('reason',''), owner=fields.get('owner',''), expires_at=fields.get('expires_at',''), conditions='review before permanent suppression'), 'suppressed'))
+                else:
+                    outputs.append(findings_ops.update_finding(argparse.Namespace(finding_id=fid, status=action, owner=fields.get('owner',''), ticket_url='')))
+            elif kind == 'reports':
+                project = fields.get('project','')
+                outputs.append(findings_ops.dashboard(argparse.Namespace(project=project)))
+                outputs.append(findings_ops.sla_report(argparse.Namespace(project=project)))
+                outputs.append(findings_ops.next_actions(argparse.Namespace(project=project, limit=10)))
+                outputs.append(findings_ops.export_report(argparse.Namespace(project=project, status='', out_dir='reports/findings')))
+            elif kind == 'ticket':
+                outputs.append(findings_ops.ticket_text(argparse.Namespace(finding_id=fields.get('finding_id',''), fixed_version=fields.get('fixed_version',''))))
+            elif kind == 'verify':
+                outputs.append(findings_ops.verify(argparse.Namespace(project=fields.get('project','default-project'), sbom=fields.get('sbom',''))))
+            else:
+                raise ValueError(f'Unsupported findings action: {kind}')
+            self.send_html('Findings saved', f"<div class='card'><h2>Findings operation complete</h2><pre>{esc(json.dumps(outputs, indent=2, sort_keys=True))}</pre><p><a class='btn' href='/findings'>Back to Findings</a></p></div>")
+        except Exception as exc:
+            self.send_html('Findings error', f"<div class='card'><h2>Findings error</h2><pre>{esc(exc)}</pre></div>", 400)
 
     def integrations_page(self):
         body = """

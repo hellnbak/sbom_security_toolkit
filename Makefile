@@ -848,3 +848,53 @@ evidence-cleanup:
 
 integration-smoke:
 	python3 -m sbomops.integrations integration-smoke --sbom $(SBOM)
+
+# v2.7 findings and remediation operations
+.PHONY: findings-import findings-list findings-dashboard findings-sla findings-remediation findings-ticket findings-assign findings-accept findings-suppress findings-verify findings-next-actions findings-export findings-smoke remediation-smoke
+FINDINGS_PROJECT ?= default-project
+FINDING_ID ?=
+FINDING_OWNER ?= platform-security
+FINDING_STATUS ?= triaged
+FINDING_REASON ?= Remediation is temporarily deferred with documented owner review.
+FINDING_EXPIRES_AT ?= 2026-12-31
+FINDINGS_OUT_DIR ?= reports/findings
+FIXED_VERSION ?=
+
+findings-import:
+	python3 -m sbomops.findings import-sbom --sbom $(SBOM) --project $(FINDINGS_PROJECT) --owner $(FINDING_OWNER)
+
+findings-list:
+	python3 -m sbomops.findings list --project $(FINDINGS_PROJECT) --limit $(or $(LIMIT),50)
+
+findings-dashboard:
+	python3 -m sbomops.findings dashboard --project $(FINDINGS_PROJECT)
+
+findings-sla:
+	python3 -m sbomops.findings sla --project $(FINDINGS_PROJECT)
+
+findings-remediation:
+	python3 -m sbomops.findings remediation-plan --project $(FINDINGS_PROJECT) $(if $(FINDING_ID),--finding-id $(FINDING_ID),) $(if $(FIXED_VERSION),--fixed-version $(FIXED_VERSION),)
+
+findings-ticket:
+	python3 -m sbomops.findings ticket --finding-id $(FINDING_ID) $(if $(FIXED_VERSION),--fixed-version $(FIXED_VERSION),)
+
+findings-assign:
+	python3 -m sbomops.findings assign --finding-id $(FINDING_ID) --owner $(FINDING_OWNER)
+
+findings-accept:
+	python3 -m sbomops.findings accept --finding-id $(FINDING_ID) --reason "$(FINDING_REASON)" --owner $(FINDING_OWNER) --expires-at $(FINDING_EXPIRES_AT)
+
+findings-suppress:
+	python3 -m sbomops.findings suppress --finding-id $(FINDING_ID) --reason "$(FINDING_REASON)" --owner $(FINDING_OWNER) --expires-at $(FINDING_EXPIRES_AT)
+
+findings-verify:
+	python3 -m sbomops.findings verify --project $(FINDINGS_PROJECT) $(if $(SBOM),--sbom $(SBOM),)
+
+findings-next-actions:
+	python3 -m sbomops.findings next-actions --project $(FINDINGS_PROJECT) --limit $(or $(LIMIT),10)
+
+findings-export:
+	python3 -m sbomops.findings export --project $(FINDINGS_PROJECT) --out-dir $(FINDINGS_OUT_DIR)
+
+findings-smoke remediation-smoke:
+	python3 -m sbomops.findings smoke --sbom $(or $(SBOM),test-sboms/example-spdx-2.3.json) --project $(FINDINGS_PROJECT)

@@ -17,7 +17,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.6.0 — Live Integrations + Operational Workflows**
+Current release: **v2.7.0 — Findings & Remediation Operations**
 
 ---
 
@@ -57,6 +57,7 @@ SBOM Security Toolkit combines workflows that are often spread across several to
 - **Cloud-capable deployment:** optional self-hosted Docker Compose stack, cloud config helpers, cloud doctor, worker scaffold, S3-compatible evidence storage guidance, and AWS IAM/Secrets Manager/Bedrock notes.
 - **Enterprise operations:** auth/RBAC scaffolding, users, service accounts, scheduled scan definitions, notifications, secret references, audit logs, API token generation, worker limits, and admin health checks.
 - **Production integrations:** SARIF, OpenVEX, Jira, DefectDojo, GitHub PR summaries, CI/CD templates, notification delivery, scheduler runner, job lifecycle helpers, and evidence-retention cleanup.
+- **Findings and remediation operations:** central finding lifecycle, deduplication, owners, SLA tracking, risk acceptance, suppression, fix verification, remediation plans, ticket text, campaigns, and next-best-action queues.
 
 ---
 
@@ -219,6 +220,54 @@ make ai-fuzz-redteam AI_PROVIDER=none
 ```
 
 `AI_PROVIDER=none` is prompt-only mode and requires no API key. Optional provider aliases include `bedrock`, `glm`, `ollama`, and `openai-compatible`.
+
+
+### Findings and remediation operations
+
+Import scan/SBOM findings into the central lifecycle store, dedupe across runs, assign owners, track SLA, generate remediation plans, and prove fixes with later evidence:
+
+```bash
+make findings-import SBOM=./bom.json FINDINGS_PROJECT=my-api FINDING_OWNER=platform-security
+make findings-dashboard FINDINGS_PROJECT=my-api
+make findings-sla FINDINGS_PROJECT=my-api
+make findings-remediation FINDINGS_PROJECT=my-api
+make findings-next-actions FINDINGS_PROJECT=my-api
+make findings-export FINDINGS_PROJECT=my-api
+```
+
+Generate remediation ticket text for an individual finding:
+
+```bash
+make findings-ticket FINDING_ID=<finding-id> FIXED_VERSION=<safe-version>
+```
+
+Lifecycle operations are explicit and evidence-oriented:
+
+```bash
+make findings-assign FINDING_ID=<finding-id> FINDING_OWNER=payments-team
+make findings-accept FINDING_ID=<finding-id> FINDING_REASON="Vendor fix unavailable; compensating controls applied" FINDING_EXPIRES_AT=2026-09-30
+make findings-suppress FINDING_ID=<finding-id> FINDING_REASON="False positive confirmed by owner"
+make findings-verify FINDINGS_PROJECT=my-api SBOM=./new-bom.json
+```
+
+The Workbench includes a **Findings** page for import, dashboards, SLA views, remediation plans, lifecycle actions, ticket templates, and fix verification.
+
+Remediation plans include:
+
+```text
+root cause / finding source
+recommended fix
+upgrade or replacement guidance
+breaking-change risk
+risk to leave unfixed vs risk to fix
+ecosystem-specific command suggestions
+verification recipe
+rollback guidance
+compensating controls
+acceptance criteria
+```
+
+AI may be used to summarize evidence or draft remediation language in adjacent workflows, but it does not approve exceptions, mark findings fixed, or make release-risk decisions.
 
 ### Production integrations
 
@@ -435,6 +484,27 @@ See `DATA-SAFETY.md` and `SECURITY.md`.
 ## Version history
 
 Detailed release notes live in `CHANGELOG.md` and `RELEASE-NOTES.md`. This README keeps the evergreen introduction and usage guide first, then summarizes each major toolkit release below.
+
+
+### v2.7.0 — Findings & Remediation Operations
+
+Turns scan output into an operating workflow for remediation:
+
+- Central findings store with normalized finding IDs, source, severity, owner, lifecycle state, evidence, ticket, and exception metadata.
+- Deduplication across repeated scans with stable fingerprints.
+- Lifecycle states for new, triaged, assigned, in progress, risk accepted, suppressed, candidate fixed, verified, and reopened.
+- SLA tracking by severity/source with overdue and due-soon reporting.
+- Time-bound risk acceptance and suppression records with owner, justification, expiry, and reopen conditions.
+- Fix verification workflow that marks missing findings as candidate-fixed and then verified after review.
+- Remediation plan generation with upgrade/replacement guidance, fix risk, verification steps, rollback notes, compensating controls, and acceptance criteria.
+- Ticket-ready remediation templates.
+- Owner routing from `owners.yml` by package/ecosystem.
+- Campaigns and next-best-action queues for remediation operations.
+- Workbench Findings page and CLI/Make targets.
+
+See:
+
+- `docs/remediation/FINDINGS-AND-REMEDIATION.md`
 
 ### v2.6.0 — Live Integrations + Operational Workflows
 
