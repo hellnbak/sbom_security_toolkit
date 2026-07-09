@@ -28,7 +28,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -84,6 +84,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/integrations": return self.integrations_page()
         if path == "/findings": return self.findings_page()
         if path == "/reports": return self.reports_page()
+        if path == "/ai-reports": return self.ai_reports_page()
         if path.startswith("/reports/view/"): return self.reports_view(path.split("/", 3)[3])
         if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
@@ -100,6 +101,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/integrations/save": return self.integrations_save()
         if self.path == "/findings/save": return self.findings_save()
         if self.path == "/reports/refresh": return self.reports_refresh()
+        if self.path == "/ai-reports/generate": return self.ai_reports_generate()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -289,6 +291,65 @@ class Handler(BaseHTTPRequestHandler):
             self.send_html("Reports refreshed", f"<div class='card'><h2>Report index refreshed</h2><pre>{esc(json.dumps(result, indent=2, sort_keys=True))}</pre><p><a class='btn' href='/reports'>View reports</a></p></div>")
         except Exception as exc:
             self.send_html("Reports error", f"<div class='card'><h2>Reports error</h2><pre>{esc(exc)}</pre></div>", 400)
+
+
+    def ai_reports_page(self):
+        try:
+            from sbomops import ai_report_writer
+            templates = ai_report_writer.REPORT_TYPES
+        except Exception:
+            templates = {"full": "Full Security Report", "executive": "Executive Summary"}
+        opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k, v in templates.items())
+        body = f"""
+        <div class='card'><h2>AI Report Writer</h2>
+        <p class='muted'>Generate evidence-bound human-readable reports from existing SBOM Security Toolkit artifacts. AI can summarize and explain evidence, but it cannot approve releases, accept risk, suppress findings, or mark fixes verified.</p>
+        <p><a class='btn secondary' href='/reports'>View generated reports</a></p></div>
+        <div class='card'><h2>Generate report</h2>
+        <form method='post' action='/ai-reports/generate'>
+          <div class='grid'>
+            <div><label>Report type</label><select name='report_type'>{opts}</select></div>
+            <div><label>Audience</label><select name='audience'><option value='security'>Security</option><option value='executive'>Executive</option><option value='engineering'>Engineering</option><option value='supplier'>Supplier / vendor</option><option value='audit'>Audit / compliance</option></select></div>
+            <div><label>Tone</label><select name='tone'><option value='action-oriented'>Action-oriented</option><option value='concise'>Concise</option><option value='detailed'>Detailed</option><option value='formal'>Formal</option></select></div>
+            <div><label>AI provider</label><select name='provider'><option value='none'>Prompt-only / deterministic</option><option value='bedrock'>AWS Bedrock</option><option value='ollama'>Ollama</option><option value='glm'>GLM</option><option value='openai-compatible'>OpenAI-compatible</option></select></div>
+          </div>
+          <div class='grid'>
+            <div><label>SBOM path</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='46'></div>
+            <div><label>Project filter</label><input name='project' placeholder='optional project id'></div>
+            <div><label>Model</label><input name='model' placeholder='optional model id'></div>
+            <div><label>Output directory</label><input name='out_dir' value='reports/ai' size='32'></div>
+          </div>
+          <label>Additional evidence roots</label><input name='evidence_roots' placeholder='comma-separated, optional' size='70'>
+          <p class='small muted'>Provider <code>none</code> creates deterministic Markdown/HTML plus the exact prompt and fact bundle for manual review. Bedrock/Ollama/GLM/OpenAI-compatible use the existing optional provider abstraction.</p>
+          <input type='submit' value='Generate AI report'>
+        </form></div>
+        <div class='grid'>
+          <div class='card'><h3>Evidence-bound</h3><p>Reports are generated from local findings, lifecycle, release, fuzzing, SARIF/OpenVEX, project, and evidence artifacts.</p></div>
+          <div class='card'><h3>Multi-audience</h3><p>Executive summaries, engineering remediation reports, supplier assessments, release memos, fuzzing summaries, lifecycle reports, and full security reports.</p></div>
+          <div class='card'><h3>Safe by design</h3><p>AI output is advisory. Risk acceptance, suppression, verification, and release approval remain explicit human/governance actions.</p></div>
+        </div>
+        """
+        self.send_html("AI Reports", body)
+
+    def ai_reports_generate(self):
+        try:
+            from sbomops import ai_report_writer
+            fields = self.parse_urlencoded()
+            ns = argparse.Namespace(
+                sbom=fields.get('sbom',''),
+                project=fields.get('project',''),
+                report_type=fields.get('report_type','full'),
+                audience=fields.get('audience','security'),
+                tone=fields.get('tone','action-oriented'),
+                provider=fields.get('provider','none'),
+                model=fields.get('model',''),
+                timeout=60,
+                out_dir=fields.get('out_dir','reports/ai'),
+                evidence_roots=fields.get('evidence_roots',''),
+            )
+            meta = ai_report_writer.generate(ns)
+            self.send_html('AI report generated', f"<div class='card'><h2>AI report generated</h2><pre>{esc(json.dumps(meta, indent=2, sort_keys=True))}</pre><p><a class='btn' href='/reports'>View reports</a> <a class='btn secondary' href='/ai-reports'>Back to AI Reports</a></p></div>")
+        except Exception as exc:
+            self.send_html('AI report error', f"<div class='card'><h2>AI report error</h2><pre>{esc(exc)}</pre><p><a class='btn' href='/ai-reports'>Back to AI Reports</a></p></div>", 400)
 
     def findings_page(self):
         try:

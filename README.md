@@ -17,7 +17,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.7.2 — Lifecycle Intelligence Sources**
+Current release: **v2.7.3 — AI Report Writer**
 
 ---
 
@@ -53,7 +53,7 @@ SBOM Security Toolkit combines workflows that are often spread across several to
 - **Project risk operations:** project workspaces, history recording, delta/trend reporting, release decision workflow, owner mapping templates, evidence viewer, and AI executive-summary scaffolding.
 - **Local workbench UI:** upload SBOMs or repository archives, use local paths or GitHub URLs, launch workflows, view job status/logs, download evidence bundles, manage YAML-backed settings, run fuzzing workflows, and use Projects/Admin/Integrations pages.
 - **Fuzzing lab:** structure-preserving mutation, schema-aware generation, semantic oracles, round-trip/metamorphic checks, scanner/toolchain fuzzing, stateful local Dependency-Track workflow fuzzing, replay packs, benchmarks, coverage scaffolding, ClusterFuzzLite scaffolding, and fuzz finding lifecycle tracking.
-- **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, provider-neutral agent prompts, GLM/local model profiles, Ollama/OpenAI-compatible hooks, Bedrock support, and AI-assisted fuzzing triage/planning.
+- **AI-assisted workflows:** prompt-only default mode, review queues, Claude Skills, provider-neutral agent prompts, GLM/local model profiles, Ollama/OpenAI-compatible hooks, Bedrock support, AI-assisted fuzzing triage/planning, and evidence-bound AI report writing for human-readable summaries.
 - **Cloud-capable deployment:** optional self-hosted Docker Compose stack, cloud config helpers, cloud doctor, worker scaffold, S3-compatible evidence storage guidance, and AWS IAM/Secrets Manager/Bedrock notes.
 - **Enterprise operations:** auth/RBAC scaffolding, users, service accounts, scheduled scan definitions, notifications, secret references, audit logs, API token generation, worker limits, and admin health checks.
 - **Production integrations:** SARIF, OpenVEX, Jira, DefectDojo, GitHub PR summaries, CI/CD templates, notification delivery, scheduler runner, job lifecycle helpers, and evidence-retention cleanup.
@@ -61,6 +61,47 @@ SBOM Security Toolkit combines workflows that are often spread across several to
 
 ---
 
+
+## AI Report Writer
+
+v2.7.3 adds an evidence-bound AI report writer so users can generate human-readable reports and summaries instead of relying only on raw JSON, scanner output, SARIF, OpenVEX, lifecycle records, or evidence bundle contents.
+
+Supported report types:
+
+- Executive summary
+- Engineering remediation report
+- Supplier / vendor risk report
+- Release decision memo
+- Fuzzing summary report
+- Lifecycle intelligence report
+- Full security report
+
+The report writer extracts facts from local evidence artifacts, writes the exact input fact bundle, writes the prompt used for review, and generates Markdown plus HTML output. AI providers are optional. In prompt-only mode, no network call is made. With Bedrock, Ollama, GLM, or OpenAI-compatible providers, AI drafts narrative text from the extracted facts.
+
+AI remains advisory only. It does not approve releases, accept risk, suppress findings, mark findings fixed, or invent evidence.
+
+```bash
+make ai-report SBOM=test-sboms/example-spdx-2.3.json AI_REPORT_TYPE=full
+make ai-report SBOM=./bom.json AI_REPORT_TYPE=executive AI_REPORT_AUDIENCE=executive
+make ai-report SBOM=./bom.json AI_REPORT_PROVIDER=bedrock AI_REPORT_MODEL="$BEDROCK_MODEL_ID"
+make ai-report-smoke
+
+sst ai-report generate --sbom ./bom.json --report-type engineering --audience engineering
+sst ai-report templates
+```
+
+Generated artifacts include:
+
+```text
+reports/ai/<report>.md
+reports/ai/<report>.html
+reports/ai/<report>.summary.json
+reports/ai/<report>.prompt.md
+reports/ai/report-input-facts.json
+reports/ai/report-generation-metadata.json
+```
+
+The Workbench includes an **AI Reports** page for choosing audience, report type, tone, provider, model, SBOM path, project filter, and evidence roots. Generated reports are viewable from the Workbench **Reports** page.
 
 ## Lifecycle intelligence for unsupported/EOL components
 
@@ -531,6 +572,17 @@ See `DATA-SAFETY.md` and `SECURITY.md`.
 ## Version history
 
 #
+
+## v2.7.3 — AI Report Writer
+
+- Added evidence-bound AI report generation for executive summaries, engineering remediation reports, supplier risk reports, release decision memos, fuzzing summaries, lifecycle reports, and full security reports.
+- Added fact extraction from SBOMs, findings, lifecycle intelligence, release evidence, fuzzing summaries, SARIF/OpenVEX, project history, and report artifacts.
+- Added Markdown, HTML, JSON summary, prompt, metadata, and fact-bundle outputs under `reports/ai/`.
+- Added prompt-only default mode plus optional Bedrock, Ollama, GLM, and OpenAI-compatible provider support.
+- Added Workbench **AI Reports** page and integrated generated reports with the Workbench **Reports** viewer.
+- Added `sst ai-report`, `sst ai-reports`, `make ai-report`, `make ai-report-facts`, `make ai-report-templates`, and `make ai-report-smoke`.
+- Added `docs/reporting/AI-REPORT-WRITER.md`.
+
 ## v2.7.2 — Lifecycle Intelligence Sources
 
 - Added lifecycle intelligence to dependency-health analysis.

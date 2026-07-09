@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.7.3 — AI Report Writer
+
+- Added evidence-bound AI report writer for executive, engineering, supplier, release, fuzzing, lifecycle, and full security reports.
+- Added deterministic fact extraction from SBOMs, findings, lifecycle outputs, release evidence, fuzzing summaries, SARIF/OpenVEX, project history, and generated reports.
+- Added Markdown, HTML, JSON summary, prompt, metadata, and fact-bundle outputs in `reports/ai/`.
+- Added Workbench **AI Reports** page and report viewer integration.
+- Added prompt-only default mode and optional Bedrock/Ollama/GLM/OpenAI-compatible narrative generation.
+- Added `sst ai-report`, `make ai-report`, `make ai-report-facts`, `make ai-report-templates`, and `make ai-report-smoke`.
+- Added `docs/reporting/AI-REPORT-WRITER.md`.
+
 ## v2.7.2 — Lifecycle Intelligence Sources
 
 - Added lifecycle intelligence to dependency-health analysis.

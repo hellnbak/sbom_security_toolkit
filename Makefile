@@ -913,3 +913,26 @@ reports-index:
 reports-view:
 	@if [ -z "$(REPORT_ID)" ]; then echo "Usage: make reports-view REPORT_ID=reports/report-index.md"; exit 2; fi
 	python3 -m sbomops.reports_viewer view "$(REPORT_ID)"
+
+# v2.7.3 AI report writer
+.PHONY: ai-report ai-report-facts ai-report-templates ai-report-smoke
+AI_REPORT_TYPE ?= full
+AI_REPORT_AUDIENCE ?= security
+AI_REPORT_TONE ?= action-oriented
+AI_REPORT_PROVIDER ?= none
+AI_REPORT_MODEL ?=
+AI_REPORT_OUT_DIR ?= reports/ai
+AI_REPORT_PROJECT ?=
+AI_REPORT_EVIDENCE_ROOTS ?=
+
+ai-report:
+	python3 -m sbomops.ai_report_writer generate $(if $(SBOM),--sbom $(SBOM),) --project "$(AI_REPORT_PROJECT)" --report-type $(AI_REPORT_TYPE) --audience $(AI_REPORT_AUDIENCE) --tone $(AI_REPORT_TONE) --provider $(AI_REPORT_PROVIDER) $(if $(AI_REPORT_MODEL),--model $(AI_REPORT_MODEL),) --out-dir $(AI_REPORT_OUT_DIR) $(if $(AI_REPORT_EVIDENCE_ROOTS),--evidence-roots $(AI_REPORT_EVIDENCE_ROOTS),)
+
+ai-report-facts:
+	python3 -m sbomops.ai_report_writer facts $(if $(SBOM),--sbom $(SBOM),) --project "$(AI_REPORT_PROJECT)" --out-dir $(AI_REPORT_OUT_DIR) $(if $(AI_REPORT_EVIDENCE_ROOTS),--evidence-roots $(AI_REPORT_EVIDENCE_ROOTS),)
+
+ai-report-templates:
+	python3 -m sbomops.ai_report_writer templates
+
+ai-report-smoke:
+	python3 -m sbomops.ai_report_writer smoke --sbom $(or $(SBOM),test-sboms/example-spdx-2.3.json) --out-dir reports/ai-smoke
