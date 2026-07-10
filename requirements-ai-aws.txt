@@ -1,4 +1,4 @@
 # Optional AWS Bedrock provider support.
 # The toolkit runs without these dependencies unless AI_PROVIDER=bedrock is used.
-boto3>=1.34
+boto3>=1.43.45
 botocore>=1.34
