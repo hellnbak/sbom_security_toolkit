@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.11.0 - User Experience
+
+- Added audited Security Controls GUI for release assurance, VEX, provenance, evidence generation, organization context, and remediation planning.
+- Fixed evidence-bundle download handling when a bundle has not yet been generated.
+- Added full primary-route HTTP smoke coverage and GUI-to-backend feature coverage tests.
+- Verified all 66 tests in bounded deterministic groups.
+
+- Redesigned Workbench application shell and responsive navigation.
+- Added overview dashboard, release decisions, action center, exceptions, evidence, and global search pages.
+- Added connector health visibility and guided first-run states.
+- Reorganized advanced tools using progressive disclosure.
+- Updated product documentation and version metadata.
+
+## 2.10.0 - Connector Platform
+
+- Added a reusable connector SDK and registry.
+- Added unified Snyk, Dependency-Track, DefectDojo, GitHub, and webhook connectors.
+- Added dry-run-first test, discovery, and synchronization workflows.
+- Added capability reporting, health artifacts, retries, pagination, timeout controls, and guarded writes.
+- Added connector configuration and health controls to the Workbench and static dashboard.
+- Added connector documentation, examples, Make targets, and offline end-to-end tests.
+
+## 2.9.0 - Release Assurance and Governance
+
+- Added a unified policy-as-code release assurance engine with stable PASS, warning, approval, block, incomplete-evidence, and error decisions.
+- Added scoped, approved, expiring risk exceptions with audit history and compensating controls.
+- Added VEX-aware and reachability-aware policy evaluation.
+- Added artifact/SBOM digest verification, SLSA-style provenance validation, and optional cosign verification.
+- Added organization, business-unit, application, service, repository, and artifact security context.
+- Added hash-manifested and optionally signed evidence bundles.
+- Added GitHub Actions and GitLab CI release-gate examples.
+- Added policy-decision schema, production policy, examples, documentation, and regression tests.
+- Preserved the existing policy, project, remediation, integration, reporting, and fuzzing commands for compatibility.
+
 ## v2.8.1 - Snyk SBOM Connector
 
 - Added dry-run-first Snyk connector configuration with token references only.
