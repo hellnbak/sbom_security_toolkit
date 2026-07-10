@@ -9,12 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 class V18PackagingTests(unittest.TestCase):
     def test_version_module(self):
         from sbomops.__version__ import __version__
-        self.assertEqual(__version__, "2.11.0")
+        self.assertEqual(__version__, "2.12.0")
 
     def test_cli_version(self):
         result = subprocess.run([sys.executable, "-m", "sbomops.cli", "version"], cwd=ROOT, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), "2.11.0")
+        self.assertEqual(result.stdout.strip(), "2.12.0")
 
     def test_packaging_files_exist(self):
         for rel in ["pyproject.toml", "requirements.txt", "setup.sh", "install.sh", "DATA-SAFETY.md", "docs/INSTALL.md", "docs/DEMO.md", "docs/RELEASE.md"]:

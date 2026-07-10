@@ -1,4 +1,8 @@
-# Quick Start — SBOM Security Toolkit v2.11.0
+# Quick Start
+
+Launch `sst workbench` and open `http://127.0.0.1:8080/welcome` for the guided setup wizard.
+
+# Quick Start — SBOM Security Toolkit v2.12.0
 
 ## Install locally
 
