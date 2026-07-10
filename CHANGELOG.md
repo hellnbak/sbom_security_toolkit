@@ -1,6 +1,10 @@
+# v2.12.0
+
+- Added Quick Start, project, and connector wizards, onboarding checklist, sample workspace, and Help Center.
+
 # Changelog
 
-## 2.11.0 — User Experience and GUI Coverage
+## 2.12.0 — User Experience and GUI Coverage
 
 - Replaced utility-centric Workbench navigation with a responsive workflow-oriented application shell.
 - Added posture dashboard, project/scans/findings workflows, release decisions, action center, exception governance, connector health, reports, evidence inventory, and global search.

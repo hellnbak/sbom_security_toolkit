@@ -1,3 +1,32 @@
+# Release Notes
+
+## v2.12.0 — Guided Experience
+
+This release makes the Workbench easier for new and occasional users while preserving advanced security-engineering workflows.
+
+### Added
+
+- Five-step Quick Start wizard based on user goals
+- Guided source, environment, and policy selection
+- Project creation wizard with ownership and business context
+- Connector setup wizard with read-only and dry-run defaults
+- Dashboard onboarding checklist and recommended actions
+- Sample workspace requiring no credentials
+- In-product Help Center
+- Plain-language navigation and quick actions
+- Responsive wizard and choice-card styling
+- Documentation and regression coverage for all guided routes and forms
+
+### Safety defaults
+
+- Connector writes remain disabled unless explicitly enabled
+- Secrets are referenced through environment variables and are not stored in plaintext
+- Guided workflows create configuration and local artifacts; they do not merge code or approve risk automatically
+
+### Upgrade
+
+Upgrade from v2.11.0 by replacing the repository contents while preserving `.git`, then reinstalling with `pip install -e ".[dev]"`.
+
 # Release Notes — v2.11.0
 
 ## SBOM Security Toolkit v2.11.0 — User Experience and GUI Coverage

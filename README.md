@@ -2,7 +2,11 @@
 
 SBOM Security Toolkit is a local-first, cloud-capable software supply-chain security workbench. It combines SBOM generation and intake, vulnerability and lifecycle analysis, release assurance, VEX, provenance, remediation, connector workflows, evidence packaging, reporting, and security-focused fuzzing in one CLI and web interface.
 
-**Current release: v2.11.0 — User Experience and GUI Coverage**
+**Current release: v2.12.0 — User Experience and GUI Coverage**
+
+## Guided Experience (v2.12.0)
+
+Start the Workbench with `sst workbench`, then open `http://127.0.0.1:8080/welcome`. The Quick Start wizard guides users through a goal, source, environment, policy preset, and first action. Additional guided pages include `/project/new`, `/connectors/setup`, `/sample`, and `/help`.
 
 ## Highlights
 
@@ -86,7 +90,7 @@ sst reports --help
 
 ## Validation
 
-The audited v2.11.0 package passed all 66 tests in bounded groups, including core, Workbench, connector, release-assurance, repository, cloud, AI-provider, packaging, and fuzzing modules. See [VALIDATION.md](VALIDATION.md) for scope and external-system limitations.
+The audited v2.12.0 package passed all 66 tests in bounded groups, including core, Workbench, connector, release-assurance, repository, cloud, AI-provider, packaging, and fuzzing modules. See [VALIDATION.md](VALIDATION.md) for scope and external-system limitations.
 
 ```bash
 python3 -m compileall sbomops ai_fuzz fuzzing

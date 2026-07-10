@@ -1,6 +1,6 @@
 # Roadmap
 
-## Current release: v2.11.0 — User Experience and GUI Coverage
+## Current release: v2.12.0 — User Experience and GUI Coverage
 
 Delivered:
 
