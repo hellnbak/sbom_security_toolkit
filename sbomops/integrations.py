@@ -153,7 +153,7 @@ def export_sarif(args: argparse.Namespace) -> Dict[str, Any]:
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.8.1", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
+            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.11.0", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
             "automationDetails": {"id": getattr(args, "project", "") or "local"},
             "results": results,
             "properties": {"created_at": now(), "source": "sst export sarif"},
@@ -317,8 +317,8 @@ def generate_k8s(args: argparse.Namespace) -> Dict[str, Any]:
     helm = base / "helm" / "sbom-security-toolkit"
     templates = helm / "templates"
     ensure_dir(templates)
-    write_yaml(helm / "Chart.yaml", {"apiVersion": "v2", "name": "sbom-security-toolkit", "description": "Self-hosted SBOM Security Toolkit", "type": "application", "version": "0.1.0", "appVersion": "2.8.1"})
-    write_yaml(helm / "values.yaml", {"image": {"repository": "sbom-security-toolkit", "tag": "2.8.1", "pullPolicy": "IfNotPresent"}, "web": {"replicas": 1, "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "1", "memory": "1Gi"}}}, "worker": {"replicas": 1, "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}, "maxConcurrentJobs": 1}, "postgres": {"external": False, "host": ""}, "redis": {"external": False, "host": ""}, "s3": {"bucket": "", "prefix": "sbom-security-toolkit"}, "oidc": {"enabled": False, "issuer": "", "clientIdSecretRef": "sst-oidc-client-id", "clientSecretSecretRef": "sst-oidc-client-secret"}, "ingress": {"enabled": False, "className": "", "host": "sst.example.com", "tlsSecret": ""}})
+    write_yaml(helm / "Chart.yaml", {"apiVersion": "v2", "name": "sbom-security-toolkit", "description": "Self-hosted SBOM Security Toolkit", "type": "application", "version": "0.1.0", "appVersion": "2.11.0"})
+    write_yaml(helm / "values.yaml", {"image": {"repository": "sbom-security-toolkit", "tag": "2.11.0", "pullPolicy": "IfNotPresent"}, "web": {"replicas": 1, "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "1", "memory": "1Gi"}}}, "worker": {"replicas": 1, "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}, "maxConcurrentJobs": 1}, "postgres": {"external": False, "host": ""}, "redis": {"external": False, "host": ""}, "s3": {"bucket": "", "prefix": "sbom-security-toolkit"}, "oidc": {"enabled": False, "issuer": "", "clientIdSecretRef": "sst-oidc-client-id", "clientSecretSecretRef": "sst-oidc-client-secret"}, "ingress": {"enabled": False, "className": "", "host": "sst.example.com", "tlsSecret": ""}})
     write_text(templates / "deployment.yaml", '''apiVersion: apps/v1
 kind: Deployment
 metadata:

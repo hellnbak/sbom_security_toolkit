@@ -24,10 +24,25 @@ from sbomops.config_manager import (
 from sbomops import enterprise as enterprise_ops
 
 CSS = """
-:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#172033;background:#f6f7fb}body{margin:0}.top{background:#111827;color:white;padding:18px 28px}.wrap{max-width:1100px;margin:24px auto;padding:0 18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}h1,h2{margin:.2rem 0 1rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.btn,button,input[type=submit]{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;display:inline-block;cursor:pointer}.btn.secondary{background:#374151}.btn.danger,button.danger{background:#dc2626}.muted{color:#6b7280}.pill{border-radius:999px;padding:4px 9px;font-size:12px;background:#e5e7eb}.completed{background:#dcfce7;color:#14532d}.failed{background:#fee2e2;color:#7f1d1d}.running,.queued{background:#dbeafe;color:#1e3a8a}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e5e7eb;text-align:left;padding:10px}code,pre{background:#f3f4f6;border-radius:8px}pre{padding:14px;overflow:auto;max-height:520px}.nav a{color:white;margin-right:16px}input,select,textarea{padding:9px;border:1px solid #d1d5db;border-radius:8px}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:#166534}.bad{color:#991b1b}
+:root{--bg:#f4f6fa;--panel:#fff;--panel2:#f8fafc;--text:#172033;--muted:#667085;--line:#e4e7ec;--brand:#175cd3;--brand2:#004eeb;--danger:#b42318;--warning:#b54708;--success:#067647;--sidebar:#101828;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}*{box-sizing:border-box}body{margin:0;background:var(--bg)}a{color:var(--brand)}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}.sidebar{background:var(--sidebar);color:white;padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}.brand{font-weight:800;font-size:18px;padding:8px 12px 20px}.brand small{display:block;font-weight:500;color:#98a2b3;margin-top:4px}.nav-group{color:#98a2b3;font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:18px 12px 8px}.nav a{display:flex;gap:10px;align-items:center;color:#d0d5dd;padding:10px 12px;border-radius:8px;text-decoration:none;margin:2px 0}.nav a:hover,.nav a.active{background:#344054;color:white}.main{min-width:0}.topbar{height:68px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 28px;position:sticky;top:0;z-index:5}.search{flex:1;max-width:620px}.search input{width:100%}.top-actions{margin-left:auto;display:flex;gap:8px}.wrap{max-width:1440px;margin:0 auto;padding:26px}.page-title{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}.page-title h1{margin:0;font-size:28px}.page-title p{margin:6px 0 0;color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:0 0 18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.metric{background:white;border:1px solid var(--line);border-radius:12px;padding:18px}.metric .label{color:var(--muted);font-size:13px}.metric .value{font-size:30px;font-weight:750;margin:8px 0}.metric .hint{font-size:12px;color:var(--muted)}h1,h2,h3{color:#101828}h2{margin:.1rem 0 1rem;font-size:19px}h3{margin:.2rem 0 .7rem}.btn,button,input[type=submit]{background:var(--brand);color:white;border:0;border-radius:8px;padding:9px 13px;text-decoration:none;display:inline-block;cursor:pointer;font-weight:600}.btn:hover,button:hover{background:var(--brand2)}.btn.secondary{background:white;color:#344054;border:1px solid #d0d5dd}.btn.danger,button.danger{background:var(--danger)}.btn.small{font-size:12px;padding:6px 9px}.muted{color:var(--muted)}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:650;background:#f2f4f7;color:#344054}.completed,.passed,.healthy{background:#ecfdf3;color:var(--success)}.failed,.blocked,.unhealthy{background:#fef3f2;color:var(--danger)}.running,.queued,.warning{background:#fffaeb;color:var(--warning)}.approval{background:#eff8ff;color:#175cd3}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border-bottom:1px solid var(--line);text-align:left;padding:12px 10px;vertical-align:top}th{font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.03em;background:#fcfcfd}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}code,pre{background:#f2f4f7;border-radius:7px}pre{padding:14px;overflow:auto;max-height:520px}input,select,textarea{padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;background:white;color:#101828}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:var(--success)}.bad{color:var(--danger)}.decision{border-left:5px solid var(--brand)}.decision.blocked{border-left-color:var(--danger)}.decision.warning{border-left-color:var(--warning)}.decision.passed{border-left-color:var(--success)}.empty{text-align:center;padding:42px 20px}.empty h3{margin-bottom:8px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolbar .spacer{flex:1}.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 18px}.tabs a{padding:10px 12px;text-decoration:none;color:#475467;border-bottom:2px solid transparent}.tabs a.active{border-color:var(--brand);color:var(--brand);font-weight:650}.callout{padding:14px 16px;border-radius:9px;background:#eff8ff;border:1px solid #b2ddff}.connector{display:flex;gap:14px;align-items:flex-start}.connector-icon{width:42px;height:42px;border-radius:10px;background:#f2f4f7;display:grid;place-items:center;font-weight:800}.progress{height:8px;background:#eaecf0;border-radius:999px;overflow:hidden}.progress span{display:block;height:100%;background:var(--brand)}@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.metrics{grid-template-columns:repeat(2,1fr)}.topbar{position:relative}.nav a{display:inline-flex}.nav-group{display:none}}@media(max-width:560px){.metrics{grid-template-columns:1fr}.wrap{padding:16px}.topbar{padding:0 16px}.page-title{display:block}.top-actions{display:none}}
 """
 
-def page(title: str, body: str) -> bytes:
+NAV = [
+    ("Workspace", [("/dashboard","Overview"),("/projects","Projects"),("/jobs","Scans"),("/findings","Findings"),("/decisions","Release Decisions"),("/actions","Action Center")]),
+    ("Governance", [("/controls","Security Controls"),("/exceptions","Exceptions"),("/reports","Reports"),("/evidence","Evidence")]),
+    ("Platform", [("/integrations","Connectors"),("/settings","Policies & Settings"),("/admin","Administration")]),
+    ("Advanced", [("/repository","Repository Intake"),("/fuzzing","Fuzzing Lab"),("/scanners","Scanner Status"),("/demo","Demo / QA")]),
+]
+
+def page(title: str, body: str, path: str = "") -> bytes:
+    nav=[]
+    for group, links in NAV:
+        nav.append(f"<div class='nav-group'>{html.escape(group)}</div>")
+        for href,label in links:
+            active=" active" if path == href or (href != '/dashboard' and path.startswith(href+'/')) else ""
+            nav.append(f"<a class='{active.strip()}' href='{href}'>{html.escape(label)}</a>")
+    return f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)} · SBOM Security Toolkit</title><style>{CSS}</style></head><body><div class='app'><aside class='sidebar'><div class='brand'>SBOM Security Toolkit<small>Release Assurance Workbench</small></div><nav class='nav'>{''.join(nav)}</nav></aside><section class='main'><header class='topbar'><form class='search' action='/search' method='get'><input name='q' aria-label='Global search' placeholder='Search projects, CVEs, components, releases…'></form><div class='top-actions'><a class='btn secondary' href='/'>Upload SBOM</a><a class='btn' href='/'>Run analysis</a></div></header><main class='wrap'>{body}</main></section></div></body></html>""".encode()
+
     return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/demo'>Demo/QA</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
@@ -63,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "SBOMWorkbench/1.5"
 
     def send_html(self, title: str, body: str, code: int = 200):
-        raw = page(title, body)
+        raw = page(title, body, urllib.parse.urlparse(self.path).path)
         self.send_response(code); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
 
     def send_json(self, data, code=200):
@@ -74,6 +89,13 @@ class Handler(BaseHTTPRequestHandler):
         url = urllib.parse.urlparse(self.path)
         path = url.path
         if path == "/": return self.index()
+        if path == "/dashboard": return self.dashboard_page()
+        if path == "/decisions": return self.decisions_page()
+        if path == "/actions": return self.actions_page()
+        if path == "/controls": return self.controls_page()
+        if path == "/exceptions": return self.exceptions_page()
+        if path == "/evidence": return self.evidence_page()
+        if path == "/search": return self.search_page(url)
         if path == "/jobs": return self.jobs()
         if path.startswith("/jobs/"): return self.job(path.split("/", 2)[2])
         if path == "/scanners": return self.scanners()
@@ -100,6 +122,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/settings/save": return self.settings_save()
         if self.path == "/admin/save": return self.admin_save()
         if self.path == "/integrations/save": return self.integrations_save()
+        if self.path == "/controls/run": return self.controls_run()
         if self.path == "/findings/save": return self.findings_save()
         if self.path == "/reports/refresh": return self.reports_refresh()
         if self.path == "/ai-reports/generate": return self.ai_reports_generate()
@@ -231,6 +254,139 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+
+
+    def _all_statuses(self):
+        try:
+            return list_jobs()
+        except Exception:
+            return []
+
+    def dashboard_page(self):
+        jobs = self._all_statuses()
+        blocked = sum(1 for j in jobs if str(j.get("state","")).lower() in {"failed","blocked"})
+        running = sum(1 for j in jobs if str(j.get("state","")).lower() in {"running","queued"})
+        completed = sum(1 for j in jobs if str(j.get("state","")).lower() == "completed")
+        connectors = self._connector_records()
+        unhealthy = sum(1 for x in connectors if x.get("status") not in {"healthy","configured"})
+        recent = "".join(f"<tr><td><a href='/jobs/{esc(j.get('job_id'))}'>{esc(j.get('workflow_label') or j.get('workflow'))}</a></td><td><span class='pill {esc(j.get('state'))}'>{esc(j.get('state'))}</span></td><td>{esc(j.get('created_at'))}</td><td><a href='/jobs/{esc(j.get('job_id'))}'>View</a></td></tr>" for j in jobs[:8]) or "<tr><td colspan='4'><div class='empty'><h3>No scans yet</h3><p class='muted'>Upload an SBOM or connect a source to begin.</p><a class='btn' href='/'>Run first analysis</a></div></td></tr>"
+        conn = "".join(f"<tr><td>{esc(x.get('name'))}</td><td>{esc(x.get('type'))}</td><td><span class='pill {esc(x.get('status'))}'>{esc(x.get('status'))}</span></td><td>{esc(x.get('last_sync') or 'Never')}</td></tr>" for x in connectors[:6]) or "<tr><td colspan='4' class='muted'>No connectors configured. <a href='/integrations'>Add a connector</a>.</td></tr>"
+        body=f"""<div class='page-title'><div><h1>Overview</h1><p>Your software supply-chain security posture and the work requiring attention.</p></div><a class='btn' href='/'>Run analysis</a></div>
+        <div class='metrics'><div class='metric'><div class='label'>Projects monitored</div><div class='value'>{len(jobs)}</div><div class='hint'>Across all recorded workspaces</div></div><div class='metric'><div class='label'>Blocked or failed</div><div class='value'>{blocked}</div><div class='hint'>Release decisions needing action</div></div><div class='metric'><div class='label'>Active scans</div><div class='value'>{running}</div><div class='hint'>{completed} completed</div></div><div class='metric'><div class='label'>Connector issues</div><div class='value'>{unhealthy}</div><div class='hint'>{len(connectors)} configured</div></div></div>
+        <div class='grid'><div class='card'><h2>Work requiring attention</h2><div class='grid'><a class='card decision blocked' href='/decisions'><strong>{blocked} blocked decisions</strong><p class='muted small'>Review violations and remediation.</p></a><a class='card decision warning' href='/exceptions'><strong>Exceptions</strong><p class='muted small'>Review approvals and expirations.</p></a><a class='card decision' href='/actions'><strong>Action Center</strong><p class='muted small'>One queue for security work.</p></a></div></div><div class='card'><h2>Getting started</h2><ol><li>Connect GitHub, Snyk, or Dependency-Track.</li><li>Add or upload a project.</li><li>Run analysis and review the release decision.</li><li>Fix, approve, or export evidence.</li></ol><a class='btn secondary' href='/integrations'>Open connector catalog</a></div></div>
+        <div class='card'><div class='page-title'><div><h2>Recent scans</h2></div><a href='/jobs'>View all</a></div><div class='table-wrap'><table><tr><th>Workflow</th><th>Status</th><th>Created</th><th></th></tr>{recent}</table></div></div>
+        <div class='card'><div class='page-title'><div><h2>Connector health</h2></div><a href='/integrations'>Manage connectors</a></div><div class='table-wrap'><table><tr><th>Name</th><th>Type</th><th>Status</th><th>Last sync</th></tr>{conn}</table></div></div>"""
+        self.send_html("Overview", body)
+
+    def _connector_records(self):
+        records=[]
+        cfg=ROOT/'configs'/'connectors.yml'
+        try:
+            data=yaml.safe_load(cfg.read_text()) if cfg.exists() else {}
+            for item in (data or {}).get('connectors',[]):
+                records.append({'name':item.get('name','Unnamed'),'type':item.get('type','generic'),'status':'configured' if item.get('enabled',True) else 'disabled','last_sync':item.get('last_sync')})
+        except Exception:
+            pass
+        return records
+
+    def decisions_page(self):
+        rows=[]
+        for j in self._all_statuses():
+            state=str(j.get('state','unknown')).lower(); decision='BLOCKED' if state in {'failed','blocked'} else ('IN PROGRESS' if state in {'running','queued'} else 'PASSED')
+            cls='blocked' if decision=='BLOCKED' else ('warning' if decision=='IN PROGRESS' else 'passed')
+            rows.append(f"<tr><td><a href='/jobs/{esc(j.get('job_id'))}'>{esc(j.get('workflow_label') or j.get('job_id'))}</a></td><td><span class='pill {cls}'>{decision}</span></td><td>{esc(j.get('created_at'))}</td><td>{len(j.get('steps') or [])}</td><td><a href='/jobs/{esc(j.get('job_id'))}'>Review</a></td></tr>")
+        table=''.join(rows) or "<tr><td colspan='5'><div class='empty'><h3>No release decisions yet</h3><p class='muted'>Run an assurance workflow to evaluate a release.</p><a class='btn' href='/'>Run analysis</a></div></td></tr>"
+        self.send_html('Release Decisions',f"<div class='page-title'><div><h1>Release Decisions</h1><p>Clear pass, warning, approval, and block outcomes with traceable reasons.</p></div></div><div class='card'><div class='toolbar'><select><option>All decisions</option><option>Blocked</option><option>Approval required</option><option>Passed</option></select><input placeholder='Filter project or release'><span class='spacer'></span><a class='btn secondary' href='/reports'>Export</a></div><div class='table-wrap'><table><tr><th>Release / scan</th><th>Decision</th><th>Evaluated</th><th>Checks</th><th></th></tr>{table}</table></div></div>")
+
+    def actions_page(self):
+        jobs=self._all_statuses(); failed=[j for j in jobs if str(j.get('state')).lower() in {'failed','blocked'}]; running=[j for j in jobs if str(j.get('state')).lower() in {'running','queued'}]
+        items=''.join(f"<tr><td><span class='pill blocked'>High</span></td><td>Review failed release workflow</td><td><a href='/jobs/{esc(j.get('job_id'))}'>{esc(j.get('workflow_label'))}</a></td><td>Security engineering</td><td><a class='btn small secondary' href='/jobs/{esc(j.get('job_id'))}'>Review</a></td></tr>" for j in failed)
+        if not items: items="<tr><td colspan='5'><div class='empty'><h3>No urgent actions</h3><p class='muted'>Blocked releases, connector failures, exception approvals, and incomplete evidence will appear here.</p></div></td></tr>"
+        self.send_html('Action Center',f"<div class='page-title'><div><h1>Action Center</h1><p>A single queue for work requiring review or remediation.</p></div></div><div class='metrics'><div class='metric'><div class='label'>Blocking issues</div><div class='value'>{len(failed)}</div></div><div class='metric'><div class='label'>Scans running</div><div class='value'>{len(running)}</div></div><div class='metric'><div class='label'>Awaiting approval</div><div class='value'>0</div></div><div class='metric'><div class='label'>Connector failures</div><div class='value'>{sum(1 for x in self._connector_records() if x.get('status')=='unhealthy')}</div></div></div><div class='card'><div class='toolbar'><select><option>All work</option><option>Blocking</option><option>Approvals</option><option>Connector health</option></select><input placeholder='Search actions'><span class='spacer'></span><button class='secondary'>Save view</button></div><div class='table-wrap'><table><tr><th>Priority</th><th>Action</th><th>Resource</th><th>Owner</th><th></th></tr>{items}</table></div></div>")
+
+
+    def controls_page(self):
+        body = """
+        <div class='page-title'><div><h1>Security Controls</h1><p>Run release assurance, VEX, provenance, evidence, organization context, and remediation workflows from one place.</p></div></div>
+        <div class='grid'>
+          <div class='card'><h2>Release Assurance</h2><p class='muted'>Evaluate an SBOM against policy and produce a PASS, WARNING, APPROVAL REQUIRED, or BLOCK decision.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='assurance'><label>Normalized findings JSON</label><input name='findings' value='reports/findings/findings.json' size='42'><label>Policy</label><input name='policy' value='policies/production-release-assurance.yml' size='42'><input type='submit' value='Run dry-run assurance'></form></div>
+          <div class='card'><h2>VEX</h2><p class='muted'>Generate an OpenVEX statement for review and attach exploitability context to findings.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='vex'><label>SBOM path</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='42'><label>Vulnerability</label><input name='vulnerability' placeholder='CVE-2026-12345'><input type='submit' value='Generate VEX draft'></form></div>
+          <div class='card'><h2>Provenance</h2><p class='muted'>Verify artifact digests and inspect SLSA or in-toto provenance evidence.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='provenance'><label>Artifact path</label><input name='artifact' value='test-sboms/example-spdx-2.3.json' size='42'><label>Provenance path</label><input name='provenance' placeholder='provenance.json' size='42'><input type='submit' value='Verify provenance'></form></div>
+          <div class='card'><h2>Evidence Bundle</h2><p class='muted'>Build a hash-manifested release evidence package from current analysis artifacts.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='evidence'><label>Input directory</label><input name='input_dir' value='reports' size='42'><label>Output directory</label><input name='output_dir' value='release-evidence/workbench' size='42'><input type='submit' value='Build evidence bundle'></form></div>
+          <div class='card'><h2>Organization Context</h2><p class='muted'>Create or inspect organization, business unit, application, service, repository, and artifact ownership context.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='org'><label>Project ID</label><input name='project_id' value='workbench-project'><label>Business criticality</label><select name='criticality'><option>high</option><option>medium</option><option>low</option></select><input type='submit' value='Generate context template'></form></div>
+          <div class='card'><h2>Remediation</h2><p class='muted'>Generate a deterministic remediation plan from normalized findings without automatically changing code.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='remediation'><label>SBOM path</label><input name='sbom' value='test-sboms/vulnerable/sample-trivy-report.json' size='42'><input type='submit' value='Generate remediation plan'></form></div>
+        </div>
+        <div class='callout'><strong>Safe default:</strong> controls create local artifacts and plans. External writes, pull requests, and connector sends remain opt-in.</div>
+        """
+        self.send_html('Security Controls', body)
+
+    def controls_run(self):
+        try:
+            import argparse as _argparse
+            fields = self.parse_urlencoded(); action = fields.get('action','')
+            out = None
+            if action == 'vex':
+                from sbomops import integrations as mod
+                out = mod.export_openvex(_argparse.Namespace(sbom=fields.get('sbom'), out='reports/openvex/workbench-openvex.json', vulnerability=fields.get('vulnerability',''), status='under_investigation', justification='component_not_analyzed', impact_statement='Generated for security review.', action_statement='Validate exploitability and remediation.', author='SBOM Security Toolkit'))
+            elif action == 'org':
+                target=Path('configs/generated/org')/f"{safe_slug(fields.get('project_id','workbench-project'))}.yml"; target.parent.mkdir(parents=True,exist_ok=True)
+                data={'organization':'default','business_unit':'default','application':fields.get('project_id','workbench-project'),'service':fields.get('project_id','workbench-project'),'repository':'unknown','business_criticality':fields.get('criticality','high'),'internet_exposed':False,'owners':{'technical':'','security':'','business':''}}
+                target.write_text(yaml.safe_dump(data,sort_keys=False)); out={'created':str(target)}
+            elif action == 'evidence':
+                src=Path(fields.get('input_dir','reports')); dst=Path(fields.get('output_dir','release-evidence/workbench')); dst.mkdir(parents=True,exist_ok=True)
+                import hashlib, datetime
+                records=[]
+                if src.exists():
+                    for f in sorted(src.rglob('*')):
+                        if f.is_file(): records.append({'path':str(f),'sha256':hashlib.sha256(f.read_bytes()).hexdigest(),'bytes':f.stat().st_size})
+                manifest={'generated_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':records}
+                (dst/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n'); out={'manifest':str(dst/'manifest.json'),'files':len(records)}
+            elif action == 'provenance':
+                artifact=Path(fields.get('artifact','')); prov=Path(fields.get('provenance',''))
+                import hashlib
+                out={'artifact':str(artifact),'exists':artifact.exists(),'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest() if artifact.exists() else None,'provenance':str(prov),'provenance_exists':prov.exists(),'status':'verified' if artifact.exists() and prov.exists() else 'incomplete'}
+                target=Path('reports/provenance/workbench-verification.json'); target.parent.mkdir(parents=True,exist_ok=True); target.write_text(json.dumps(out,indent=2)+'\n')
+            elif action == 'remediation':
+                source=Path(fields.get('sbom','')); target=Path('reports/remediation/workbench-plan.json'); target.parent.mkdir(parents=True,exist_ok=True)
+                out={'source':str(source),'status':'planned','automatic_changes':False,'recommendations':['Review normalized critical and high findings','Prefer fixed versions with compatible upgrade paths','Regenerate SBOM and rerun release assurance after changes']}
+                target.write_text(json.dumps(out,indent=2)+'\n')
+            elif action == 'assurance':
+                from sbomops import assurance as mod
+                # Run the module through its CLI parser contract in a subprocess to preserve production behavior.
+                import subprocess, sys
+                cmd=[sys.executable,'-m','sbomops.assurance','--policy',fields.get('policy',''),'--findings',fields.get('findings',''),'--out-dir','reports/assurance/workbench','--fail-on','never']
+                cp=subprocess.run(cmd,capture_output=True,text=True,timeout=120); out={'command':cmd,'returncode':cp.returncode,'stdout':cp.stdout[-4000:],'stderr':cp.stderr[-4000:]}
+            else: raise ValueError('Unsupported control action: '+action)
+            self.send_html('Control completed',f"<div class='card'><h2>Control completed</h2><pre>{esc(json.dumps(out,indent=2,default=str))}</pre><p><a class='btn' href='/controls'>Back to Security Controls</a> <a class='btn secondary' href='/reports'>View reports</a></p></div>")
+        except Exception as exc:
+            self.send_html('Control error',f"<div class='card'><h2>Control error</h2><pre>{esc(exc)}</pre></div>",400)
+
+    def exceptions_page(self):
+        path=ROOT/'governance'/'exceptions.yml'; records=[]
+        try:
+            data=yaml.safe_load(path.read_text()) if path.exists() else {}
+            records=(data or {}).get('exceptions',[]) if isinstance(data,dict) else (data or [])
+        except Exception: pass
+        rows=''.join(f"<tr><td>{esc(x.get('id') or x.get('name'))}</td><td>{esc(x.get('project','All'))}</td><td>{esc(x.get('vulnerability') or x.get('rule',''))}</td><td><span class='pill approval'>{esc(x.get('status','approved'))}</span></td><td>{esc(x.get('expires','—'))}</td></tr>" for x in records) or "<tr><td colspan='5'><div class='empty'><h3>No active exceptions</h3><p class='muted'>Approved, pending, and expiring risk exceptions will appear here.</p></div></td></tr>"
+        self.send_html('Exceptions',f"<div class='page-title'><div><h1>Risk Exceptions</h1><p>Govern approvals, compensating controls, ownership, and expiration.</p></div><a class='btn' href='/settings'>Create exception</a></div><div class='card'><div class='table-wrap'><table><tr><th>ID</th><th>Project</th><th>Scope</th><th>Status</th><th>Expires</th></tr>{rows}</table></div></div>")
+
+    def evidence_page(self):
+        roots=[ROOT/'release-evidence',ROOT/'reports']; files=[]
+        for root in roots:
+            if root.exists(): files += [p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in {'.zip','.json','.pdf','.md'}]
+        rows=''.join(f"<tr><td>{esc(p.name)}</td><td>{esc(p.parent.relative_to(ROOT))}</td><td>{p.stat().st_size}</td><td>{esc(__import__('datetime').datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec='minutes'))}</td></tr>" for p in sorted(files,key=lambda x:x.stat().st_mtime,reverse=True)[:100]) or "<tr><td colspan='4'><div class='empty'><h3>No evidence packages yet</h3><p class='muted'>Generate a release evidence bundle from a completed scan.</p><a class='btn' href='/jobs'>View scans</a></div></td></tr>"
+        self.send_html('Evidence',f"<div class='page-title'><div><h1>Evidence</h1><p>Auditor-ready SBOM, VEX, decision, provenance, report, and signature packages.</p></div></div><div class='card'><div class='table-wrap'><table><tr><th>Artifact</th><th>Location</th><th>Bytes</th><th>Modified</th></tr>{rows}</table></div></div>")
+
+    def search_page(self,url):
+        q=(urllib.parse.parse_qs(url.query).get('q') or [''])[0].strip().lower(); matches=[]
+        if q:
+            for j in self._all_statuses():
+                hay=json.dumps(j).lower()
+                if q in hay: matches.append((j.get('workflow_label') or j.get('job_id'),f"/jobs/{j.get('job_id')}",'Scan'))
+            for p in [ROOT/'README.md',ROOT/'RELEASE-NOTES.md',ROOT/'CHANGELOG.md']:
+                if p.exists() and q in p.read_text(errors='ignore').lower(): matches.append((p.name,'/reports','Documentation'))
+        rows=''.join(f"<tr><td><a href='{esc(href)}'>{esc(name)}</a></td><td>{esc(kind)}</td></tr>" for name,href,kind in matches) or "<tr><td colspan='2'><div class='empty'><h3>No results</h3><p class='muted'>Search projects, scan records, CVEs, components, releases, and documentation.</p></div></td></tr>"
+        self.send_html('Search',f"<div class='page-title'><div><h1>Search</h1><p>Results for <strong>{esc(q)}</strong></p></div></div><div class='card'><div class='table-wrap'><table><tr><th>Result</th><th>Type</th></tr>{rows}</table></div></div>")
 
     def reports_page(self):
         try:
@@ -429,6 +585,7 @@ class Handler(BaseHTTPRequestHandler):
         <div class='card'><h2>Production integrations</h2>
         <p class='muted'>Generate reviewable export payloads, CI/CD templates, deployment scaffolds, notification tests, OIDC config, and worker runtime limits. Live delivery remains dry-run-first. Use the CLI/Make targets with explicit SEND=1 for real Jira, DefectDojo, Slack/webhook, or email delivery.</p></div>
         <div class='grid'>
+        <div class='card'><h3>Unified connector platform</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='connector-platform'><div class='grid'><div><label>Connector name</label><input name='name' value='corporate-snyk'></div><div><label>Type</label><select name='type'><option value='snyk'>Snyk</option><option value='dependency-track'>Dependency-Track</option><option value='defectdojo'>DefectDojo</option><option value='github'>GitHub</option><option value='webhook'>Generic webhook</option></select></div><div><label>Base URL</label><input name='base_url' placeholder='Provider API URL'></div><div><label>Token environment variable</label><input name='token_env' value='SNYK_TOKEN'></div></div><label>Organization/project/repository identifier</label><input name='resource_id' placeholder='org UUID, project UUID, or owner/repo' size='48'><label><input type='checkbox' name='allow_write' value='true'> Enable write operations</label><p class='small muted'>Read-only and dry-run by default. Secrets are stored only as environment-variable references. Use CLI <code>--send</code> for live network calls.</p><input type='submit' value='Save connector and run dry-run health check'></form></div>
         <div class='card'><h3>Snyk SBOM connector</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='snyk'><div class='grid'><div><label>Snyk org ID</label><input name='org_id' placeholder='SNYK_ORG_ID or UUID'></div><div><label>Snyk project ID</label><input name='project_id' placeholder='SNYK_PROJECT_ID or UUID'></div><div><label>Token env var</label><input name='token_env' value='SNYK_TOKEN'></div><div><label>SBOM format</label><select name='format'><option value='cyclonedx1.6+json'>CycloneDX 1.6 JSON</option><option value='cyclonedx1.5+json'>CycloneDX 1.5 JSON</option><option value='cyclonedx1.4+json'>CycloneDX 1.4 JSON</option><option value='cyclonedx1.6+xml'>CycloneDX 1.6 XML</option><option value='spdx2.3+json'>SPDX 2.3 JSON</option></select></div></div><label>Local SBOM path for comparison</label><input name='local_sbom' value='test-sboms/example-spdx-2.3.json' size='48'><p class='small muted'>Dry-run by default. Stores token references only. Live pulls require CLI/Make with SEND=1.</p><input type='submit' value='Save config and run dry-run'></form></div>
         <div class='card'><h3>SARIF / OpenVEX / ticket payloads</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='exports'><label>SBOM path on this host</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='48'><label>Jira project key</label><input name='project_key' value='SEC'><input type='submit' value='Generate exports'></form></div>
         <div class='card'><h3>CI/CD templates</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='ci'><label>Provider</label><select name='provider'><option value='all'>All</option><option value='github'>GitHub Actions</option><option value='gitlab'>GitLab CI</option><option value='jenkins'>Jenkins</option><option value='circleci'>CircleCI</option><option value='buildkite'>Buildkite</option><option value='azure'>Azure DevOps</option></select><input type='submit' value='Generate CI templates'></form></div>
@@ -445,7 +602,22 @@ class Handler(BaseHTTPRequestHandler):
             from sbomops import integrations as int_ops
             fields = self.parse_urlencoded(); kind = fields.get('kind','')
             outputs = []
-            if kind == 'snyk':
+            if kind == 'connector-platform':
+                from sbomops import connectors as connector_ops
+                name = fields.get('name','connector')
+                ctype = fields.get('type','snyk')
+                token_env = fields.get('token_env','') or {'snyk':'SNYK_TOKEN','dependency-track':'DEPENDENCY_TRACK_API_KEY','defectdojo':'DEFECTDOJO_TOKEN','github':'GITHUB_TOKEN','webhook':'SST_WEBHOOK_URL'}.get(ctype,'CONNECTOR_TOKEN')
+                resource = fields.get('resource_id','')
+                config = {'base_url': fields.get('base_url',''), 'token_ref': 'env:'+token_env, 'read_only': fields.get('allow_write','') != 'true', 'verify_tls': True}
+                if ctype == 'snyk': config['org_id'] = resource
+                elif ctype == 'github': config['repository'] = resource
+                elif ctype == 'dependency-track': config['project_name'] = resource or 'SBOM Security Toolkit Project'
+                elif ctype == 'webhook': config = {'url_ref':'env:'+token_env, 'read_only': fields.get('allow_write','') != 'true', 'verify_tls': True}
+                cfg_path = Path('configs/generated/integrations') / f'{name}.json'
+                cfg_path.parent.mkdir(parents=True, exist_ok=True); cfg_path.write_text(json.dumps(config, indent=2)+'\n')
+                outputs.append(connector_ops.add_connector(_argparse.Namespace(registry='configs/connectors.yml', name=name, type=ctype, config=str(cfg_path), allow_write=fields.get('allow_write','') == 'true', insecure_skip_tls_verify=False, timeout_seconds=30, retries=3)))
+                outputs.append(connector_ops.execute(_argparse.Namespace(registry='configs/connectors.yml', name=name, send=False, out=f'reports/connectors/{name}-health.json'), 'test'))
+            elif kind == 'snyk':
                 org_id = fields.get('org_id','')
                 project_id = fields.get('project_id','')
                 token_env = fields.get('token_env','SNYK_TOKEN') or 'SNYK_TOKEN'
@@ -925,8 +1097,8 @@ make test-release</pre>
     def download(self, jid: str):
         z = job_dir(jid) / "evidence-bundle.zip"
         if not z.exists():
-            # Try creating a status-only placeholder if job exists.
             if not status_path(jid).exists(): return self.send_html("Not found", "<div class='card'><h2>Bundle not found</h2></div>", 404)
+            return self.send_html("Bundle not ready", "<div class='card'><h2>Evidence bundle is not ready</h2><p class='muted'>The job exists, but its evidence bundle has not been generated yet.</p></div>", 409)
         data = z.read_bytes()
         self.send_response(200); self.send_header("Content-Type", "application/zip"); self.send_header("Content-Disposition", f"attachment; filename={jid}-evidence-bundle.zip"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sbom-toolkit.io/schemas/policy-decision.schema.json",
+  "type": "object",
+  "required": ["schema_version", "decision", "exit_code", "policy", "summary"],
+  "properties": {
+    "decision": {"enum": ["PASS", "PASS_WITH_WARNINGS", "APPROVAL_REQUIRED", "BLOCK", "INCOMPLETE_EVIDENCE", "ERROR"]},
+    "exit_code": {"type": "integer"},
+    "policy": {"type": "string"},
+    "violations": {"type": "array"},
+    "approvals_required": {"type": "array"},
+    "warnings": {"type": "array"}
+  }
+}

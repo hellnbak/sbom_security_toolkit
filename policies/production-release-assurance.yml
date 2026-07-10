@@ -1,0 +1,37 @@
+apiVersion: sbom-toolkit.io/v1
+kind: SecurityPolicy
+metadata:
+  name: production-release-assurance
+spec:
+  requireEvidence:
+    provenance: true
+    signedArtifact: false
+    signedSbom: false
+    builderIdentity: true
+  deny:
+    - id: critical-fix-available
+      severity: critical
+      fixAvailable: true
+      message: A critical vulnerability with a remediation is present.
+    - id: cisa-kev
+      kev: true
+      message: A CISA Known Exploited Vulnerability is present.
+    - id: high-reachable
+      severity: high
+      reachable: true
+      message: A reachable high or critical vulnerability is present.
+    - id: high-epss
+      severity: high
+      epss:
+        greaterThan: 0.7
+      message: A high-severity vulnerability has EPSS above 0.7.
+  requireApproval:
+    - id: aged-high
+      severity: high
+      ageDays:
+        greaterThan: 30
+      message: A high-severity vulnerability is older than 30 days.
+  warn:
+    - id: unresolved-medium
+      severity: medium
+      message: Medium or higher vulnerability remains unresolved.
