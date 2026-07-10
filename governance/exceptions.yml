@@ -1,0 +1,3 @@
+apiVersion: sbom-toolkit.io/v1
+kind: RiskExceptionList
+exceptions: []

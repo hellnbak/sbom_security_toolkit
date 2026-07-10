@@ -1,0 +1,10 @@
+stages: [security]
+sbom-release-assurance:
+  stage: security
+  image: python:3.11
+  script:
+    - pip install -e .
+    - sst assurance --policy policies/production-release-assurance.yml --findings reports/findings.json --vex reports/vex.json --exceptions governance/exceptions.yml --provenance reports/provenance/provenance-verification.json --context reports/context.json --out-dir reports/release-assurance --fail-on block
+  artifacts:
+    when: always
+    paths: [reports/]

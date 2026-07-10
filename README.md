@@ -1,34 +1,69 @@
 # SBOM Security Toolkit
 
-SBOM Security Toolkit is a local-first, cloud-capable workbench for software supply-chain security. It helps teams generate, validate, fuzz, scan, explain, monitor, and remediate SBOM risk across one-off vendor intake, release decisions, and ongoing project operations.
+SBOM Security Toolkit is a local-first, cloud-capable workbench and release-assurance control plane for software supply-chain security. It helps teams generate, validate, fuzz, scan, explain, govern, monitor, and remediate SBOM risk across supplier intake, CI/CD release decisions, and ongoing project operations.
+
+Current release: **v2.9.0 — Release Assurance and Governance**
 
 ## Why use this toolkit?
 
 Use it when you need to answer practical questions:
 
-- What is in this software?
-- Is the SBOM complete enough to trust?
-- Are there critical vulnerabilities, EOL runtimes, unsupported dependencies, or scanner disagreements?
-- Can this release ship, or does it need an exception?
-- Who owns the remediation and how do we verify the fix?
-- Can I generate human-readable reports from evidence instead of raw JSON?
+- What is in this software and is its SBOM complete enough to trust?
+- Are there critical vulnerabilities, known-exploited issues, unsupported dependencies, or scanner disagreements?
+- Is a finding actually reachable or covered by valid VEX evidence?
+- Can this release ship, does it need approval, or must it be blocked?
+- Is an exception approved, scoped, justified, and still valid?
+- Does the artifact match its provenance and signed SBOM evidence?
+- Can audit-ready evidence and human-readable reports be generated from deterministic facts?
 
-## What this toolkit does
+## What is new in v2.9.0
 
-- SBOM quality, policy, supplier-intake, VEX, dependency-health, and lifecycle intelligence checks.
-- Coverage-guided and semantic fuzzing for SBOM/toolchain hardening.
-- AI-assisted fuzz case generation and evidence-bound AI report writing.
-- Project history, trends, release decisions, findings/remediation operations, and report viewing.
-- Local Workbench UI plus optional self-hosted cloud/enterprise scaffolding.
-- Live/dry-run integrations for Jira, DefectDojo, Snyk SBOM pulls, Slack/webhook/email, SARIF, OpenVEX, GitHub PR summaries, CI templates, OIDC, and Kubernetes/Helm scaffolds.
+**Release Assurance and Governance** adds a unified decision layer that converts SBOM, vulnerability, VEX, exception, provenance, and organizational context into stable release outcomes.
 
-## What is new in v2.8.1
+- Policy-as-code decisions: `PASS`, `PASS_WITH_WARNINGS`, `APPROVAL_REQUIRED`, `BLOCK`, `INCOMPLETE_EVIDENCE`, and `ERROR`.
+- Stable CI exit codes and configurable failure thresholds.
+- Auditable risk exceptions with approval, compensating controls, expiration, revocation, and history.
+- VEX-aware suppression and reachability-aware policy matching.
+- SLSA/in-toto-style provenance subject validation and optional cosign verification.
+- Organization, business-unit, application, service, repository, artifact, ownership, criticality, exposure, and regulatory context.
+- Independently verifiable release evidence bundles with SHA-256 manifests and optional cosign signing.
+- GitHub Actions and GitLab CI release-gate templates.
+- New production policy examples, decision schemas, tests, and documentation.
 
-**Snyk SBOM Connector** adds dry-run-first Snyk configuration, Snyk project SBOM pull support, Snyk-vs-local SBOM comparison, Workbench configuration controls, and evidence/report outputs for SBOM coverage drift.
+## Core v2.9.0 commands
 
-## What was added in v2.8.0
+```bash
+# Evaluate release evidence against policy
+sst assurance \
+  --policy policies/production-release.yml \
+  --findings reports/findings.json \
+  --vex reports/openvex.json \
+  --exceptions governance/exceptions.yml \
+  --provenance reports/provenance/provenance-verification.json \
+  --context governance/context.yml \
+  --fail-on block
 
-**Productization, QA, and Demo Readiness** adds release-gate test tiers, a polished demo workspace, first-run setup helpers, doctor/install/upgrade helpers, public GitHub templates, CI workflow scaffolding, architecture/demo/QA docs, roadmap, and security hardening checklist generation.
+# Manage risk exceptions
+sst risk-exceptions create --project payments-api \
+  --vulnerability CVE-2026-12345 \
+  --justification "No compatible patched version is available" \
+  --compensating-control "Service is not internet accessible" \
+  --requestor security-team \
+  --expires 2026-08-31
+
+sst risk-exceptions approve RISK-20260710-ABC123 --approver security-architecture
+
+# Verify artifact, SBOM, and provenance integrity
+sst provenance --artifact dist/app.tar.gz --sbom reports/sbom.cdx.json \
+  --provenance reports/provenance.json
+
+# Build release evidence
+sst evidence-bundle --release v2.9.0 \
+  --include 'reports/**/*.json' \
+  --include 'reports/**/*.md'
+```
+
+Aliases are also available for `release-assurance`, `exceptions`, and `org-model`.
 
 ## Quick start
 
@@ -42,6 +77,17 @@ make ui-server
 ```
 
 Open `http://127.0.0.1:8080`.
+
+## Quality and release validation
+
+```bash
+make test-fast
+make test-integration-offline
+make test-fuzz-smoke
+make test-release
+```
+
+Use `make test-all` for the broader local suite. Fuzzing and workbench integration tests intentionally run subprocesses and can take substantially longer.
 
 ## Optional Snyk SBOM connector
 
@@ -106,7 +152,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.8.1 — Snyk SBOM Connector**
+Current release: **v2.9.0 — Release Assurance and Governance**
 
 ---
 
@@ -840,3 +886,20 @@ The v1.x line introduced the original local-first SBOM intake and evidence workf
 ## License
 
 This project uses the **Functional Source License 1.1, Apache 2.0 Future License (`FSL-1.1-ALv2`)**. See `LICENSE`.
+
+## Release assurance and governance (2.9)
+
+Turn vulnerability, VEX, provenance, exception, and business-context evidence into a deterministic release decision:
+
+```bash
+sst assurance \
+  --policy policies/production-release-assurance.yml \
+  --findings reports/findings.json \
+  --vex reports/vex.json \
+  --exceptions governance/exceptions.yml \
+  --provenance reports/provenance/provenance-verification.json \
+  --context reports/context.json
+```
+
+See [Release Assurance](docs/RELEASE-ASSURANCE.md) for policy rules, exit codes, exception workflows, provenance verification, CI gates, and evidence bundles.
+
