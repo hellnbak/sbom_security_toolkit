@@ -996,3 +996,28 @@ security-checklist:
 
 install-notes:
 	python3 -m sbomops.productization install-notes
+
+# v2.8.1 Snyk SBOM connector
+.PHONY: snyk-config snyk-test snyk-pull-sbom snyk-compare snyk-smoke
+SNYK_API_BASE_URL ?= https://api.snyk.io
+SNYK_API_VERSION ?= 2024-10-15
+SNYK_TOKEN_ENV ?= SNYK_TOKEN
+SNYK_SBOM_FORMAT ?= cyclonedx1.6+json
+SNYK_OUT ?= reports/snyk/snyk-project.sbom.cdx.json
+SNYK_LOCAL_SBOM ?= $(SBOM)
+SNYK_PULLED_SBOM ?= $(SNYK_OUT)
+
+snyk-config:
+	python3 -m sbomops.integrations snyk-config --api-base-url $(SNYK_API_BASE_URL) --api-version $(SNYK_API_VERSION) --org-id "$(SNYK_ORG_ID)" --project-id "$(SNYK_PROJECT_ID)" --token-env $(SNYK_TOKEN_ENV) --format '$(SNYK_SBOM_FORMAT)'
+
+snyk-test:
+	python3 -m sbomops.integrations snyk-test --api-base-url $(SNYK_API_BASE_URL) --api-version $(SNYK_API_VERSION) --org-id "$(SNYK_ORG_ID)" --token-env $(SNYK_TOKEN_ENV) $(if $(SEND),--send,)
+
+snyk-pull-sbom:
+	python3 -m sbomops.integrations snyk-pull-sbom --api-base-url $(SNYK_API_BASE_URL) --api-version $(SNYK_API_VERSION) --org-id "$(SNYK_ORG_ID)" --project-id "$(SNYK_PROJECT_ID)" --token-env $(SNYK_TOKEN_ENV) --format '$(SNYK_SBOM_FORMAT)' --out $(SNYK_OUT) $(if $(SEND),--send,)
+
+snyk-compare:
+	python3 -m sbomops.integrations snyk-compare --snyk-sbom $(SNYK_PULLED_SBOM) --local-sbom $(SNYK_LOCAL_SBOM)
+
+snyk-smoke:
+	python3 -m sbomops.integrations snyk-smoke

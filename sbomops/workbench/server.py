@@ -429,6 +429,7 @@ class Handler(BaseHTTPRequestHandler):
         <div class='card'><h2>Production integrations</h2>
         <p class='muted'>Generate reviewable export payloads, CI/CD templates, deployment scaffolds, notification tests, OIDC config, and worker runtime limits. Live delivery remains dry-run-first. Use the CLI/Make targets with explicit SEND=1 for real Jira, DefectDojo, Slack/webhook, or email delivery.</p></div>
         <div class='grid'>
+        <div class='card'><h3>Snyk SBOM connector</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='snyk'><div class='grid'><div><label>Snyk org ID</label><input name='org_id' placeholder='SNYK_ORG_ID or UUID'></div><div><label>Snyk project ID</label><input name='project_id' placeholder='SNYK_PROJECT_ID or UUID'></div><div><label>Token env var</label><input name='token_env' value='SNYK_TOKEN'></div><div><label>SBOM format</label><select name='format'><option value='cyclonedx1.6+json'>CycloneDX 1.6 JSON</option><option value='cyclonedx1.5+json'>CycloneDX 1.5 JSON</option><option value='cyclonedx1.4+json'>CycloneDX 1.4 JSON</option><option value='cyclonedx1.6+xml'>CycloneDX 1.6 XML</option><option value='spdx2.3+json'>SPDX 2.3 JSON</option></select></div></div><label>Local SBOM path for comparison</label><input name='local_sbom' value='test-sboms/example-spdx-2.3.json' size='48'><p class='small muted'>Dry-run by default. Stores token references only. Live pulls require CLI/Make with SEND=1.</p><input type='submit' value='Save config and run dry-run'></form></div>
         <div class='card'><h3>SARIF / OpenVEX / ticket payloads</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='exports'><label>SBOM path on this host</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='48'><label>Jira project key</label><input name='project_key' value='SEC'><input type='submit' value='Generate exports'></form></div>
         <div class='card'><h3>CI/CD templates</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='ci'><label>Provider</label><select name='provider'><option value='all'>All</option><option value='github'>GitHub Actions</option><option value='gitlab'>GitLab CI</option><option value='jenkins'>Jenkins</option><option value='circleci'>CircleCI</option><option value='buildkite'>Buildkite</option><option value='azure'>Azure DevOps</option></select><input type='submit' value='Generate CI templates'></form></div>
         <div class='card'><h3>Deployment and runtime</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='deployment'><label>OIDC issuer</label><input name='issuer' value='https://issuer.example.com' size='38'><label>Allowed domains</label><input name='allowed_domains' value='example.com'><input type='submit' value='Generate Helm/OIDC/worker limits'></form></div>
@@ -444,7 +445,22 @@ class Handler(BaseHTTPRequestHandler):
             from sbomops import integrations as int_ops
             fields = self.parse_urlencoded(); kind = fields.get('kind','')
             outputs = []
-            if kind == 'exports':
+            if kind == 'snyk':
+                org_id = fields.get('org_id','')
+                project_id = fields.get('project_id','')
+                token_env = fields.get('token_env','SNYK_TOKEN') or 'SNYK_TOKEN'
+                fmt = fields.get('format','cyclonedx1.6+json')
+                local_sbom = fields.get('local_sbom') or 'test-sboms/example-spdx-2.3.json'
+                outputs.append(int_ops.snyk_config(_argparse.Namespace(api_base_url='https://api.snyk.io', api_version='2024-10-15', org_id=org_id, project_id=project_id, token_env=token_env, token_secret_ref='env:'+token_env, format=fmt, out='configs/generated/integrations/snyk.yml')))
+                outputs.append(int_ops.snyk_test(_argparse.Namespace(api_base_url='https://api.snyk.io', api_version='2024-10-15', org_id=org_id, token_env=token_env, out='reports/snyk/snyk-test.json', send=False)))
+                outputs.append(int_ops.snyk_pull_sbom(_argparse.Namespace(api_base_url='https://api.snyk.io', api_version='2024-10-15', org_id=org_id, project_id=project_id, token_env=token_env, format=fmt, out='reports/snyk/snyk-project.sbom.cdx.json', meta_out='reports/snyk/snyk-pull-meta.json', error_out='reports/snyk/snyk-pull-error.json', timeout_seconds=30, send=False)))
+                if Path(local_sbom).exists():
+                    # Generate a deterministic sample Snyk SBOM so the UI can demonstrate comparison without live credentials.
+                    sample_snyk = Path('reports/snyk/sample-snyk.cdx.json')
+                    sample_snyk.parent.mkdir(parents=True, exist_ok=True)
+                    sample_snyk.write_text(json.dumps({'bomFormat':'CycloneDX','specVersion':'1.5','version':1,'components':[{'type':'library','name':'demo-snyk-only','version':'1.0.0','purl':'pkg:npm/demo-snyk-only@1.0.0'}]}, indent=2)+'\n')
+                    outputs.append(int_ops.snyk_compare(_argparse.Namespace(snyk_sbom=str(sample_snyk), local_sbom=local_sbom, out='reports/snyk/snyk-sbom-compare.json', markdown='reports/snyk/snyk-sbom-compare.md')))
+            elif kind == 'exports':
                 sbom = fields.get('sbom') or 'test-sboms/example-spdx-2.3.json'
                 outputs.append(int_ops.export_sarif(_argparse.Namespace(sbom=sbom, out='reports/sarif/sbom-security-toolkit.sarif', project='workbench', release_decision='')))
                 outputs.append(int_ops.export_openvex(_argparse.Namespace(sbom=sbom, out='reports/openvex/openvex.json', vulnerability='', status='under_investigation', justification='component_not_analyzed', impact_statement='Generated for review.', action_statement='Review before distribution.', author='SBOM Security Toolkit')))

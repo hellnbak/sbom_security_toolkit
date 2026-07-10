@@ -20,9 +20,13 @@ Use it when you need to answer practical questions:
 - AI-assisted fuzz case generation and evidence-bound AI report writing.
 - Project history, trends, release decisions, findings/remediation operations, and report viewing.
 - Local Workbench UI plus optional self-hosted cloud/enterprise scaffolding.
-- Live/dry-run integrations for Jira, DefectDojo, Slack/webhook/email, SARIF, OpenVEX, GitHub PR summaries, CI templates, OIDC, and Kubernetes/Helm scaffolds.
+- Live/dry-run integrations for Jira, DefectDojo, Snyk SBOM pulls, Slack/webhook/email, SARIF, OpenVEX, GitHub PR summaries, CI templates, OIDC, and Kubernetes/Helm scaffolds.
 
-## What is new in v2.8.0
+## What is new in v2.8.1
+
+**Snyk SBOM Connector** adds dry-run-first Snyk configuration, Snyk project SBOM pull support, Snyk-vs-local SBOM comparison, Workbench configuration controls, and evidence/report outputs for SBOM coverage drift.
+
+## What was added in v2.8.0
 
 **Productization, QA, and Demo Readiness** adds release-gate test tiers, a polished demo workspace, first-run setup helpers, doctor/install/upgrade helpers, public GitHub templates, CI workflow scaffolding, architecture/demo/QA docs, roadmap, and security hardening checklist generation.
 
@@ -38,6 +42,27 @@ make ui-server
 ```
 
 Open `http://127.0.0.1:8080`.
+
+## Optional Snyk SBOM connector
+
+The toolkit can pull SBOMs from Snyk projects and compare them with locally generated SBOMs. This is useful when you want to validate whether your existing Snyk project inventory agrees with the toolkit's repository intake/SBOM generation. The connector is dry-run-first and stores token references only.
+
+```bash
+make snyk-config SNYK_ORG_ID=<org-id> SNYK_PROJECT_ID=<project-id>
+make snyk-test SNYK_ORG_ID=<org-id>
+make snyk-pull-sbom SNYK_ORG_ID=<org-id> SNYK_PROJECT_ID=<project-id>
+
+# Live API calls require the token env var and explicit SEND=1
+export SNYK_TOKEN=...
+make snyk-test SNYK_ORG_ID=<org-id> SEND=1
+make snyk-pull-sbom SNYK_ORG_ID=<org-id> SNYK_PROJECT_ID=<project-id> SEND=1
+
+# Compare the pulled Snyk SBOM to a locally generated SBOM
+make snyk-compare SNYK_PULLED_SBOM=reports/snyk/snyk-project.sbom.cdx.json SNYK_LOCAL_SBOM=reports/repo-intake/sbom.cdx.json
+```
+
+The Workbench **Integrations** page includes Snyk configuration fields for org ID, project ID, token environment variable, SBOM format, and local SBOM comparison path.
+
 
 ## Quality and release gate
 
@@ -81,7 +106,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.7.3 — AI Report Writer**
+Current release: **v2.8.1 — Snyk SBOM Connector**
 
 ---
 

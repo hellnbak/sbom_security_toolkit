@@ -153,7 +153,7 @@ def export_sarif(args: argparse.Namespace) -> Dict[str, Any]:
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.7.1", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
+            "tool": {"driver": {"name": "SBOM Security Toolkit", "semanticVersion": "2.8.1", "informationUri": "https://github.com/hellnbak/sbom_security_toolkit", "rules": list(rules.values())}},
             "automationDetails": {"id": getattr(args, "project", "") or "local"},
             "results": results,
             "properties": {"created_at": now(), "source": "sst export sarif"},
@@ -317,8 +317,8 @@ def generate_k8s(args: argparse.Namespace) -> Dict[str, Any]:
     helm = base / "helm" / "sbom-security-toolkit"
     templates = helm / "templates"
     ensure_dir(templates)
-    write_yaml(helm / "Chart.yaml", {"apiVersion": "v2", "name": "sbom-security-toolkit", "description": "Self-hosted SBOM Security Toolkit", "type": "application", "version": "0.1.0", "appVersion": "2.6.0"})
-    write_yaml(helm / "values.yaml", {"image": {"repository": "sbom-security-toolkit", "tag": "2.6.0", "pullPolicy": "IfNotPresent"}, "web": {"replicas": 1, "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "1", "memory": "1Gi"}}}, "worker": {"replicas": 1, "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}, "maxConcurrentJobs": 1}, "postgres": {"external": False, "host": ""}, "redis": {"external": False, "host": ""}, "s3": {"bucket": "", "prefix": "sbom-security-toolkit"}, "oidc": {"enabled": False, "issuer": "", "clientIdSecretRef": "sst-oidc-client-id", "clientSecretSecretRef": "sst-oidc-client-secret"}, "ingress": {"enabled": False, "className": "", "host": "sst.example.com", "tlsSecret": ""}})
+    write_yaml(helm / "Chart.yaml", {"apiVersion": "v2", "name": "sbom-security-toolkit", "description": "Self-hosted SBOM Security Toolkit", "type": "application", "version": "0.1.0", "appVersion": "2.8.1"})
+    write_yaml(helm / "values.yaml", {"image": {"repository": "sbom-security-toolkit", "tag": "2.8.1", "pullPolicy": "IfNotPresent"}, "web": {"replicas": 1, "resources": {"requests": {"cpu": "250m", "memory": "512Mi"}, "limits": {"cpu": "1", "memory": "1Gi"}}}, "worker": {"replicas": 1, "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"cpu": "2", "memory": "4Gi"}}, "maxConcurrentJobs": 1}, "postgres": {"external": False, "host": ""}, "redis": {"external": False, "host": ""}, "s3": {"bucket": "", "prefix": "sbom-security-toolkit"}, "oidc": {"enabled": False, "issuer": "", "clientIdSecretRef": "sst-oidc-client-id", "clientSecretSecretRef": "sst-oidc-client-secret"}, "ingress": {"enabled": False, "className": "", "host": "sst.example.com", "tlsSecret": ""}})
     write_text(templates / "deployment.yaml", '''apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -492,6 +492,184 @@ def _jira_payloads(args: argparse.Namespace) -> List[Dict[str, Any]]:
         })
     return payloads
 
+
+
+def snyk_config(args: argparse.Namespace) -> Dict[str, Any]:
+    """Write a Snyk connector configuration that stores token references only."""
+    cfg = {
+        "snyk": {
+            "enabled": True,
+            "api_base_url": args.api_base_url,
+            "api_version": args.api_version,
+            "org_id": args.org_id,
+            "project_id": args.project_id,
+            "token_env": args.token_env,
+            "token_secret_ref": args.token_secret_ref,
+            "default_format": args.format,
+            "dry_run_default": True,
+            "store_raw_token": False,
+            "created_at": now(),
+            "notes": [
+                "The toolkit stores token references only; it does not persist Snyk API tokens.",
+                "Use --send or SEND=1 for live API calls. Dry-run mode validates configuration and writes planned request metadata.",
+            ],
+        }
+    }
+    out = Path(args.out)
+    write_yaml(out, cfg)
+    return {"path": str(out), "org_id_configured": bool(args.org_id), "project_id_configured": bool(args.project_id), "token_reference": args.token_secret_ref or f"env:{args.token_env}"}
+
+
+def _snyk_token(token_env: str) -> str:
+    return os.environ.get(token_env, "")
+
+
+def _snyk_headers(token: str) -> Dict[str, str]:
+    return {"Authorization": f"token {token}", "Accept": "application/json"}
+
+
+def snyk_test(args: argparse.Namespace) -> Dict[str, Any]:
+    token = _snyk_token(args.token_env)
+    url = args.api_base_url.rstrip("/")
+    out_doc = {
+        "tested_at": now(),
+        "mode": "dry-run",
+        "api_base_url": url,
+        "api_version": args.api_version,
+        "org_id_configured": bool(args.org_id),
+        "token_env": args.token_env,
+        "token_configured": bool(token),
+        "send_required_for_live_call": True,
+    }
+    if args.send:
+        if not args.org_id:
+            raise SystemExit("--org-id is required for live Snyk test")
+        if not token:
+            raise SystemExit(f"Snyk token env var {args.token_env!r} is not set")
+        endpoint = f"{url}/rest/orgs/{args.org_id}?version={args.api_version}"
+        result = _http_json(endpoint, headers=_snyk_headers(token))
+        out_doc.update({"mode": "sent", "endpoint": endpoint, "result": result})
+    write_json(Path(args.out), out_doc)
+    return {"path": args.out, "mode": out_doc["mode"], "org_id_configured": out_doc["org_id_configured"], "token_configured": out_doc["token_configured"]}
+
+
+def snyk_pull_sbom(args: argparse.Namespace) -> Dict[str, Any]:
+    out = Path(args.out)
+    request_meta = {
+        "created_at": now(),
+        "mode": "dry-run",
+        "api_base_url": args.api_base_url.rstrip("/"),
+        "api_version": args.api_version,
+        "org_id": args.org_id,
+        "project_id": args.project_id,
+        "format": args.format,
+        "token_env": args.token_env,
+        "out": str(out),
+        "note": "Dry-run only. Use --send or SEND=1 to call Snyk and write the returned SBOM.",
+    }
+    ensure_dir(out.parent)
+    if not args.send:
+        meta_out = out.with_suffix(out.suffix + ".request.json") if out.suffix else out.with_name(out.name + ".request.json")
+        write_json(meta_out, request_meta)
+        return {"path": str(meta_out), "mode": "dry-run", "planned_out": str(out)}
+    if not args.org_id or not args.project_id:
+        raise SystemExit("--org-id and --project-id are required for live Snyk SBOM pull")
+    token = _snyk_token(args.token_env)
+    if not token:
+        raise SystemExit(f"Snyk token env var {args.token_env!r} is not set")
+    fmt = urllib.parse.quote(args.format, safe="")
+    endpoint = f"{args.api_base_url.rstrip('/')}/rest/orgs/{args.org_id}/projects/{args.project_id}/sbom?version={args.api_version}&format={fmt}"
+    req = urllib.request.Request(endpoint, headers=_snyk_headers(token), method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=args.timeout_seconds) as resp:
+            body = resp.read()
+            status = getattr(resp, "status", None)
+            content_type = resp.headers.get("Content-Type", "") if hasattr(resp, "headers") else ""
+    except urllib.error.HTTPError as exc:
+        err = exc.read().decode("utf-8", errors="replace")[:4000]
+        write_json(Path(args.error_out), {"endpoint": endpoint, "status": exc.code, "error": err, "created_at": now()})
+        raise SystemExit(f"Snyk SBOM pull failed with HTTP {exc.code}; details written to {args.error_out}")
+    out.write_bytes(body)
+    write_json(Path(args.meta_out), {**request_meta, "mode": "sent", "endpoint": endpoint, "status": status, "content_type": content_type, "bytes": len(body), "sbom_path": str(out)})
+    return {"path": str(out), "metadata": args.meta_out, "mode": "sent", "bytes": len(body), "status": status}
+
+
+def _component_index(sbom: str | Path) -> Dict[str, Dict[str, Any]]:
+    _fmt, comps, _meta = parse_components(Path(sbom))
+    indexed: Dict[str, Dict[str, Any]] = {}
+    for c in comps:
+        key_base = c.purl or c.bom_ref or c.name or "unknown"
+        key = key_base.lower()
+        rec = {"name": c.name, "version": c.version, "purl": c.purl, "bom_ref": c.bom_ref, "ecosystem": c.ecosystem}
+        if key in indexed:
+            # Keep deterministic duplicate keys by appending version/name context.
+            key = f"{key}|{c.version}|{c.name}".lower()
+        indexed[key] = rec
+    return indexed
+
+
+def snyk_compare(args: argparse.Namespace) -> Dict[str, Any]:
+    snyk = _component_index(args.snyk_sbom)
+    local = _component_index(args.local_sbom)
+    snyk_keys = set(snyk)
+    local_keys = set(local)
+    only_snyk = [snyk[k] for k in sorted(snyk_keys - local_keys)]
+    only_local = [local[k] for k in sorted(local_keys - snyk_keys)]
+    mismatches = []
+    for k in sorted(snyk_keys & local_keys):
+        sv = snyk[k].get("version") or ""
+        lv = local[k].get("version") or ""
+        if sv != lv:
+            mismatches.append({"key": k, "snyk": snyk[k], "local": local[k], "snyk_version": sv, "local_version": lv})
+    doc = {
+        "created_at": now(),
+        "snyk_sbom": str(args.snyk_sbom),
+        "local_sbom": str(args.local_sbom),
+        "summary": {
+            "snyk_components": len(snyk),
+            "local_components": len(local),
+            "only_in_snyk": len(only_snyk),
+            "only_in_local": len(only_local),
+            "version_mismatches": len(mismatches),
+        },
+        "only_in_snyk": only_snyk,
+        "only_in_local": only_local,
+        "version_mismatches": mismatches,
+        "recommendations": [
+            "Review components only present in one SBOM to identify generator coverage gaps.",
+            "Review version mismatches before using either SBOM as release evidence.",
+            "Use this comparison as SBOM confidence evidence, not as a vulnerability verdict by itself.",
+        ],
+    }
+    write_json(Path(args.out), doc)
+    md = ["# Snyk SBOM comparison", "", f"Generated: {doc['created_at']}", "", "## Summary", ""]
+    for k, v in doc["summary"].items():
+        md.append(f"- **{k.replace('_',' ')}:** {v}")
+    md += ["", "## Recommended review", ""] + [f"- {x}" for x in doc["recommendations"]]
+    if only_snyk[:20]:
+        md += ["", "## Components only in Snyk SBOM", ""] + [f"- {x.get('name')} {x.get('version')} `{x.get('purl') or x.get('bom_ref')}`" for x in only_snyk[:20]]
+    if only_local[:20]:
+        md += ["", "## Components only in local SBOM", ""] + [f"- {x.get('name')} {x.get('version')} `{x.get('purl') or x.get('bom_ref')}`" for x in only_local[:20]]
+    if mismatches[:20]:
+        md += ["", "## Version mismatches", ""] + [f"- {x['key']}: Snyk `{x['snyk_version']}` vs local `{x['local_version']}`" for x in mismatches[:20]]
+    write_text(Path(args.markdown), "\n".join(md) + "\n")
+    return {"path": args.out, "markdown": args.markdown, **doc["summary"]}
+
+
+def snyk_smoke(args: argparse.Namespace) -> Dict[str, Any]:
+    out_dir = Path(args.out_dir)
+    ensure_dir(out_dir)
+    snyk_sbom = out_dir / "snyk-sample.cdx.json"
+    local_sbom = out_dir / "local-sample.cdx.json"
+    write_json(snyk_sbom, {"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[{"type":"library","name":"alpha","version":"1.0.1","purl":"pkg:npm/alpha@1.0.1"},{"type":"library","name":"snyk-only","version":"2.0.0","purl":"pkg:pypi/snyk-only@2.0.0"}]})
+    write_json(local_sbom, {"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[{"type":"library","name":"alpha","version":"1.0.0","purl":"pkg:npm/alpha@1.0.1"},{"type":"library","name":"local-only","version":"3.0.0","purl":"pkg:maven/local-only@3.0.0"}]})
+    cfg = snyk_config(argparse.Namespace(api_base_url="https://api.snyk.io", api_version="2024-10-15", org_id="demo-org", project_id="demo-project", token_env="SNYK_TOKEN", token_secret_ref="env:SNYK_TOKEN", format="cyclonedx1.6+json", out=str(out_dir / "snyk.yml")))
+    test = snyk_test(argparse.Namespace(api_base_url="https://api.snyk.io", api_version="2024-10-15", org_id="demo-org", token_env="SNYK_TOKEN", out=str(out_dir / "snyk-test.json"), send=False))
+    pull = snyk_pull_sbom(argparse.Namespace(api_base_url="https://api.snyk.io", api_version="2024-10-15", org_id="demo-org", project_id="demo-project", token_env="SNYK_TOKEN", format="cyclonedx1.6+json", out=str(out_dir / "pulled.cdx.json"), meta_out=str(out_dir / "pull-meta.json"), error_out=str(out_dir / "pull-error.json"), timeout_seconds=30, send=False))
+    compare = snyk_compare(argparse.Namespace(snyk_sbom=str(snyk_sbom), local_sbom=str(local_sbom), out=str(out_dir / "compare.json"), markdown=str(out_dir / "compare.md")))
+    summary = {"ok": True, "config": cfg, "test": test, "pull_dry_run": pull, "compare": compare, "created_at": now()}
+    write_json(out_dir / "summary.json", summary)
+    return {"path": str(out_dir / "summary.json"), "ok": True}
 
 def jira_test(args: argparse.Namespace) -> Dict[str, Any]:
     url = args.url or os.environ.get("JIRA_BASE_URL", "")
@@ -677,6 +855,7 @@ def integration_smoke(args: argparse.Namespace) -> Dict[str, Any]:
     run("jira-dry-run", jira_create, argparse.Namespace(sbom=sbom, findings="", out="reports/integration-smoke/jira-create.json", project_key="SEC", issue_type="Task", state="reports/integration-smoke/jira-state.json", send=False, url="", email="", token_env="JIRA_API_TOKEN"))
     run("defectdojo-dry-run", defectdojo_upload, argparse.Namespace(sbom=sbom, out="reports/integration-smoke/defectdojo-upload.json", payload_out="reports/integration-smoke/defectdojo-import.json", product_name="Smoke", engagement_name="Smoke", minimum_severity="Info", send=False, url="", token_env="DEFECTDOJO_TOKEN"))
     run("notify-dry-run", notify, argparse.Namespace(type="webhook", target_ref="SST_WEBHOOK_URL", event="smoke", severity="info", title="Smoke", message="Smoke test", project="smoke", out="reports/integration-smoke/notify.json", send=False, smtp_host="localhost", smtp_port=25, email_from="sst@example.local"))
+    run("snyk-smoke", snyk_smoke, argparse.Namespace(out_dir="reports/integration-smoke/snyk"))
     ok = all(r["ok"] for r in results)
     out = {"ok": ok, "mode": "offline", "results": results, "created_at": now()}
     write_json(Path(args.out), out)
@@ -706,6 +885,11 @@ def main(argv: List[str] | None = None) -> int:
     p = sub.add_parser("scheduler-run"); p.add_argument("--history", default="reports/scheduler/history.json"); p.add_argument("--once", action="store_true"); p.add_argument("--dry-run", action="store_true", default=True); p.add_argument("--execute", dest="dry_run", action="store_false")
     p = sub.add_parser("jobs"); p.add_argument("action", choices=["list","cancel","retry","rerun","mark-reviewed"]); p.add_argument("--jobs-dir", default="ui/storage/jobs"); p.add_argument("--job-id", default=""); p.add_argument("--new-job-id", default=""); p.add_argument("--note", default=""); p.add_argument("--limit", type=int, default=50)
     p = sub.add_parser("evidence-cleanup"); p.add_argument("--roots", default="reports,ui/storage/jobs"); p.add_argument("--retention-days", type=int, default=90); p.add_argument("--out", default="reports/evidence-cleanup.json"); p.add_argument("--dry-run", action="store_true", default=True); p.add_argument("--delete", dest="dry_run", action="store_false")
+    p = sub.add_parser("snyk-config"); p.add_argument("--api-base-url", default="https://api.snyk.io"); p.add_argument("--api-version", default="2024-10-15"); p.add_argument("--org-id", default=os.environ.get("SNYK_ORG_ID", "")); p.add_argument("--project-id", default=os.environ.get("SNYK_PROJECT_ID", "")); p.add_argument("--token-env", default="SNYK_TOKEN"); p.add_argument("--token-secret-ref", default="env:SNYK_TOKEN"); p.add_argument("--format", default="cyclonedx1.6+json"); p.add_argument("--out", default="configs/generated/integrations/snyk.yml")
+    p = sub.add_parser("snyk-test"); p.add_argument("--api-base-url", default="https://api.snyk.io"); p.add_argument("--api-version", default="2024-10-15"); p.add_argument("--org-id", default=os.environ.get("SNYK_ORG_ID", "")); p.add_argument("--token-env", default="SNYK_TOKEN"); p.add_argument("--out", default="reports/snyk/snyk-test.json"); p.add_argument("--send", action="store_true")
+    p = sub.add_parser("snyk-pull-sbom"); p.add_argument("--api-base-url", default="https://api.snyk.io"); p.add_argument("--api-version", default="2024-10-15"); p.add_argument("--org-id", default=os.environ.get("SNYK_ORG_ID", "")); p.add_argument("--project-id", default=os.environ.get("SNYK_PROJECT_ID", "")); p.add_argument("--token-env", default="SNYK_TOKEN"); p.add_argument("--format", default="cyclonedx1.6+json"); p.add_argument("--out", default="reports/snyk/snyk-project.sbom.cdx.json"); p.add_argument("--meta-out", default="reports/snyk/snyk-pull-meta.json"); p.add_argument("--error-out", default="reports/snyk/snyk-pull-error.json"); p.add_argument("--timeout-seconds", type=int, default=30); p.add_argument("--send", action="store_true")
+    p = sub.add_parser("snyk-compare"); p.add_argument("--snyk-sbom", required=True); p.add_argument("--local-sbom", required=True); p.add_argument("--out", default="reports/snyk/snyk-sbom-compare.json"); p.add_argument("--markdown", default="reports/snyk/snyk-sbom-compare.md")
+    p = sub.add_parser("snyk-smoke"); p.add_argument("--out-dir", default="reports/snyk-smoke")
     p = sub.add_parser("integration-smoke"); p.add_argument("--sbom", default="test-sboms/example-spdx-2.3.json"); p.add_argument("--out", default="reports/integration-smoke/summary.json")
     args = ap.parse_args(argv)
     if args.cmd == "sarif": out = export_sarif(args)
@@ -727,6 +911,11 @@ def main(argv: List[str] | None = None) -> int:
     elif args.cmd == "scheduler-run": out = scheduler_run(args)
     elif args.cmd == "jobs": out = jobs_control(args)
     elif args.cmd == "evidence-cleanup": out = evidence_cleanup(args)
+    elif args.cmd == "snyk-config": out = snyk_config(args)
+    elif args.cmd == "snyk-test": out = snyk_test(args)
+    elif args.cmd == "snyk-pull-sbom": out = snyk_pull_sbom(args)
+    elif args.cmd == "snyk-compare": out = snyk_compare(args)
+    elif args.cmd == "snyk-smoke": out = snyk_smoke(args)
     elif args.cmd == "integration-smoke": out = integration_smoke(args)
     else: raise SystemExit(2)
     print(json.dumps(out, indent=2, sort_keys=True))

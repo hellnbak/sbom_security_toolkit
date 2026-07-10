@@ -1,5 +1,14 @@
 # Release Notes
 
+## v2.8.1 - Snyk SBOM Connector
+
+- Added dry-run-first Snyk connector configuration with token references only.
+- Added Snyk connection test and Snyk project SBOM pull commands.
+- Added Snyk-vs-local SBOM comparison reports for coverage drift and version mismatches.
+- Added Workbench Integrations configuration controls for Snyk org ID, project ID, token environment variable, SBOM format, and local comparison path.
+- Added Make targets: `snyk-config`, `snyk-test`, `snyk-pull-sbom`, `snyk-compare`, and `snyk-smoke`.
+- Added `docs/integrations/SNYK-SBOM-CONNECTOR.md`.
+
 ## v2.8.0 - Productization, QA, and Demo Readiness
 
 - Added `sbomops.productization` helpers for doctor, first-run setup, demo generation, release gate, install notes, and security hardening checklist output.
