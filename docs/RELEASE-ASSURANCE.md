@@ -17,7 +17,7 @@ Version 2.9 introduces a deterministic control plane that turns scan evidence in
 sst org-model context examples/org/enterprise.yml --repository customer-api --out reports/context.json
 sst provenance --artifact dist/app.tar --sbom reports/sbom.cdx.json --provenance reports/slsa.json
 sst assurance --policy policies/production-release-assurance.yml --findings reports/findings.json --vex reports/vex.json --exceptions governance/exceptions.yml --provenance reports/provenance/provenance-verification.json --context reports/context.json
-sst evidence-bundle --release 2.9.0 --include 'reports/**/*.json' --include 'reports/**/*.md'
+sst evidence-bundle --release 2.11.0 --include 'reports/**/*.json' --include 'reports/**/*.md'
 ```
 
 ## Exceptions

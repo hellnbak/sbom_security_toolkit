@@ -1,37 +1,29 @@
 # Roadmap
 
-## Current: v2.10 Connector Platform
+## Current release: v2.11.0 — User Experience and GUI Coverage
 
-The toolkit now includes a shared connector SDK and first-class Snyk, Dependency-Track, DefectDojo, GitHub, and webhook adapters.
+Delivered:
 
-## Next candidates
+- Workflow-oriented Workbench navigation and posture dashboard.
+- Project, scan, finding, decision, action, exception, connector, report, evidence, and search experiences.
+- Security Controls workspace for release assurance, VEX, provenance, evidence, organization context, and remediation.
+- Connector platform for Snyk, Dependency-Track, DefectDojo, GitHub, and webhooks.
+- Audited GUI-to-backend coverage and bounded full-suite validation.
 
-- GitLab vulnerability and merge-request integration.
-- AWS Security Hub, Microsoft Defender for Cloud, and Google Security Command Center.
-- ServiceNow Vulnerability Response, Splunk, Elastic, and Microsoft Sentinel.
-- Bidirectional exception reconciliation and conflict resolution.
-- Background incremental synchronization with durable checkpoints and dead-letter queues.
-- Signed connector event envelopes and OpenTelemetry traces.
+## Next: operational maturity
 
-# Roadmap
+- Durable background connector synchronization with checkpoints and dead-letter queues.
+- GitLab, AWS Security Hub, Microsoft Defender for Cloud, Google Security Command Center, ServiceNow VR, Splunk, Elastic, Sentinel, Slack, and Teams connectors.
+- Bidirectional exception synchronization with conflict detection.
+- Saved views, bulk actions, global command palette, and richer project workspaces.
+- Stronger authentication, RBAC, audit trails, and multi-user deployment controls.
+- OpenTelemetry metrics/traces and connector event envelopes.
 
-## Current focus
+## Later: enterprise and scale
 
-- Local-first SBOM security workbench
-- Self-hosted cloud mode
-- Findings and remediation operations
-- Evidence-bound AI reports
-- Productized QA, demo, and release gates
-
-## Near-term
-
-- Reachability and exploitability context
-- Stronger live integration coverage
-- Worker isolation hardening
-- Kubernetes deployment hardening
-
-## Later
-
-- Optional managed cloud model
-- Marketplace integrations
-- Advanced SSO/SAML enforcement
+- Worker isolation and horizontally scalable job execution.
+- Hardened Kubernetes deployment and managed secret integrations.
+- SSO/SAML/OIDC enforcement and tenant isolation.
+- Runtime reachability and deployment-context correlation.
+- Automated, human-approved remediation pull requests.
+- Portfolio-level executive and auditor dashboards.

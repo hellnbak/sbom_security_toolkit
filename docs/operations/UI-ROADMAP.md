@@ -1,40 +1,18 @@
-# UI Roadmap
+# Workbench UI Roadmap
 
-A UI is useful now, but it should start small. The project should not become a large web app before the CLI workflow is stable.
+The full local Workbench is implemented as of v2.11.0. Current work is focused on operational depth rather than replacing the UI.
 
-## Recommended first UI
+## Delivered
 
-Start with a static local report UI generated from CLI outputs:
+- Workflow-based navigation and responsive application shell.
+- Overview, projects, scans, findings, decisions, actions, exceptions, connectors, reports, evidence, search, settings, and administration.
+- Security Controls for release assurance, VEX, provenance, evidence generation, organization context, and remediation.
+- Route tests and GUI feature-coverage matrix.
 
-- No login.
-- No server.
-- No database.
-- No uploaded sensitive artifacts stored anywhere.
-- Opens from `reports/ui/index.html`.
+## Next improvements
 
-This keeps the project easy to run and safe for source-available release.
-
-## Later UI options
-
-Phase 2 can add a local-only web UI:
-
-- FastAPI backend.
-- Read-only project workspace.
-- Drag-and-drop SBOM upload.
-- Quality score view.
-- Policy results.
-- Scanner comparison.
-- Supplier follow-up questions.
-- VEX template generation.
-
-Phase 3 can add multi-user features only if needed:
-
-- Authentication.
-- Database-backed project history.
-- Role-based access.
-- Secrets management.
-- Background job queue.
-
-## Recommendation
-
-For now, keep the UI as a generated static dashboard. Add a full web app only after the CLI commands and report schema settle.
+- Saved views, bulk actions, command palette, and customizable dashboards.
+- Rich project workspace tabs and finding detail pages.
+- Persona-aware executive, developer, security-engineer, and auditor views.
+- Multi-user authentication, RBAC, audit history, and notification center.
+- Durable background jobs and live progress streaming.

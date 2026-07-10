@@ -1,40 +1,56 @@
 # Installation
 
+## Requirements
+
+- Python 3.10 or newer
+- Git
+- Optional: Docker, Syft, Trivy, Grype, OSV-Scanner, cosign, OpenSSF Scorecard
+
 ## Local editable install
 
 ```bash
 git clone https://github.com/hellnbak/sbom_security_toolkit.git
 cd sbom_security_toolkit
-make setup
+python3 -m venv .venv
 source .venv/bin/activate
-sst --help
+python3 -m pip install --upgrade pip
+pip install -e ".[dev]"
+
+sst version
+sst doctor
 ```
 
-## Run the local workbench
+## Run the Workbench
+
+```bash
+sst workbench
+```
+
+Open <http://127.0.0.1:8080/dashboard>.
+
+Alternative Make target:
 
 ```bash
 make ui-server
 ```
 
-Open <http://127.0.0.1:8080>.
-
-## Docker local workbench
+## Docker local Workbench
 
 ```bash
 make docker-build
 make docker-ui
 ```
 
-The default container binds to `127.0.0.1:8080` and stores generated workbench data in a local volume.
+The default local deployment binds to `127.0.0.1:8080` and stores generated data in local paths or volumes.
 
-## Optional tools
+## Upgrade an existing clone
 
-The toolkit works without external scanners, but some workflows become richer when these are installed:
+Apply release contents to the repository root while preserving `.git`, then reinstall:
 
-- Syft
-- Trivy
-- Grype
-- OSV-Scanner
-- Docker
-- cosign
-- OpenSSF Scorecard
+```bash
+source .venv/bin/activate
+pip install -e ".[dev]"
+sst version
+```
+
+Review `RELEASE-NOTES.md` and run the validation commands in `VALIDATION.md` before deployment.
