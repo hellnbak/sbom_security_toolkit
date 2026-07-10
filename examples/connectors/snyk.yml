@@ -1,0 +1,8 @@
+base_url: https://api.snyk.io
+api_version: 2024-10-15
+org_id: replace-me
+token_ref: env:SNYK_TOKEN
+read_only: true
+verify_tls: true
+timeout_seconds: 30
+retries: 3

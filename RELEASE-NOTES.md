@@ -1,5 +1,18 @@
 # Release Notes
 
+## v2.10.0 — Connector Platform
+
+- Added a shared connector SDK, registry, capability model, and normalized operation results.
+- Added first-class Snyk, Dependency-Track, DefectDojo, GitHub, and generic webhook connectors.
+- Added project discovery, connection testing, dry-run synchronization plans, status persistence, pagination, retries, timeouts, and exponential backoff.
+- Enforced read-only defaults, explicit `--send` network execution, explicit write enablement, environment-variable secret references, TLS verification, and localhost-only insecure test mode.
+- Added `sst connector` and `sst connectors` commands with `add`, `list`, `test`, `discover`, `sync`, and `smoke` operations.
+- Added connector registry examples and detailed connector documentation.
+- Updated the Workbench Integrations page to configure and health-check all supported connectors.
+- Updated the static dashboard with connector health, operation, mode, record count, and error visibility.
+- Added offline end-to-end connector smoke tests and GUI regression tests.
+- Preserved the existing Snyk, Jira, DefectDojo, SARIF, OpenVEX, notification, and CI commands for compatibility.
+
 ## v2.8.1 - Snyk SBOM Connector
 
 - Added dry-run-first Snyk connector configuration with token references only.
@@ -117,3 +130,7 @@ make enterprise-api-token
 - Secrets are references, not plaintext config values.
 - API tokens are displayed once and then stored only as SHA-256 hashes.
 - The enterprise layer is self-hosted scaffolding; full SaaS multi-tenancy and OIDC login enforcement are future layers.
+
+### Validation
+
+See `VALIDATION.md`. Offline connector and legacy integration smoke tests passed. Deterministic connector, core, packaging, release-assurance, provider, and GUI tests passed. The complete legacy suite did not terminate within the allotted window because long-running cloud/workbench/fuzz subprocess tests require bounded CI service fixtures; no assertion failure was observed before timeout.

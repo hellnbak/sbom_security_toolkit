@@ -20,11 +20,21 @@ Use it when you need to answer practical questions:
 - AI-assisted fuzz case generation and evidence-bound AI report writing.
 - Project history, trends, release decisions, findings/remediation operations, and report viewing.
 - Local Workbench UI plus optional self-hosted cloud/enterprise scaffolding.
-- Live/dry-run integrations for Jira, DefectDojo, Snyk SBOM pulls, Slack/webhook/email, SARIF, OpenVEX, GitHub PR summaries, CI templates, OIDC, and Kubernetes/Helm scaffolds.
+- Unified dry-run-first connector platform for Snyk, Dependency-Track, DefectDojo, GitHub, and webhooks, plus Jira, Slack/email, SARIF, OpenVEX, CI templates, OIDC, and Kubernetes/Helm scaffolds.
 
-## What is new in v2.8.1
+## What is new in v2.10.0
 
-**Snyk SBOM Connector** adds dry-run-first Snyk configuration, Snyk project SBOM pull support, Snyk-vs-local SBOM comparison, Workbench configuration controls, and evidence/report outputs for SBOM coverage drift.
+**Connector Platform** adds a unified connector SDK and registry for Snyk, Dependency-Track, DefectDojo, GitHub, and generic webhooks. All connectors are read-only and dry-run by default, use environment-variable secret references, expose capability metadata, maintain auditable status artifacts, and appear in both the static dashboard and Workbench Integrations UI.
+
+```bash
+cp configs/connectors.example.yml configs/connectors.yml
+sst connectors list
+sst connectors smoke
+sst connectors test --name corporate-snyk
+sst connectors discover --name corporate-snyk --send
+```
+
+See `docs/CONNECTORS.md` for configuration, security controls, live operation, and extension guidance.
 
 ## What was added in v2.8.0
 
@@ -106,7 +116,7 @@ The project is intentionally **local-first**. The CLI, Make targets, and web wor
 
 For teams, the toolkit is also **cloud-capable by choice**. Optional self-hosted mode adds Postgres/Redis/object-storage scaffolding, worker separation for long-running jobs, admin/RBAC scaffolding, scheduled scans, audit logs, notification targets, secret references, and deployment guidance while preserving safe defaults.
 
-Current release: **v2.8.1 — Snyk SBOM Connector**
+Current release: **v2.10.0 — Connector Platform**
 
 ---
 
@@ -840,3 +850,20 @@ The v1.x line introduced the original local-first SBOM intake and evidence workf
 ## License
 
 This project uses the **Functional Source License 1.1, Apache 2.0 Future License (`FSL-1.1-ALv2`)**. See `LICENSE`.
+
+## Release assurance and governance (2.9)
+
+Turn vulnerability, VEX, provenance, exception, and business-context evidence into a deterministic release decision:
+
+```bash
+sst assurance \
+  --policy policies/production-release-assurance.yml \
+  --findings reports/findings.json \
+  --vex reports/vex.json \
+  --exceptions governance/exceptions.yml \
+  --provenance reports/provenance/provenance-verification.json \
+  --context reports/context.json
+```
+
+See [Release Assurance](docs/RELEASE-ASSURANCE.md) for policy rules, exit codes, exception workflows, provenance verification, CI gates, and evidence bundles.
+
