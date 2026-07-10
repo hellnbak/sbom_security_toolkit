@@ -1,5 +1,73 @@
 # Release Notes
 
+## v2.9.0 — Release Assurance and Governance
+
+SBOM Security Toolkit v2.9.0 adds a governed release-decision layer on top of the existing SBOM generation, analysis, fuzzing, remediation, integration, and AI-reporting capabilities.
+
+### Release assurance
+
+- Added `sst assurance` and `sst release-assurance`.
+- Added deterministic decisions: `PASS`, `PASS_WITH_WARNINGS`, `APPROVAL_REQUIRED`, `BLOCK`, `INCOMPLETE_EVIDENCE`, and `ERROR`.
+- Added stable exit codes: `0`, `2`, `3`, `4`, `5`, and `10`.
+- Added configurable CI failure thresholds with `--fail-on block|approval|warning|never`.
+- Added policy evaluation for severity, fix availability, CISA KEV status, EPSS, CVSS, finding age, direct dependencies, reachability, and environment.
+- Added explicit evidence requirements for provenance, artifact signatures, SBOM signatures, and builder identity.
+- Added JSON and Markdown policy-decision outputs under `reports/release-assurance/`.
+
+### Risk exceptions and governance
+
+- Added `sst risk-exceptions` and `sst exceptions`.
+- Added exception creation, approval, listing, expiration detection, and revocation.
+- Added scoped exceptions for project, vulnerability, component, package URL, and policy rule.
+- Added requestor, approver, justification, compensating controls, expiry, and append-only history fields.
+- Expired, revoked, or unapproved exceptions no longer suppress blocking policy results.
+
+### VEX and reachability
+
+- Added VEX-aware release evaluation.
+- Findings marked not affected, false positive, resolved, or fixed can be excluded from applicable policy decisions.
+- Added reachability-aware and direct/transitive dependency policy matching.
+
+### Provenance and integrity
+
+- Added `sst provenance`.
+- Added SHA-256 correlation between release artifacts, SBOMs, and SLSA/in-toto-style provenance subjects.
+- Added builder identity extraction.
+- Added optional cosign blob verification for artifacts and SBOMs when signatures and a verification key are supplied.
+- Added machine-readable provenance verification output.
+
+### Release evidence
+
+- Added `sst evidence-bundle`.
+- Added versioned release-evidence directories with `manifest.json` and `checksums.txt`.
+- Added SHA-256 hashes and file sizes for included evidence.
+- Added optional cosign signing of the evidence manifest.
+
+### Organizational context
+
+- Added `sst org-model`.
+- Added organization, business unit, application, service, repository, and artifact hierarchy support.
+- Added ownership, environment, business criticality, internet exposure, data classification, regulatory scope, support tier, runtime platform, and production URL context fields.
+
+### CI/CD and documentation
+
+- Added GitHub Actions and GitLab CI release-assurance templates.
+- Added production release-policy examples and policy-decision schema support.
+- Updated package version to `2.9.0`.
+- Added release-assurance regression tests and packaging/version checks.
+- Updated README, changelog, roadmap, and release documentation for the v2.9.0 release.
+
+### Validation
+
+- Python compilation validation passed.
+- CLI command/help validation passed.
+- Fifteen targeted core, packaging, version, and release-assurance tests passed.
+- The broader suite reached long-running fuzz/workbench integration tests and exceeded the available execution window; no failure was observed before timeout.
+
+### Compatibility
+
+Existing SBOM analysis, repository intake, supplier intake, project history, findings/remediation, integrations, fuzzing, lifecycle intelligence, Snyk ingestion, Workbench, and evidence-grounded AI-reporting workflows remain available.
+
 ## v2.8.1 - Snyk SBOM Connector
 
 - Added dry-run-first Snyk connector configuration with token references only.
@@ -26,8 +94,6 @@
 - Added prompt-only default mode and optional Bedrock/Ollama/GLM/OpenAI-compatible narrative generation.
 - Added `sst ai-report`, `make ai-report`, `make ai-report-facts`, `make ai-report-templates`, and `make ai-report-smoke`.
 - Added `docs/reporting/AI-REPORT-WRITER.md`.
-
-# Release Notes
 
 ## v2.7.2 — Lifecycle Intelligence Sources
 
