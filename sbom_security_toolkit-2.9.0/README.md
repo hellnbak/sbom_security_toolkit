@@ -840,3 +840,20 @@ The v1.x line introduced the original local-first SBOM intake and evidence workf
 ## License
 
 This project uses the **Functional Source License 1.1, Apache 2.0 Future License (`FSL-1.1-ALv2`)**. See `LICENSE`.
+
+## Release assurance and governance (2.9)
+
+Turn vulnerability, VEX, provenance, exception, and business-context evidence into a deterministic release decision:
+
+```bash
+sst assurance \
+  --policy policies/production-release-assurance.yml \
+  --findings reports/findings.json \
+  --vex reports/vex.json \
+  --exceptions governance/exceptions.yml \
+  --provenance reports/provenance/provenance-verification.json \
+  --context reports/context.json
+```
+
+See [Release Assurance](docs/RELEASE-ASSURANCE.md) for policy rules, exit codes, exception workflows, provenance verification, CI gates, and evidence bundles.
+
