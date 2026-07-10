@@ -1,12 +1,13 @@
 ## Summary
 
-## Testing
+## Validation
 
-- [ ] `make test-fast`
-- [ ] `make test-integration-offline`
-- [ ] docs updated
+- [ ] `make test`
+- [ ] `make validate`
+- [ ] `make preflight-release`
 
-## Security considerations
+## Safety
 
-- [ ] No secrets added
-- [ ] No unsafe network/AI behavior added by default
+- [ ] No production/customer SBOMs were added
+- [ ] No secrets or tokens were added
+- [ ] No generated reports/workbench uploads were committed
