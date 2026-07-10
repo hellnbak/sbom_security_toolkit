@@ -429,6 +429,7 @@ class Handler(BaseHTTPRequestHandler):
         <div class='card'><h2>Production integrations</h2>
         <p class='muted'>Generate reviewable export payloads, CI/CD templates, deployment scaffolds, notification tests, OIDC config, and worker runtime limits. Live delivery remains dry-run-first. Use the CLI/Make targets with explicit SEND=1 for real Jira, DefectDojo, Slack/webhook, or email delivery.</p></div>
         <div class='grid'>
+        <div class='card'><h3>Unified connector platform</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='connector-platform'><div class='grid'><div><label>Connector name</label><input name='name' value='corporate-snyk'></div><div><label>Type</label><select name='type'><option value='snyk'>Snyk</option><option value='dependency-track'>Dependency-Track</option><option value='defectdojo'>DefectDojo</option><option value='github'>GitHub</option><option value='webhook'>Generic webhook</option></select></div><div><label>Base URL</label><input name='base_url' placeholder='Provider API URL'></div><div><label>Token environment variable</label><input name='token_env' value='SNYK_TOKEN'></div></div><label>Organization/project/repository identifier</label><input name='resource_id' placeholder='org UUID, project UUID, or owner/repo' size='48'><label><input type='checkbox' name='allow_write' value='true'> Enable write operations</label><p class='small muted'>Read-only and dry-run by default. Secrets are stored only as environment-variable references. Use CLI <code>--send</code> for live network calls.</p><input type='submit' value='Save connector and run dry-run health check'></form></div>
         <div class='card'><h3>Snyk SBOM connector</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='snyk'><div class='grid'><div><label>Snyk org ID</label><input name='org_id' placeholder='SNYK_ORG_ID or UUID'></div><div><label>Snyk project ID</label><input name='project_id' placeholder='SNYK_PROJECT_ID or UUID'></div><div><label>Token env var</label><input name='token_env' value='SNYK_TOKEN'></div><div><label>SBOM format</label><select name='format'><option value='cyclonedx1.6+json'>CycloneDX 1.6 JSON</option><option value='cyclonedx1.5+json'>CycloneDX 1.5 JSON</option><option value='cyclonedx1.4+json'>CycloneDX 1.4 JSON</option><option value='cyclonedx1.6+xml'>CycloneDX 1.6 XML</option><option value='spdx2.3+json'>SPDX 2.3 JSON</option></select></div></div><label>Local SBOM path for comparison</label><input name='local_sbom' value='test-sboms/example-spdx-2.3.json' size='48'><p class='small muted'>Dry-run by default. Stores token references only. Live pulls require CLI/Make with SEND=1.</p><input type='submit' value='Save config and run dry-run'></form></div>
         <div class='card'><h3>SARIF / OpenVEX / ticket payloads</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='exports'><label>SBOM path on this host</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='48'><label>Jira project key</label><input name='project_key' value='SEC'><input type='submit' value='Generate exports'></form></div>
         <div class='card'><h3>CI/CD templates</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='ci'><label>Provider</label><select name='provider'><option value='all'>All</option><option value='github'>GitHub Actions</option><option value='gitlab'>GitLab CI</option><option value='jenkins'>Jenkins</option><option value='circleci'>CircleCI</option><option value='buildkite'>Buildkite</option><option value='azure'>Azure DevOps</option></select><input type='submit' value='Generate CI templates'></form></div>
@@ -445,7 +446,22 @@ class Handler(BaseHTTPRequestHandler):
             from sbomops import integrations as int_ops
             fields = self.parse_urlencoded(); kind = fields.get('kind','')
             outputs = []
-            if kind == 'snyk':
+            if kind == 'connector-platform':
+                from sbomops import connectors as connector_ops
+                name = fields.get('name','connector')
+                ctype = fields.get('type','snyk')
+                token_env = fields.get('token_env','') or {'snyk':'SNYK_TOKEN','dependency-track':'DEPENDENCY_TRACK_API_KEY','defectdojo':'DEFECTDOJO_TOKEN','github':'GITHUB_TOKEN','webhook':'SST_WEBHOOK_URL'}.get(ctype,'CONNECTOR_TOKEN')
+                resource = fields.get('resource_id','')
+                config = {'base_url': fields.get('base_url',''), 'token_ref': 'env:'+token_env, 'read_only': fields.get('allow_write','') != 'true', 'verify_tls': True}
+                if ctype == 'snyk': config['org_id'] = resource
+                elif ctype == 'github': config['repository'] = resource
+                elif ctype == 'dependency-track': config['project_name'] = resource or 'SBOM Security Toolkit Project'
+                elif ctype == 'webhook': config = {'url_ref':'env:'+token_env, 'read_only': fields.get('allow_write','') != 'true', 'verify_tls': True}
+                cfg_path = Path('configs/generated/integrations') / f'{name}.json'
+                cfg_path.parent.mkdir(parents=True, exist_ok=True); cfg_path.write_text(json.dumps(config, indent=2)+'\n')
+                outputs.append(connector_ops.add_connector(_argparse.Namespace(registry='configs/connectors.yml', name=name, type=ctype, config=str(cfg_path), allow_write=fields.get('allow_write','') == 'true', insecure_skip_tls_verify=False, timeout_seconds=30, retries=3)))
+                outputs.append(connector_ops.execute(_argparse.Namespace(registry='configs/connectors.yml', name=name, send=False, out=f'reports/connectors/{name}-health.json'), 'test'))
+            elif kind == 'snyk':
                 org_id = fields.get('org_id','')
                 project_id = fields.get('project_id','')
                 token_env = fields.get('token_env','SNYK_TOKEN') or 'SNYK_TOKEN'

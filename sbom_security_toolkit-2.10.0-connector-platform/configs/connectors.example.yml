@@ -1,0 +1,42 @@
+apiVersion: sbom-toolkit.io/v1
+kind: ConnectorRegistry
+connectors:
+  - name: corporate-snyk
+    type: snyk
+    enabled: true
+    config:
+      base_url: https://api.snyk.io
+      api_version: 2024-10-15
+      org_id: replace-me
+      token_ref: env:SNYK_TOKEN
+      read_only: true
+      verify_tls: true
+  - name: dependency-track
+    type: dependency-track
+    enabled: true
+    config:
+      base_url: http://localhost:8081
+      token_ref: env:DEPENDENCY_TRACK_API_KEY
+      project_name: Example Application
+      project_version: latest
+      read_only: true
+  - name: defectdojo
+    type: defectdojo
+    enabled: true
+    config:
+      base_url: http://localhost:8080
+      token_ref: env:DEFECTDOJO_TOKEN
+      read_only: true
+  - name: github
+    type: github
+    enabled: true
+    config:
+      repository: hellnbak/sbom_security_toolkit
+      token_ref: env:GITHUB_TOKEN
+      read_only: true
+  - name: generic-webhook
+    type: webhook
+    enabled: true
+    config:
+      url_ref: env:SST_WEBHOOK_URL
+      read_only: true

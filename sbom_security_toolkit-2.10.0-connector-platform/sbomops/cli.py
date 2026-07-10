@@ -3,6 +3,13 @@ from __future__ import annotations
 import argparse, subprocess, sys
 
 MODULES = {
+    "assurance": "sbomops.assurance",
+    "release-assurance": "sbomops.assurance",
+    "exceptions": "sbomops.risk_exceptions",
+    "risk-exceptions": "sbomops.risk_exceptions",
+    "provenance": "sbomops.provenance",
+    "evidence-bundle": "sbomops.evidence_bundle",
+    "org-model": "sbomops.org_model",
     "analyze": "sbomops.analyze_project",
     "score": "sbomops.score_sbom",
     "minimum-elements": "sbomops.minimum_elements",
@@ -37,6 +44,8 @@ MODULES = {
     "config": "sbomops.config_manager",
     "enterprise": "sbomops.enterprise",
     "integrations": "sbomops.integrations",
+    "connector": "sbomops.connectors",
+    "connectors": "sbomops.connectors",
     "findings": "sbomops.findings",
     "remediation": "sbomops.findings",
     "reports-viewer": "sbomops.reports_viewer",

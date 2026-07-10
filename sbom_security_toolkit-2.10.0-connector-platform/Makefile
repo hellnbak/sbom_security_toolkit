@@ -1021,3 +1021,13 @@ snyk-compare:
 
 snyk-smoke:
 	python3 -m sbomops.integrations snyk-smoke
+
+# v2.10 unified connector platform
+connectors-list:
+	python3 -m sbomops.connectors --registry configs/connectors.yml list
+
+connectors-smoke:
+	python3 -m sbomops.connectors smoke --out-dir reports/connector-smoke
+
+connectors-ui: connectors-smoke
+	python3 -m sbomops.ui_bundle --reports-dir reports --out-dir reports/ui

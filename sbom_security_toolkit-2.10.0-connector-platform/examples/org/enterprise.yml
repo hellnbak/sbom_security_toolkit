@@ -1,0 +1,22 @@
+organization: ExampleCo
+defaults:
+  security_owner: product-security
+  environment: production
+businessUnits:
+  - name: Digital Products
+    context:
+      regulatory_scope: [SOC2]
+    applications:
+      - name: Customer Portal
+        context:
+          business_criticality: critical
+          data_classification: confidential
+        services:
+          - name: API
+            context:
+              internet_exposed: true
+            repositories:
+              - name: customer-api
+                url: https://github.com/example/customer-api
+                context:
+                  technical_owner: platform-team
