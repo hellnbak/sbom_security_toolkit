@@ -41,6 +41,10 @@ MODULES = {
     "remediation": "sbomops.findings",
     "reports-viewer": "sbomops.reports_viewer",
     "reports": "sbomops.reports_viewer",
+    "product": "sbomops.productization",
+    "qa": "sbomops.productization",
+    "doctor": "sbomops.productization",
+    "demo-product": "sbomops.productization",
     "export": "sbomops.integrations",
     "vex": "sbomops.integrations",
 

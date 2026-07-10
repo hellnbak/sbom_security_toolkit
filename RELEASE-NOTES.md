@@ -1,3 +1,13 @@
+# Release Notes
+
+## v2.8.0 - Productization, QA, and Demo Readiness
+
+- Added `sbomops.productization` helpers for doctor, first-run setup, demo generation, release gate, install notes, and security hardening checklist output.
+- Added Make targets: `test-fast`, `test-integration-offline`, `test-fuzz-smoke`, `test-release`, `test-all`, `doctor`, `first-run`, `demo-product`, `reset-demo`, `security-checklist`, and `install-notes`.
+- Added GitHub issue templates, pull request template, CODEOWNERS, and CI workflow scaffold.
+- Added `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/demo/WALKTHROUGH.md`, `docs/qa/RELEASE-GATE.md`, `docs/deployment/INSTALL.md`, and `docs/product/FIRST-RUN.md`.
+- Updated README to keep the product introduction, value proposition, quick start, and QA/release workflow at the top.
+
 ## v2.7.3 — AI Report Writer
 
 - Added evidence-bound AI report writer for executive, engineering, supplier, release, fuzzing, lifecycle, and full security reports.

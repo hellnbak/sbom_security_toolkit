@@ -1,5 +1,69 @@
 # SBOM Security Toolkit
 
+SBOM Security Toolkit is a local-first, cloud-capable workbench for software supply-chain security. It helps teams generate, validate, fuzz, scan, explain, monitor, and remediate SBOM risk across one-off vendor intake, release decisions, and ongoing project operations.
+
+## Why use this toolkit?
+
+Use it when you need to answer practical questions:
+
+- What is in this software?
+- Is the SBOM complete enough to trust?
+- Are there critical vulnerabilities, EOL runtimes, unsupported dependencies, or scanner disagreements?
+- Can this release ship, or does it need an exception?
+- Who owns the remediation and how do we verify the fix?
+- Can I generate human-readable reports from evidence instead of raw JSON?
+
+## What this toolkit does
+
+- SBOM quality, policy, supplier-intake, VEX, dependency-health, and lifecycle intelligence checks.
+- Coverage-guided and semantic fuzzing for SBOM/toolchain hardening.
+- AI-assisted fuzz case generation and evidence-bound AI report writing.
+- Project history, trends, release decisions, findings/remediation operations, and report viewing.
+- Local Workbench UI plus optional self-hosted cloud/enterprise scaffolding.
+- Live/dry-run integrations for Jira, DefectDojo, Slack/webhook/email, SARIF, OpenVEX, GitHub PR summaries, CI templates, OIDC, and Kubernetes/Helm scaffolds.
+
+## What is new in v2.8.0
+
+**Productization, QA, and Demo Readiness** adds release-gate test tiers, a polished demo workspace, first-run setup helpers, doctor/install/upgrade helpers, public GitHub templates, CI workflow scaffolding, architecture/demo/QA docs, roadmap, and security hardening checklist generation.
+
+## Quick start
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+make doctor
+make demo-product
+make ui-server
+```
+
+Open `http://127.0.0.1:8080`.
+
+## Quality and release gate
+
+```bash
+make test-fast
+make test-integration-offline
+make test-fuzz-smoke
+make test-release
+```
+
+Use `make test-all` for the broader local suite. It can take longer because fuzzing workflows intentionally run subprocesses.
+
+## Documentation
+
+- `docs/ARCHITECTURE.md`
+- `docs/deployment/INSTALL.md`
+- `docs/demo/WALKTHROUGH.md`
+- `docs/qa/RELEASE-GATE.md`
+- `docs/product/FIRST-RUN.md`
+- `ROADMAP.md`
+
+---
+
+## Full documentation and version history
+
+
 **SBOM Security Toolkit** is a local-first, cloud-capable, source-available workbench for SBOM security operations, supplier SBOM intake, repository-to-SBOM analysis, release evidence, production integrations, and SBOM-focused fuzzing research.
 
 It helps security teams, product-security engineers, AppSec teams, maintainers, and researchers answer practical questions:

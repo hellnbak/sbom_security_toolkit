@@ -28,7 +28,7 @@ CSS = """
 """
 
 def page(title: str, body: str) -> bytes:
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/demo'>Demo/QA</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -85,6 +85,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/findings": return self.findings_page()
         if path == "/reports": return self.reports_page()
         if path == "/ai-reports": return self.ai_reports_page()
+        if path == "/demo": return self.demo_qa_page()
         if path.startswith("/reports/view/"): return self.reports_view(path.split("/", 3)[3])
         if path.startswith("/settings/view/"): return self.settings_view(path.split("/", 3)[3])
         if path == "/fuzzing": return self.fuzzing_lab()
@@ -102,6 +103,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/findings/save": return self.findings_save()
         if self.path == "/reports/refresh": return self.reports_refresh()
         if self.path == "/ai-reports/generate": return self.ai_reports_generate()
+        if self.path == "/demo/run": return self.demo_qa_run()
         if self.path.startswith("/delete/"):
             jid = self.path.split("/", 2)[2]; delete_job(jid); self.redirect("/jobs"); return
         self.send_html("Not found", "<div class='card'><h2>Not found</h2></div>", 404)
@@ -755,6 +757,54 @@ class Handler(BaseHTTPRequestHandler):
         <div class='card'><h2>Recent Repository Jobs</h2><table><tr><th>Job</th><th>Workflow</th><th>Status</th><th>Created</th></tr>{recent_rows}</table></div>
         """
         self.send_html("Repository Intake", body)
+
+
+    def demo_qa_page(self):
+        body = """
+        <div class='card'><h2>Demo / QA Readiness</h2>
+        <p class='muted'>Generate a realistic demo workspace, run doctor checks, create first-run defaults, or generate release-readiness artifacts from the Workbench.</p>
+        <form method='post' action='/demo/run'>
+          <label>Action</label>
+          <select name='action'>
+            <option value='doctor'>Doctor / environment check</option>
+            <option value='demo'>Generate demo workspace</option>
+            <option value='first-run'>Generate first-run config</option>
+            <option value='security-checklist'>Generate security hardening checklist</option>
+            <option value='install-notes'>Generate install / upgrade notes</option>
+          </select>
+          <p><label><input type='checkbox' name='load_demo' value='1'> Load demo data during first-run setup</label></p>
+          <input type='submit' value='Run action'>
+        </form></div>
+        <div class='card'><h2>Recommended release gate</h2>
+        <pre>make test-fast
+make test-integration-offline
+make test-fuzz-smoke
+make test-release</pre>
+        <p class='muted'>The broader <code>make test-all</code> target can take longer because fuzzing workflows intentionally run subprocesses.</p></div>
+        <div class='grid'><div class='card'><h3>Demo workspace</h3><p><code>reports/demo-product/</code></p></div><div class='card'><h3>QA docs</h3><p><code>docs/qa/RELEASE-GATE.md</code></p></div><div class='card'><h3>Walkthrough</h3><p><code>docs/demo/WALKTHROUGH.md</code></p></div></div>
+        """
+        self.send_html("Demo / QA", body)
+
+    def demo_qa_run(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        fields = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8", errors="replace"))
+        action = (fields.get("action") or ["doctor"])[0]
+        try:
+            from sbomops import productization
+            import argparse as _argparse
+            if action == "demo":
+                productization.demo(_argparse.Namespace(out_dir=None, reset=True))
+            elif action == "first-run":
+                productization.first_run(_argparse.Namespace(mode="local", project_id="demo-product", policy="policies/default-release-policy.yml", ai_provider="none", fuzzing_profile="release-smoke", load_demo=(fields.get("load_demo") == ["1"]), out=None))
+            elif action == "security-checklist":
+                productization.security_checklist(_argparse.Namespace(out=None))
+            elif action == "install-notes":
+                productization.install_notes(_argparse.Namespace(out=None))
+            else:
+                productization.doctor(_argparse.Namespace(out=None))
+            self.send_html("Demo / QA", f"<div class='card'><h2>Action completed</h2><p>Ran <code>{esc(action)}</code>.</p><p><a class='btn' href='/reports'>View generated reports</a> <a class='btn secondary' href='/demo'>Back</a></p></div>")
+        except Exception as exc:
+            self.send_html("Demo / QA error", f"<div class='card'><h2>Action failed</h2><pre>{esc(exc)}</pre></div>", 500)
 
     def fuzzing_lab(self):
         opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k, v in FUZZ_WORKFLOWS.items())

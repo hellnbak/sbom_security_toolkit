@@ -437,7 +437,7 @@ sbom-experience:
 
 # v1.8 usability, packaging, release hardening
 .PHONY: setup install docker-build docker-ui docker-dtrack docker-guac demo-full coverage preflight-release release version clean-generated
-VERSION ?= 2.6.0
+VERSION ?= 2.8.0
 
 setup:
 	./setup.sh
@@ -936,3 +936,63 @@ ai-report-templates:
 
 ai-report-smoke:
 	python3 -m sbomops.ai_report_writer smoke --sbom $(or $(SBOM),test-sboms/example-spdx-2.3.json) --out-dir reports/ai-smoke
+
+
+# v2.8 productization, QA, and demo readiness
+.PHONY: doctor first-run demo-product reset-demo security-checklist install-notes release-gate test-fast test-unit test-integration-offline test-fuzz-smoke test-release test-all demo-reset
+
+TEST_SBOM ?= test-sboms/example-spdx-2.3.json
+
+# Fast confidence tests that should complete quickly on developer laptops and CI.
+test-fast:
+	python3 -m compileall -q sbomops scripts
+	python3 -m sbomops.cli version
+	$(MAKE) validate
+	python3 -m sbomops.productization doctor --out reports/doctor/doctor.json
+
+# Unit tests only. Longer fuzz/integration suites remain separate.
+test-unit:
+	python3 -m unittest discover -s tests -v
+
+# Offline integration smoke tests. These do not call external Jira/DefectDojo/AI providers.
+test-integration-offline:
+	$(MAKE) integration-smoke SBOM=$(TEST_SBOM)
+	$(MAKE) ai-report-smoke
+	$(MAKE) lifecycle-intelligence SBOM=test-sboms/example-lifecycle.cdx.json OFFLINE_CACHE_ONLY=1
+	$(MAKE) reports-index
+
+# Lightweight fuzz workflow confidence check. Increase TIME_BUDGET locally for deeper testing.
+test-fuzz-smoke:
+	$(MAKE) fuzz-workflow-smoke SBOM=test-sboms/clean/minimal-cyclonedx.json COUNT=1 TIME_BUDGET=1
+
+# Release gate used before packaging/tagging.
+test-release release-gate:
+	python3 -m sbomops.productization release-gate
+	$(MAKE) clean-generated
+	$(MAKE) preflight-release
+
+# Full local suite. This can be long because fuzz tests intentionally run subprocess workflows.
+test-all:
+	$(MAKE) test-fast
+	$(MAKE) test-unit
+	$(MAKE) test-integration-offline
+	$(MAKE) test-fuzz-smoke
+	$(MAKE) preflight-release
+
+doctor:
+	python3 -m sbomops.productization doctor
+
+first-run:
+	python3 -m sbomops.productization first-run --mode $(or $(MODE),local) --project-id $(or $(PROJECT_ID),demo-product) $(if $(LOAD_DEMO),--load-demo,)
+
+demo-product:
+	python3 -m sbomops.productization demo --reset
+
+reset-demo demo-reset:
+	python3 -m sbomops.productization reset-demo
+
+security-checklist:
+	python3 -m sbomops.productization security-checklist
+
+install-notes:
+	python3 -m sbomops.productization install-notes
