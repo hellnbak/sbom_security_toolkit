@@ -1,3 +1,13 @@
+# Changelog
+
+## 2.13.0
+
+- Added all 25 actionable-workflow UX improvements.
+- Added guided workflows, scan profiles, saved views, activity, notifications, persona views, policy simulation, support bundles, feedback, command palette, accessibility controls, and improved recovery guidance.
+- Added `sbomops.workbench.ux` and actionable UX regression tests.
+- Updated documentation and version metadata.
+
+
 # v2.12.0
 
 - Added Quick Start, project, and connector wizards, onboarding checklist, sample workspace, and Help Center.

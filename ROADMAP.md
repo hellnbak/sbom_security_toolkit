@@ -1,5 +1,12 @@
 # Roadmap
 
+## Current release: v2.13.0 Actionable Workflows
+
+The guided and actionable UX layer is complete. Future work should focus on multi-user persistence, production authentication/RBAC, real-time notifications, richer comparison charts, and browser automation tests.
+
+
+# Roadmap
+
 ## Current release: v2.12.0 — User Experience and GUI Coverage
 
 Delivered:

@@ -1,34 +1,18 @@
-# Validation — v2.12.0
+# Validation — v2.13.0 Actionable Workflows
 
-Validation completed for the Guided Experience release.
+## Result
 
-## Results
+All **73 tests passed** when each test module was run in a bounded process. This includes core analysis, packaging, repository intake, dependency health, connectors, release assurance, Workbench, guided experience, actionable UX, cloud mode, AI providers, adaptive fuzzing, and fuzzing operations.
 
-- Python compilation: passed
-- Core, dependency health, repository intake, packaging, connectors, GUI, guided experience, release assurance, and Workbench: 44 passed
-- AI fuzz and provider modules: 15 passed
-- Cloud mode: 3 passed
-- Adaptive fuzzing: 4 passed
-- Fuzzing operations: 3 passed
-- Total: 69 tests passed
+```bash
+python3 -m compileall sbomops ai_fuzz fuzzing
+for f in tests/test_*.py; do
+  PYTHONPATH=. timeout 180 pytest -q "$f"
+done
+```
 
-## Guided GUI coverage
-
-The following routes were exercised through a live local HTTP server:
-
-- `/welcome` and all five wizard steps
-- `/project/new`
-- `/connectors/setup`
-- `/help`
-- `/sample`
-- Existing primary Workbench routes
-
-Connector configuration remains read-only and dry-run by default. Plaintext secrets are not stored.
-
-## Test execution note
-
-A single monolithic `pytest` invocation can exceed the execution window because legacy subprocess-oriented fuzz tests accumulate runtime. Every test module passed in bounded groups.
+The new actionable UX regression suite validates version metadata, the application shell and command palette, all six scan profiles, all seven guided tasks, four persona views, policy simulation, saved local UX state, activity records, and sanitized support-bundle generation.
 
 ## External-system limitation
 
-Live writes to Snyk, GitHub, GitLab, Dependency-Track, DefectDojo, Jira, and webhook destinations were not executed because external credentials were not available. Offline, configuration, read-only, and dry-run behavior was validated.
+Live third-party writes were not performed because credentials were not supplied. Connector writes remain opt-in and require explicit send/write flags. Offline, configuration, read-only, dry-run, local GUI, and artifact-generation paths were tested.

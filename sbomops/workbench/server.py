@@ -22,16 +22,17 @@ from sbomops.config_manager import (
     build_project_defaults_config, import_config, list_configs, safe_slug, write_yaml
 )
 from sbomops import enterprise as enterprise_ops
+from . import ux
 
 CSS = """
 :root{--bg:#f4f6fa;--panel:#fff;--panel2:#f8fafc;--text:#172033;--muted:#667085;--line:#e4e7ec;--brand:#175cd3;--brand2:#004eeb;--danger:#b42318;--warning:#b54708;--success:#067647;--sidebar:#101828;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}*{box-sizing:border-box}body{margin:0;background:var(--bg)}a{color:var(--brand)}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}.sidebar{background:var(--sidebar);color:white;padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}.brand{font-weight:800;font-size:18px;padding:8px 12px 20px}.brand small{display:block;font-weight:500;color:#98a2b3;margin-top:4px}.nav-group{color:#98a2b3;font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:18px 12px 8px}.nav a{display:flex;gap:10px;align-items:center;color:#d0d5dd;padding:10px 12px;border-radius:8px;text-decoration:none;margin:2px 0}.nav a:hover,.nav a.active{background:#344054;color:white}.main{min-width:0}.topbar{height:68px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 28px;position:sticky;top:0;z-index:5}.search{flex:1;max-width:620px}.search input{width:100%}.top-actions{margin-left:auto;display:flex;gap:8px}.wrap{max-width:1440px;margin:0 auto;padding:26px}.page-title{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}.page-title h1{margin:0;font-size:28px}.page-title p{margin:6px 0 0;color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:0 0 18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.metric{background:white;border:1px solid var(--line);border-radius:12px;padding:18px}.metric .label{color:var(--muted);font-size:13px}.metric .value{font-size:30px;font-weight:750;margin:8px 0}.metric .hint{font-size:12px;color:var(--muted)}h1,h2,h3{color:#101828}h2{margin:.1rem 0 1rem;font-size:19px}h3{margin:.2rem 0 .7rem}.btn,button,input[type=submit]{background:var(--brand);color:white;border:0;border-radius:8px;padding:9px 13px;text-decoration:none;display:inline-block;cursor:pointer;font-weight:600}.btn:hover,button:hover{background:var(--brand2)}.btn.secondary{background:white;color:#344054;border:1px solid #d0d5dd}.btn.danger,button.danger{background:var(--danger)}.btn.small{font-size:12px;padding:6px 9px}.muted{color:var(--muted)}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:650;background:#f2f4f7;color:#344054}.completed,.passed,.healthy{background:#ecfdf3;color:var(--success)}.failed,.blocked,.unhealthy{background:#fef3f2;color:var(--danger)}.running,.queued,.warning{background:#fffaeb;color:var(--warning)}.approval{background:#eff8ff;color:#175cd3}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border-bottom:1px solid var(--line);text-align:left;padding:12px 10px;vertical-align:top}th{font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.03em;background:#fcfcfd}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}code,pre{background:#f2f4f7;border-radius:7px}pre{padding:14px;overflow:auto;max-height:520px}input,select,textarea{padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;background:white;color:#101828}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:var(--success)}.bad{color:var(--danger)}.decision{border-left:5px solid var(--brand)}.decision.blocked{border-left-color:var(--danger)}.decision.warning{border-left-color:var(--warning)}.decision.passed{border-left-color:var(--success)}.empty{text-align:center;padding:42px 20px}.empty h3{margin-bottom:8px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolbar .spacer{flex:1}.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 18px}.tabs a{padding:10px 12px;text-decoration:none;color:#475467;border-bottom:2px solid transparent}.tabs a.active{border-color:var(--brand);color:var(--brand);font-weight:650}.callout{padding:14px 16px;border-radius:9px;background:#eff8ff;border:1px solid #b2ddff}.connector{display:flex;gap:14px;align-items:flex-start}.connector-icon{width:42px;height:42px;border-radius:10px;background:#f2f4f7;display:grid;place-items:center;font-weight:800}.progress{height:8px;background:#eaecf0;border-radius:999px;overflow:hidden}.progress span{display:block;height:100%;background:var(--brand)}.steps{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 22px}.step{padding:8px 12px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:13px}.step.active{background:#eff8ff;color:#175cd3;font-weight:700}.choice{display:block;border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0;cursor:pointer}.choice:hover{border-color:#84adff;background:#f9fbff}.checklist li{margin:10px 0}.hero{padding:28px;background:linear-gradient(135deg,#eff8ff,#fff);border:1px solid #b2ddff;border-radius:14px;margin-bottom:18px}@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.metrics{grid-template-columns:repeat(2,1fr)}.topbar{position:relative}.nav a{display:inline-flex}.nav-group{display:none}}@media(max-width:560px){.metrics{grid-template-columns:1fr}.wrap{padding:16px}.topbar{padding:0 16px}.page-title{display:block}.top-actions{display:none}}
 """
 
 NAV = [
-    ("Get Started", [("/welcome","Quick Start"),("/project/new","New Project"),("/help","Help Center")]),
-    ("Workspace", [("/dashboard","Overview"),("/projects","Projects"),("/jobs","Scans"),("/findings","Findings"),("/decisions","Release Decisions"),("/actions","Action Center")]),
+    ("Get Started", [("/welcome","Quick Start"),("/workflows","Guided Workflows"),("/project/new","New Project"),("/help","Help Center")]),
+    ("Workspace", [("/dashboard","Overview"),("/projects","Projects"),("/jobs","Scans"),("/findings","Findings"),("/decisions","Release Decisions"),("/actions","Action Center"),("/saved-views","Saved Views"),("/activity","Activity")]),
     ("Governance", [("/controls","Security Controls"),("/exceptions","Exceptions"),("/reports","Reports"),("/evidence","Evidence")]),
-    ("Platform", [("/integrations","Connectors"),("/settings","Policies & Settings"),("/admin","Administration")]),
+    ("Platform", [("/integrations","Connectors"),("/notifications","Notifications"),("/personas","My View"),("/settings","Policies & Settings"),("/admin","Administration")]),
     ("Advanced", [("/repository","Repository Intake"),("/fuzzing","Fuzzing Lab"),("/scanners","Scanner Status"),("/demo","Demo / QA")]),
 ]
 
@@ -42,9 +43,9 @@ def page(title: str, body: str, path: str = "") -> bytes:
         for href,label in links:
             active=" active" if path == href or (href != '/dashboard' and path.startswith(href+'/')) else ""
             nav.append(f"<a class='{active.strip()}' href='{href}'>{html.escape(label)}</a>")
-    return f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)} · SBOM Security Toolkit</title><style>{CSS}</style></head><body><div class='app'><aside class='sidebar'><div class='brand'>SBOM Security Toolkit<small>Release Assurance Workbench</small></div><nav class='nav'>{''.join(nav)}</nav></aside><section class='main'><header class='topbar'><form class='search' action='/search' method='get'><input name='q' aria-label='Global search' placeholder='Search projects, CVEs, components, releases…'></form><div class='top-actions'><a class='btn secondary' href='/welcome'>Quick Start</a><a class='btn secondary' href='/'>Upload SBOM</a><a class='btn' href='/project/new'>New Project</a></div></header><main class='wrap'>{body}</main></section></div></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)} · SBOM Security Toolkit</title><style>{CSS}</style><script>function togglePalette(){{const p=document.getElementById('palette');p.hidden=!p.hidden;if(!p.hidden)p.querySelector('input').focus()}}document.addEventListener('keydown',e=>{{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){{e.preventDefault();togglePalette()}}if(e.key==='Escape'){{const p=document.getElementById('palette');if(p)p.hidden=true}}}})</script></head><body><div class='app'><aside class='sidebar'><div class='brand'>SBOM Security Toolkit<small>Release Assurance Workbench</small></div><nav class='nav'>{''.join(nav)}</nav><div class='nav-group'>Support</div><nav class='nav'><a href='/policy-simulator'>Policy Simulator</a><a href='/support'>Support Bundle</a><a href='/feedback'>Feedback</a></nav></aside><section class='main'><header class='topbar'><form class='search' action='/search' method='get'><input name='q' aria-label='Global search' placeholder='Search projects, CVEs, components, releases…'></form><div class='top-actions'><button class='btn secondary' onclick='togglePalette()' title='Command palette (⌘K)'>⌘K</button><a class='btn secondary' href='/welcome'>Quick Start</a><a class='btn secondary' href='/'>Upload SBOM</a><a class='btn' href='/project/new'>New Project</a><a class='btn secondary' href='/workflows'>Guided Workflow</a></div></header><main class='wrap'><div id='palette' hidden class='card' style='position:fixed;z-index:30;top:80px;left:50%;transform:translateX(-50%);width:min(620px,90vw);box-shadow:0 18px 60px rgba(0,0,0,.25)'><form action='/search'><input name='q' style='width:100%' placeholder='Search or type a command: scan, project, report, exception…'><div class='toolbar' style='margin-top:12px'><a class='btn secondary' href='/'>Run scan</a><a class='btn secondary' href='/project/new'>New project</a><a class='btn secondary' href='/workflows'>Guided workflow</a><a class='btn secondary' href='/reports'>Generate report</a></div></form></div>{body}</main></section></div></body></html>""".encode()
 
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/demo'>Demo/QA</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style><script>function togglePalette(){{const p=document.getElementById('palette');p.hidden=!p.hidden;if(!p.hidden)p.querySelector('input').focus()}}document.addEventListener('keydown',e=>{{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){{e.preventDefault();togglePalette()}}if(e.key==='Escape'){{const p=document.getElementById('palette');if(p)p.hidden=true}}}})</script></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/demo'>Demo/QA</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'><div id='palette' hidden class='card' style='position:fixed;z-index:30;top:80px;left:50%;transform:translateX(-50%);width:min(620px,90vw);box-shadow:0 18px 60px rgba(0,0,0,.25)'><form action='/search'><input name='q' style='width:100%' placeholder='Search or type a command: scan, project, report, exception…'><div class='toolbar' style='margin-top:12px'><a class='btn secondary' href='/'>Run scan</a><a class='btn secondary' href='/project/new'>New project</a><a class='btn secondary' href='/workflows'>Guided workflow</a><a class='btn secondary' href='/reports'>Generate report</a></div></form></div>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -92,6 +93,14 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/": return self.index()
         if path == "/dashboard": return self.dashboard_page()
         if path == "/welcome": return self.welcome_page(url)
+        if path == "/workflows": return self.workflows_page(url)
+        if path == "/saved-views": return self.saved_views_page()
+        if path == "/activity": return self.activity_page()
+        if path == "/notifications": return self.notifications_page()
+        if path == "/personas": return self.personas_page()
+        if path == "/policy-simulator": return self.policy_simulator_page(url)
+        if path == "/support": return self.support_page()
+        if path == "/feedback": return self.feedback_page()
         if path == "/project/new": return self.project_wizard(url)
         if path == "/connectors/setup": return self.connector_wizard(url)
         if path == "/help": return self.help_page()
@@ -126,6 +135,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/upload": return self.upload()
         if self.path == "/welcome/save": return self.welcome_save()
+        if self.path == "/preferences/save": return self.preferences_save()
+        if self.path == "/saved-views/save": return self.saved_views_save()
+        if self.path == "/notifications/save": return self.notifications_save()
+        if self.path == "/support/create": return self.support_create()
+        if self.path == "/feedback/save": return self.feedback_save()
         if self.path == "/project/new/save": return self.project_wizard_save()
         if self.path == "/connectors/setup/save": return self.connector_wizard_save()
         if self.path == "/settings/save": return self.settings_save()
@@ -264,6 +278,62 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
+
+    def workflows_page(self, url):
+        q=urllib.parse.parse_qs(url.query); chosen=q.get('task',[''])[0]
+        cards=''.join(f"<div class='card'><h3>{esc(label)}</h3><p class='muted'>A guided, step-by-step workflow with sensible defaults and clear completion criteria.</p><a class='btn' href='/workflows?task={esc(key)}'>Start workflow</a></div>" for key,label in ux.TASKS)
+        profile=''.join(f"<option value='{esc(k)}'>{esc(v['label'])}</option>" for k,v in ux.SCAN_PROFILES.items())
+        detail=''
+        if chosen:
+            label=dict(ux.TASKS).get(chosen,chosen)
+            detail=f"<div class='hero'><h2>{esc(label)}</h2><div class='steps'><span class='step active'>1 Goal</span><span class='step'>2 Scope</span><span class='step'>3 Controls</span><span class='step'>4 Run</span><span class='step'>5 Review</span></div><form action='/' method='get'><label>Scan profile</label><select name='profile'>{profile}</select><label>Environment</label><select><option>Development</option><option>Staging</option><option selected>Production</option><option>Regulated production</option></select><p class='callout'><strong>Recommended next step:</strong> Continue to the scan screen with these defaults, then review the plain-language result summary.</p><button>Continue</button></form></div>"
+        self.send_html('Guided Workflows',f"<div class='page-title'><div><h1>Guided workflows</h1><p>Choose an outcome. The Workbench handles the underlying security steps.</p></div></div>{detail}<div class='grid'>{cards}</div>")
+
+    def saved_views_page(self):
+        rows=ux.load('saved_views.json',ux.DEFAULT_VIEWS)
+        cards=''.join(f"<div class='card'><h3>{esc(x['name'])}</h3><code>{esc(x['filter'])}</code><p><a class='btn secondary' href='/findings?{esc(x['filter'])}'>Open view</a></p></div>" for x in rows)
+        self.send_html('Saved Views',f"<div class='page-title'><div><h1>Saved views</h1><p>Reusable filters for high-volume triage.</p></div></div><div class='grid'>{cards}</div><div class='card'><h2>Create view</h2><form method='post' action='/saved-views/save'><label>Name</label><input name='name' required><label>Filter expression</label><input name='filter' placeholder='severity=critical&fix_available=true' size='48' required><button>Save view</button></form></div>")
+
+    def saved_views_save(self):
+        f=self.parse_urlencoded(); rows=ux.load('saved_views.json',ux.DEFAULT_VIEWS); rows.append({'name':f.get('name','Custom view'),'filter':f.get('filter','')}); ux.save('saved_views.json',rows); ux.add_activity('saved_view_created',f.get('name','')); self.redirect('/saved-views')
+
+    def activity_page(self):
+        rows=ux.load('activity.json',[])
+        htmlrows=''.join(f"<tr><td>{esc(x.get('time'))}</td><td>{esc(x.get('action'))}</td><td>{esc(x.get('detail'))}</td><td>{esc(x.get('actor'))}</td></tr>" for x in rows) or "<tr><td colspan='4'>No activity yet.</td></tr>"
+        self.send_html('Activity',f"<div class='page-title'><div><h1>Activity timeline</h1><p>Chronological project and governance events for troubleshooting and audits.</p></div></div><div class='card table-wrap'><table><tr><th>Time</th><th>Action</th><th>Detail</th><th>Actor</th></tr>{htmlrows}</table></div>")
+
+    def notifications_page(self):
+        p=ux.preferences(); selected=set(p.get('notifications',[])); events=[('release_blocked','Release blocked'),('critical_finding','Critical finding introduced'),('connector_failed','Connector failed'),('scan_completed','Scan completed'),('exception_requested','Exception requested'),('exception_expiring','Exception expiring'),('evidence_ready','Evidence ready'),('remediation_pr','Remediation PR created')]
+        checks=''.join(f"<label><input type='checkbox' name='events' value='{k}' {'checked' if k in selected else ''}> {esc(v)}</label>" for k,v in events)
+        self.send_html('Notifications',f"<div class='page-title'><div><h1>Notification preferences</h1><p>Choose events and delivery channels.</p></div></div><div class='card'><form method='post' action='/notifications/save'><div class='grid'><div><h3>Events</h3>{checks}</div><div><h3>Channels</h3><label><input type='checkbox' name='channels' value='in-app' checked> In-app</label><label><input type='checkbox' name='channels' value='email'> Email</label><label><input type='checkbox' name='channels' value='slack'> Slack</label><label><input type='checkbox' name='channels' value='teams'> Teams</label><label><input type='checkbox' name='channels' value='webhook'> Webhook</label></div></div><button>Save preferences</button></form></div>")
+
+    def notifications_save(self):
+        f=self.parse_urlencoded(multi=True); p=ux.preferences(); p['notifications']=f.get('events',[]); p['channels']=f.get('channels',[]); ux.save('preferences.json',p); ux.add_activity('notification_preferences_updated'); self.redirect('/notifications')
+
+    def personas_page(self):
+        p=ux.preferences(); cards=''.join(f"<label class='choice'><input type='radio' name='persona' value='{k}' {'checked' if p.get('persona')==k else ''}> <strong>{k.title()}</strong><br><span class='muted'>{esc(', '.join(items))}</span></label>" for k,items in ux.PERSONAS.items())
+        self.send_html('My View',f"<div class='page-title'><div><h1>My view</h1><p>Tailor the homepage and navigation to your role and preferred level of detail.</p></div></div><div class='card'><form method='post' action='/preferences/save'><h2>Role-specific homepage</h2>{cards}<h2>Interface mode</h2><label><input type='radio' name='mode' value='guided' {'checked' if p.get('mode')=='guided' else ''}> Guided mode</label><label><input type='radio' name='mode' value='advanced' {'checked' if p.get('mode')=='advanced' else ''}> Advanced mode</label><label><input type='checkbox' name='reduced_motion' value='1' {'checked' if p.get('reduced_motion') else ''}> Reduce motion</label><button>Save my view</button></form></div>")
+
+    def preferences_save(self):
+        f=self.parse_urlencoded(); p=ux.preferences(); p.update({'persona':f.get('persona',p.get('persona','security')),'mode':f.get('mode',p.get('mode','guided')),'reduced_motion':f.get('reduced_motion')=='1'}); ux.save('preferences.json',p); ux.add_activity('preferences_updated',json.dumps(p)); self.redirect('/personas')
+
+    def policy_simulator_page(self,url):
+        q=urllib.parse.parse_qs(url.query); policy=q.get('policy',['standard'])[0]; r=ux.policy_simulation(policy)
+        self.send_html('Policy Simulator',f"<div class='page-title'><div><h1>Policy simulation</h1><p>Preview impact before enforcing a policy.</p></div></div><div class='card'><form><label>Policy preset</label><select name='policy'><option value='development'>Development</option><option value='standard' {'selected' if policy=='standard' else ''}>Standard production</option><option value='high-assurance' {'selected' if policy=='high-assurance' else ''}>High assurance</option></select><button>Simulate</button></form></div><div class='metrics'><div class='metric'><div class='label'>Would pass</div><div class='value'>{r['pass']}</div></div><div class='metric'><div class='label'>Warnings</div><div class='value'>{r['warning']}</div></div><div class='metric'><div class='label'>Approval</div><div class='value'>{r['approval']}</div></div><div class='metric'><div class='label'>Blocked</div><div class='value'>{r['blocked']}</div></div></div><div class='callout'><strong>Recommendation:</strong> Run simulation against production data before enabling enforcement. This preview is deterministic sample data when no project corpus is selected.</div>")
+
+    def support_page(self):
+        self.send_html('Support',"<div class='page-title'><div><h1>Support and diagnostics</h1><p>Create a sanitized troubleshooting package with version, route health, connector state, and UX settings.</p></div></div><div class='card'><p>Secrets and raw connector tokens are never included.</p><form method='post' action='/support/create'><button>Create support bundle</button></form></div><div class='card'><h2>Error recovery checklist</h2><ol><li>Review the plain-language error and recommended action.</li><li>Retry the operation.</li><li>Open technical details only when needed.</li><li>Create a support bundle if the issue persists.</li></ol></div>")
+
+    def support_create(self):
+        try:
+            p=ux.create_support_bundle(); self.send_html('Support bundle ready',f"<div class='card'><h2>Support bundle ready</h2><p><code>{esc(p)}</code></p><p class='ok'>Secrets were excluded.</p><a class='btn' href='/support'>Back</a></div>")
+        except Exception as exc: self.send_html('Support bundle failed',f"<div class='card'><h2>Support bundle failed</h2><p>What failed: bundle creation.</p><p>Recommended action: verify reports/support is writable and retry.</p><details><summary>Technical details</summary><pre>{esc(exc)}</pre></details></div>",500)
+
+    def feedback_page(self):
+        self.send_html('Feedback',"<div class='page-title'><div><h1>Product feedback</h1><p>Tell us where the experience is unclear.</p></div></div><div class='card'><form method='post' action='/feedback/save'><label>Page or workflow</label><input name='context' required><label>Was the recommendation useful?</label><select name='useful'><option>Yes</option><option>Partly</option><option>No</option></select><label>What was confusing?</label><textarea name='message' required></textarea><button>Submit feedback</button></form></div>")
+
+    def feedback_save(self):
+        f=self.parse_urlencoded(); rows=ux.load('feedback.json',[]); rows.append({'time':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),**f}); ux.save('feedback.json',rows); ux.add_activity('feedback_submitted',f.get('context','')); self.send_html('Thank you',"<div class='card'><h2>Thank you</h2><p>Your feedback was saved locally.</p><a class='btn' href='/dashboard'>Return to dashboard</a></div>")
 
     def _all_statuses(self):
         try:
@@ -814,10 +884,11 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.send_html("Admin error", f"<div class='card'><h2>Admin error</h2><pre>{esc(exc)}</pre></div>", 400)
 
-    def parse_urlencoded(self) -> Dict[str, str]:
+    def parse_urlencoded(self, multi: bool = False):
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length).decode("utf-8", errors="replace")
-        return {k: v[-1] if v else "" for k, v in urllib.parse.parse_qs(raw, keep_blank_values=True).items()}
+        parsed = urllib.parse.parse_qs(raw, keep_blank_values=True)
+        return parsed if multi else {k: v[-1] if v else "" for k, v in parsed.items()}
 
     def bool_field(self, fields: Dict[str, str], name: str) -> bool:
         return fields.get(name) in {"1", "true", "on", "yes"}

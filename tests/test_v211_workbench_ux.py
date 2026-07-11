@@ -19,7 +19,7 @@ class WorkbenchUXTests(unittest.TestCase):
 
     def test_version(self):
         from sbomops.__version__ import __version__
-        self.assertEqual(__version__, "2.12.0")
+        self.assertEqual(__version__, "2.13.0")
 
 
 if __name__ == "__main__":

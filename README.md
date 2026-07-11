@@ -119,3 +119,10 @@ Some legacy subprocess-heavy tests are best run in the bounded groups documented
 ## License
 
 Functional Source License 1.1, Apache 2.0 Future License. See [LICENSE](LICENSE).
+
+## v2.13.0 Actionable Workflows
+
+The Workbench now guides users from goal to result with task-based workflows, scan profiles, saved views, role-specific home views, policy simulation, notification preferences, activity timelines, a command palette, sanitized support bundles, accessibility controls, and in-product feedback. See `docs/ACTIONABLE-WORKFLOWS.md`.
+
+### Deployment
+
