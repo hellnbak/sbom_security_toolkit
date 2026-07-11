@@ -1,3 +1,15 @@
+# Quick Start — v2.13.0
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+sst workbench
+```
+
+Open `http://127.0.0.1:8080/welcome`, or start with `/workflows` to choose a task-based flow. Use `Cmd/Ctrl+K` for the command palette. The default experience is guided and local-first.
+
+
 # Quick Start
 
 Launch `sst workbench` and open `http://127.0.0.1:8080/welcome` for the guided setup wizard.

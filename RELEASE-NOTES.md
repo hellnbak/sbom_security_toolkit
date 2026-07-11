@@ -1,3 +1,12 @@
+# SBOM Security Toolkit v2.13.0 — Actionable Workflows
+
+This release implements all 25 planned user-experience improvements. It adds guided workflows, scan profiles, prioritized next actions, finding-level remediation paths, bulk-triage and saved-view patterns, project activity timelines, notification preferences, persona-specific views, guided/advanced modes, policy simulation, comparison-oriented flows, better progress and error recovery, environment-aware defaults, a command palette, sanitized support bundles, accessibility improvements, and in-product feedback.
+
+## Validation
+
+The release is compiled and tested with the complete bounded test matrix documented in `VALIDATION.md`. Live external writes require user-provided credentials and remain opt-in.
+
+
 # Release Notes
 
 ## v2.12.0 — Guided Experience
