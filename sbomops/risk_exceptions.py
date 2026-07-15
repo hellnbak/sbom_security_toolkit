@@ -1,32 +1,70 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json, uuid
-from datetime import datetime, timezone
+import argparse, secrets
 from pathlib import Path
-import yaml
+from typing import Any
+from .release_common import load_data, now, parse_time, write_yaml
+DEFAULT=Path('governance/exceptions.yml')
 
-def now(): return datetime.now(timezone.utc).isoformat()
-def read(path):
-    p=Path(path); return yaml.safe_load(p.read_text()) if p.exists() else {'apiVersion':'sbom-toolkit.io/v1','kind':'RiskExceptionList','exceptions':[]}
-def write(path,data): Path(path).parent.mkdir(parents=True,exist_ok=True); Path(path).write_text(yaml.safe_dump(data,sort_keys=False))
+def _db(path: Path)->dict[str,Any]:
+    d=load_data(path,{}) or {}
+    if isinstance(d,list): d={'exceptions':d}
+    d.setdefault('version',1); d.setdefault('exceptions',[])
+    return d
+
+def _save(path:Path,d:dict[str,Any]): write_yaml(path,d)
+def _id()->str: return 'RISK-'+now()[:10].replace('-','')+'-'+secrets.token_hex(3).upper()
+def _find(d,eid):
+    for x in d['exceptions']:
+        if x.get('id')==eid:return x
+    raise SystemExit(f'exception not found: {eid}')
+def _active(x):
+    if x.get('status')!='approved': return False
+    exp=parse_time(x.get('expires'))
+    from datetime import datetime, timezone
+    return not exp or exp>datetime.now(timezone.utc)
+
+def create(a):
+    p=Path(a.store); d=_db(p)
+    item={'id':_id(),'status':'requested','created_at':now(),'updated_at':now(),'project':a.project or '',
+          'vulnerability':a.vulnerability or '','component':a.component or '','purl':a.purl or '',
+          'policy_rule':a.policy_rule or '','environment':a.environment or '',
+          'requestor':a.requestor,'approver':'','justification':a.justification,
+          'compensating_controls':a.compensating_control or [],'expires':a.expires,'history':[{'at':now(),'action':'created','actor':a.requestor}]}
+    d['exceptions'].append(item); _save(p,d); return item
+
+def transition(a,status,actor_field):
+    p=Path(a.store);d=_db(p);x=_find(d,a.id);actor=getattr(a,actor_field)
+    x['status']=status;x['updated_at']=now();x[actor_field]=actor
+    x.setdefault('history',[]).append({'at':now(),'action':status,'actor':actor,'reason':getattr(a,'reason','')})
+    _save(p,d);return x
+
+def list_items(a):
+    d=_db(Path(a.store)); items=d['exceptions']
+    if a.status: items=[x for x in items if x.get('status')==a.status]
+    for x in items: x['effective']=_active(x)
+    return {'count':len(items),'exceptions':items}
+
+def expire(a):
+    from datetime import datetime,timezone
+    p=Path(a.store);d=_db(p);n=0
+    for x in d['exceptions']:
+        exp=parse_time(x.get('expires'))
+        if x.get('status')=='approved' and exp and exp<=datetime.now(timezone.utc):
+            x['status']='expired';x['updated_at']=now();x.setdefault('history',[]).append({'at':now(),'action':'expired','actor':'system'});n+=1
+    _save(p,d);return {'expired':n}
+
+def parser():
+    ap=argparse.ArgumentParser(description='Manage auditable, time-bound risk exceptions')
+    ap.add_argument('--store',default=str(DEFAULT)); sp=ap.add_subparsers(dest='cmd',required=True)
+    c=sp.add_parser('create'); c.add_argument('--project');c.add_argument('--vulnerability');c.add_argument('--component');c.add_argument('--purl');c.add_argument('--policy-rule');c.add_argument('--environment');c.add_argument('--justification',required=True);c.add_argument('--compensating-control',action='append');c.add_argument('--requestor',required=True);c.add_argument('--expires',required=True);c.set_defaults(fn=create)
+    for name,status,actor in [('approve','approved','approver'),('revoke','revoked','approver'),('reject','rejected','approver')]:
+        s=sp.add_parser(name);s.add_argument('id');s.add_argument(f'--{actor}',required=True);s.add_argument('--reason',default='');s.set_defaults(fn=lambda a,st=status,ac=actor:transition(a,st,ac))
+    l=sp.add_parser('list');l.add_argument('--status');l.set_defaults(fn=list_items)
+    e=sp.add_parser('expire');e.set_defaults(fn=expire)
+    return ap
+
 def main(argv=None):
-    ap=argparse.ArgumentParser(description='Manage auditable, expiring risk exceptions.'); sub=ap.add_subparsers(dest='cmd',required=True)
-    p=sub.add_parser('create'); p.add_argument('--store',default='governance/exceptions.yml'); p.add_argument('--project',required=True); p.add_argument('--vulnerability'); p.add_argument('--component'); p.add_argument('--purl'); p.add_argument('--rule'); p.add_argument('--justification',required=True); p.add_argument('--compensating-control',action='append',default=[]); p.add_argument('--requestor',required=True); p.add_argument('--expires',required=True)
-    p=sub.add_parser('approve'); p.add_argument('id'); p.add_argument('--store',default='governance/exceptions.yml'); p.add_argument('--approver',required=True)
-    p=sub.add_parser('revoke'); p.add_argument('id'); p.add_argument('--store',default='governance/exceptions.yml'); p.add_argument('--actor',required=True); p.add_argument('--reason',required=True)
-    p=sub.add_parser('list'); p.add_argument('--store',default='governance/exceptions.yml'); p.add_argument('--json',action='store_true')
-    a=ap.parse_args(argv); d=read(a.store); items=d.setdefault('exceptions',[])
-    if a.cmd=='create':
-        ident='RISK-'+datetime.now().strftime('%Y%m%d')+'-'+uuid.uuid4().hex[:6].upper(); e={'metadata':{'id':ident,'created_at':now()},'spec':{'project':a.project,'vulnerability':a.vulnerability,'component':a.component,'purl':a.purl,'rule':a.rule,'justification':a.justification,'compensatingControls':a.compensating_control,'requestor':a.requestor,'expires':a.expires,'status':'requested','history':[{'at':now(),'actor':a.requestor,'action':'created'}]}}; items.append(e); write(a.store,d); print(ident); return 0
-    target=next((e for e in items if e.get('metadata',{}).get('id')==getattr(a,'id',None)),None)
-    if a.cmd in {'approve','revoke'} and not target: raise SystemExit('exception not found')
-    if a.cmd=='approve': target['spec'].update({'status':'approved','approvedBy':a.approver,'approvedAt':now()}); target['spec'].setdefault('history',[]).append({'at':now(),'actor':a.approver,'action':'approved'}); write(a.store,d); return 0
-    if a.cmd=='revoke': target['spec'].update({'status':'revoked','revokedBy':a.actor,'revokedAt':now(),'revocationReason':a.reason}); target['spec'].setdefault('history',[]).append({'at':now(),'actor':a.actor,'action':'revoked','reason':a.reason}); write(a.store,d); return 0
-    active=[]
-    for e in items:
-        exp=e.get('spec',{}).get('expires'); expired=False
-        try: expired=datetime.fromisoformat(str(exp).replace('Z','+00:00'))<=datetime.now(timezone.utc)
-        except Exception: pass
-        x=json.loads(json.dumps(e)); x['expired']=expired; active.append(x)
-    print(json.dumps(active,indent=2) if a.json else '\n'.join(f"{e['metadata']['id']}\t{e['spec']['status']}\t{e['spec']['project']}\texpires={e['spec']['expires']}" for e in active)); return 0
+    import json
+    a=parser().parse_args(argv);r=a.fn(a);print(json.dumps(r,indent=2,sort_keys=True));return 0
 if __name__=='__main__': raise SystemExit(main())

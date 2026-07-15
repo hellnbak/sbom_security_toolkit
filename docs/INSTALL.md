@@ -2,37 +2,56 @@
 
 ## Requirements
 
-- Python 3.10 or newer
-- Git
-- Optional: Docker, Syft, Trivy, Grype, OSV-Scanner, cosign, OpenSSF Scorecard
+- Python 3.9 or newer
+- macOS or Linux
+- Optional external scanners such as Syft, Trivy, Grype, and OSV-Scanner
 
-## Local editable install
+## Recommended local installation
 
 ```bash
 git clone https://github.com/hellnbak/sbom_security_toolkit.git
 cd sbom_security_toolkit
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
-pip install -e ".[dev]"
-
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e ".[dev]"
+sst --help
 sst version
-sst doctor
 ```
 
-## Run the Workbench
+The pip upgrade occurs only inside `.venv`. v2.14.2 also includes `setup.py` for compatibility with Apple systems whose starting pip version is 21.2.x.
+
+The bundled helper performs the same steps:
 
 ```bash
-sst workbench
+./scripts/bootstrap-macos.sh
+source .venv/bin/activate
 ```
 
-Open <http://127.0.0.1:8080/dashboard>.
+## Validate dependencies
 
-Alternative Make target:
+```bash
+make check-runtime-deps
+make reconciled-test
+```
+
+A missing `PyYAML` dependency now produces a direct installation error instead of being misreported as malformed JSON.
+
+## Run the local Workbench
 
 ```bash
 make ui-server
 ```
+
+Open <http://127.0.0.1:8080>.
+
+## Run the live offline demo
+
+```bash
+make demo-live
+```
+
+This creates local runtime data under ignored Workbench directories. It does not require network access or credentials.
 
 ## Docker local Workbench
 
@@ -41,16 +60,16 @@ make docker-build
 make docker-ui
 ```
 
-The default local deployment binds to `127.0.0.1:8080` and stores generated data in local paths or volumes.
+The default container binds to `127.0.0.1:8080` and stores generated Workbench data in a local volume.
 
-## Upgrade an existing clone
+## Optional tools
 
-Apply release contents to the repository root while preserving `.git`, then reinstall:
+The toolkit works without external scanners, but some workflows become richer when these are installed:
 
-```bash
-source .venv/bin/activate
-pip install -e ".[dev]"
-sst version
-```
-
-Review `RELEASE-NOTES.md` and run the validation commands in `VALIDATION.md` before deployment.
+- Syft
+- Trivy
+- Grype
+- OSV-Scanner
+- Docker
+- cosign
+- OpenSSF Scorecard

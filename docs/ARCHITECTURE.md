@@ -1,44 +1,33 @@
 # Architecture
 
-SBOM Security Toolkit v2.11.0 is a local-first, cloud-capable software supply-chain security platform with six primary layers.
+## v2.14.2 runtime architecture
 
-## 1. User interfaces
+The Workbench is a local HTTP server backed by a filesystem job store. Guided UI routes translate user intent into a normalized workflow and call the same `create_job` entry point used by upload forms. Each job writes a status document, execution contract, logs, deterministic result artifacts, report state, and an evidence archive.
 
-- `sst` CLI and Make targets for reproducible automation.
-- FastAPI Workbench for guided local operation.
-- CI templates for GitHub Actions and GitLab.
+The runtime sequence is:
 
-## 2. Workflow and control plane
+1. A route or CLI helper selects a workflow and source.
+2. `sbomops.wizard_runtime` resolves policy/profile/source options.
+3. `sbomops.workbench.job_runner.create_job` copies or references the input and starts the worker thread.
+4. The job runner executes deterministic subprocess steps and writes their results.
+5. `sbomops.workbench.runtime_hooks` starts automatic reporting after the workflow reaches a terminal state.
+6. `sbomops.reporting_runtime` calls the evidence-bound report writer and records an independent report state.
+7. The evidence ZIP is rebuilt after the default report and after each optional report variant.
 
-- Projects, jobs, normalized findings, remediation, release decisions, exceptions, and evidence lifecycle.
-- Security Controls workspace for release assurance, VEX, provenance, organization context, evidence generation, and remediation planning.
-- Policy-as-code and stable release-decision exit codes.
+The live demo uses this same path. Its only special behavior is synthetic evidence preparation and a demo summary around the normal analysis workflow.
 
-## 3. Analysis services
+Release assurance is deterministic and separate from AI narrative reporting. `sbomops.assurance` consumes policy, findings, VEX, exceptions, provenance, and context and emits a stable decision and exit code.
 
-- CycloneDX/SPDX normalization, quality scoring, minimum-elements checks, supplier intake, dependency health, lifecycle intelligence, vulnerability prioritization, scanner comparison, and SBOM repair.
-- Coverage-guided, grammar, semantic, VEX-logic, and AI-assisted fuzzing.
-- Evidence-bound deterministic and AI-assisted reporting.
+Connector configuration stores secret references and defaults to read-only or dry-run modes. Existing integration modules remain available for vendor-specific payloads and delivery.
 
-## 4. Connector platform
+---
 
-- Shared connector registry and capability model.
-- Snyk, Dependency-Track, DefectDojo, GitHub, and webhook adapters.
-- Existing Jira, notifications, SARIF, OpenVEX, CI, and scheduled-integration helpers.
-- Dry-run/read-only defaults, explicit network/write enablement, secret references, retries, and status artifacts.
+SBOM Security Toolkit is local-first and cloud-capable. The main layers are:
 
-## 5. Storage and evidence
+1. CLI and Make targets for reproducible workflows.
+2. Workbench UI for uploads, jobs, reports, findings, AI reports, integrations, settings, and admin controls.
+3. Analysis modules for SBOM quality, policy, dependency health, lifecycle intelligence, fuzzing, and reports.
+4. Operational modules for projects, findings/remediation, integrations, scheduling, and evidence cleanup.
+5. Optional self-hosted cloud components for API/UI, workers, Postgres, Redis, and object storage.
 
-Local filesystem storage is the default for projects, jobs, reports, connector state, findings, exceptions, and evidence bundles. Evidence packages can include checksums, manifests, policy decisions, SBOMs, VEX, reports, provenance, and optional signatures.
-
-## 6. Optional cloud deployment
-
-Self-hosted scaffolding supports API/UI services, workers, Postgres, Redis, object storage, OIDC, Kubernetes/Helm, and cloud AI providers. Cloud deployment is optional; the local Workbench remains fully supported.
-
-## Trust boundaries and safe defaults
-
-- Local execution and local storage by default.
-- Network, AI, and connector writes require explicit opt-in.
-- Secrets are referenced by environment variable or external secret store.
-- AI output is advisory and evidence-bound.
-- Release approval, risk acceptance, finding suppression, and code changes remain human-controlled.
+Safe defaults: local execution, network opt-in, AI opt-in, dry-run live integrations, and evidence-bound reporting.

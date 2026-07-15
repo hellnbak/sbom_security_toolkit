@@ -1,12 +1,20 @@
 ## Summary
 
-## Testing
+## User-visible behavior
+
+## Validation
 
 - [ ] `make test-fast`
+- [ ] `make test-unit`
+- [ ] `make reconciled-test`
 - [ ] `make test-integration-offline`
-- [ ] docs updated
+- [ ] `make demo-live`
+- [ ] Documentation and version metadata updated
 
-## Security considerations
+## Security and data safety
 
-- [ ] No secrets added
-- [ ] No unsafe network/AI behavior added by default
+- [ ] No production/customer SBOMs or reports were added
+- [ ] No credentials, tokens, secrets, or private URLs were added
+- [ ] Connector configuration stores secret references only
+- [ ] Generated jobs, reports, caches, and local environment files are excluded
+- [ ] External writes or network calls remain explicit opt-ins

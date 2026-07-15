@@ -1,44 +1,73 @@
 # Changelog
 
+## 2.14.2 — 2026-07-15
+
+### Added
+
+- Compatibility `setup.py` and a macOS virtual-environment bootstrap script.
+- Non-destructive Git checkout updater with pre-application status and binary-diff backups.
+- v2.14.2 hotfix documentation and regression coverage.
+- Complete reconciled release tree combining the attached v2.8.2 package, verified later repository capability surface, and corrected v2.14 runtime work.
+- Deterministic release assurance, risk exceptions, provenance verification, release evidence bundling, organization context, and unified connector commands.
+- Release-review job-runner workflow.
+- Guided scan profiles, outcomes, personas, saved views, activity, notifications, policy simulation, support, feedback, and help routes.
+- Policies, examples, schemas, tests, reconciliation metadata, and current documentation.
+
+### Changed
+
+- `make reconciled-test` now runs the complete Python regression suite.
+- Release preflight now evaluates tracked or manifested runtime files instead of rejecting harmless local demo output.
+- CI validates Python 3.9 and 3.12 and installs the development extras.
+- Automatic detailed engineering reporting now runs after deterministic job completion.
+- Quick Start, Guided Workflows, project creation, and Demo/QA now execute tasks.
+- Demo mode now runs the normal pipeline using synthetic evidence.
+- Repository fuzzing is selected by profile or explicit fuzz workflow.
+- Optional reports reuse the completed evidence and refresh the evidence archive.
+- README, quick start, upgrade, release notes, architecture, roadmap, and validation documentation now use one consistent release version.
+
+### Fixed
+
+- Editable-install failure on Apple pip 21.2.4 caused by a missing legacy setuptools entry point.
+- YAML files being passed to the JSON parser when PyYAML was unavailable.
+- Destructive GitHub update instructions that could remove valid v2.9-v2.13 files.
+- False preflight failure after running the live demo.
+- Regression coverage gaps that allowed connector, release-assurance, and guided-UX compatibility issues into v2.14.1.
+- `analyze-everything` lifecycle-cache `cmd`/`dep_cmd` bug.
+- v2.14 overlay indentation incompatibility on the attached source tree.
+- Missing Workbench route installation for guided pages.
+- Duplicate automatic-report paths.
+- Report variants missing from downloadable evidence archives.
+- Undefined `PYTHON` Make variable that caused `demo-live` and runtime helper targets to execute `m ...` and ignore the failure.
+- Stale v2.8/v2.12/v2.13 current-release declarations.
+
+## 2.14.0
+
+- Initial automatic-report, executable-wizard, and live-demo runtime work. Superseded by v2.14.2 because the overlay was not compatible with every older source tree.
+
 ## 2.13.0
 
-- Added all 25 actionable-workflow UX improvements.
-- Added guided workflows, scan profiles, saved views, activity, notifications, persona views, policy simulation, support bundles, feedback, command palette, accessibility controls, and improved recovery guidance.
-- Added `sbomops.workbench.ux` and actionable UX regression tests.
-- Updated documentation and version metadata.
+- Actionable workflows and outcome-driven Workbench UX.
 
+## 2.12.0
 
-# v2.12.0
+- Guided experience, profiles, personas, saved views, notifications, policy simulation, and support workflows.
 
-- Added Quick Start, project, and connector wizards, onboarding checklist, sample workspace, and Help Center.
+## 2.11.0
 
-# Changelog
+- User-experience and documentation improvements.
 
-## 2.12.0 — User Experience and GUI Coverage
+## 2.10.0
 
-- Replaced utility-centric Workbench navigation with a responsive workflow-oriented application shell.
-- Added posture dashboard, project/scans/findings workflows, release decisions, action center, exception governance, connector health, reports, evidence inventory, and global search.
-- Added Security Controls workspace for release assurance, OpenVEX drafting, provenance verification, evidence-bundle generation, organization context, and remediation planning.
-- Added progressive disclosure, first-run and empty-state guidance, and narrow-screen support.
-- Corrected release-assurance GUI input handling to use normalized findings.
-- Added graceful HTTP 409 behavior when evidence bundles are not ready.
-- Added GUI feature-coverage and route tests.
-- Refreshed README, Quick Start, Roadmap, release notes, architecture, Workbench, GUI coverage, release-assurance, and validation documentation.
-- Validated 66 tests in bounded groups.
+- Connector platform and onboarding.
 
-## 2.10.0 — Connector Platform
+## 2.9.0
 
-- Added shared connector SDK, registry, capabilities, status artifacts, retries, pagination, and dry-run plans.
-- Added first-class Snyk, Dependency-Track, DefectDojo, GitHub, and webhook connectors.
-- Added unified connector CLI and Workbench connector health/configuration experience.
-- Enforced read-only, environment-secret, TLS, and explicit-send safeguards.
+- Release assurance and governance.
 
-## 2.9.0 — Release Assurance and Governance
+## 2.8.x
 
-- Added deterministic release decisions and stable CI exit codes.
-- Added policy-as-code evaluation, expiring risk exceptions, compensating controls, VEX-aware decisions, provenance checks, organization context, and signed evidence helpers.
-- Added GitHub and GitLab release-gate templates.
+- Productization, QA/demo readiness, Snyk SBOM connector, Quick Start/upload fixes, and automatic reporting foundations.
 
-## Earlier releases
+## 2.7.x and earlier
 
-See `RELEASE-NOTES.md` for the detailed history of v2.8.x and earlier capabilities.
+- Reports viewer, AI report writer, lifecycle intelligence, remediation operations, integrations, enterprise/cloud scaffolding, repository intake, and fuzzing platform foundations.

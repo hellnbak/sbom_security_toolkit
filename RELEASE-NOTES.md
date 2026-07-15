@@ -1,114 +1,103 @@
-# SBOM Security Toolkit v2.13.0 — Actionable Workflows
-
-This release implements all 25 planned user-experience improvements. It adds guided workflows, scan profiles, prioritized next actions, finding-level remediation paths, bulk-triage and saved-view patterns, project activity timelines, notification preferences, persona-specific views, guided/advanced modes, policy simulation, comparison-oriented flows, better progress and error recovery, environment-aware defaults, a command palette, sanitized support bundles, accessibility improvements, and in-product feedback.
-
-## Validation
-
-The release is compiled and tested with the complete bounded test matrix documented in `VALIDATION.md`. Live external writes require user-provided credentials and remain opt-in.
-
-
 # Release Notes
 
-## v2.12.0 — Guided Experience
+## v2.14.2 — GitHub Reconciliation Hotfix
 
-This release makes the Workbench easier for new and occasional users while preserving advanced security-engineering workflows.
+v2.14.2 supersedes v2.14.1. It retains the automatic reporting, executable guided workflows, and live demo while correcting the installation, compatibility, preflight, and GitHub update defects discovered during a real macOS deployment.
 
-### Added
+### Packaging and upgrade hotfixes
 
-- Five-step Quick Start wizard based on user goals
-- Guided source, environment, and policy selection
-- Project creation wizard with ownership and business context
-- Connector setup wizard with read-only and dry-run defaults
-- Dashboard onboarding checklist and recommended actions
-- Sample workspace requiring no credentials
-- In-product Help Center
-- Plain-language navigation and quick actions
-- Responsive wizard and choice-card styling
-- Documentation and regression coverage for all guided routes and forms
+- Adds a compatibility `setup.py` so editable installation works on macOS environments starting with pip 21.2.x.
+- Documents upgrading pip, setuptools, and wheel inside the virtual environment before installing `.[dev]`.
+- Adds `scripts/bootstrap-macos.sh` for a repeatable local installation.
+- Adds `scripts/apply-release-safe.sh`, which records the existing Git diff and copies release files without deleting destination-only files.
+- Removes the destructive `rsync --delete` update pattern.
+- Restores valid v2.9-v2.13 CI, policy, schema, connector, example, guided-UX, and regression-test files.
+- Changes release preflight to reject generated files only when they are tracked by Git or included in the release manifest.
+- Adds ignored paths for demo state, local projects, generated configurations, and upgrade manifests.
+- Produces a direct missing-PyYAML error instead of trying to parse YAML as JSON.
+- Expands `make reconciled-test` to run the complete Python regression suite.
 
-### Safety defaults
 
-- Connector writes remain disabled unless explicitly enabled
-- Secrets are referenced through environment variables and are not stored in plaintext
-- Guided workflows create configuration and local artifacts; they do not merge code or approve risk automatically
+### Automatic reporting
 
-### Upgrade
+- Generates a detailed Full Security Engineering Report for every Workbench run after the deterministic workflow reaches a terminal state.
+- Keeps report status independent from scan status; report-provider failure does not change the scan result.
+- Supports executive, developer, compliance, supplier, customer-facing, release, fuzzing, and lifecycle versions from the same run evidence.
+- Refreshes the evidence archive after default and optional reports so downloadable evidence remains complete.
+- Removes duplicate automatic-report execution paths.
 
-Upgrade from v2.11.0 by replacing the repository contents while preserving `.git`, then reinstalling with `pip install -e ".[dev]"`.
+### Executable guided experience
 
-# Release Notes — v2.11.0
+- Quick Start now queues a job on its final step.
+- Guided Workflow cards map to concrete job-runner workflows.
+- Project creation can immediately start the first analysis.
+- Repository paths and URLs are passed to repository intake.
+- Repository fuzzing is controlled by the selected profile instead of being forced by every repository analysis.
+- Guided release review runs normal analysis plus deterministic release assurance.
+- Every guided job receives an execution contract.
 
-## SBOM Security Toolkit v2.11.0 — User Experience and GUI Coverage
+### Live demo
 
-This release turns the Workbench into a guided software supply-chain security application and completes GUI coverage for the major backend control-plane capabilities introduced in v2.9 and v2.10.
+- Replaces static sample metrics with an offline synthetic CycloneDX run through the normal job runner.
+- Produces real job states, steps, logs, findings, analysis artifacts, reports, demo metadata, and an evidence archive.
+- Requires no production data, credentials, or network access.
 
-### Workflow-oriented Workbench
+### Release assurance and governance
 
-- Responsive sidebar and top action bar.
-- Overview dashboard for posture, blocked releases, recent activity, and connector health.
-- Project, scan, finding, release-decision, action-center, exception, connector, report, evidence, and search pages.
-- Improved first-run, empty, loading, and error states.
-- Mobile and narrow-screen behavior.
-- Progressive disclosure for advanced technical details.
+- Adds deterministic decisions: `PASS`, `PASS_WITH_WARNINGS`, `APPROVAL_REQUIRED`, `BLOCK`, `INCOMPLETE_EVIDENCE`, and `ERROR`.
+- Adds VEX-aware finding exclusion and approved, scoped, time-bound risk exceptions.
+- Adds provenance subject/hash correlation and optional cosign verification.
+- Adds release evidence manifests, checksums, archives, and optional signing.
+- Adds organizational context and ownership validation.
+- Adds policy, exception, connector, and release-decision schemas and examples.
 
-### Security Controls workspace
+### Connector and UX reconciliation
 
-The new workspace provides GUI access to:
+- Adds a unified connector interface with read-only/dry-run defaults and environment-variable secret references.
+- Preserves existing vendor-specific integrations.
+- Adds scan profiles, personas, saved views, activity history, notifications, policy simulation, feedback/help routes, and redacted support bundles.
 
-- release-assurance evaluation over normalized findings;
-- OpenVEX draft generation;
-- artifact and provenance digest verification;
-- hash-manifested evidence-bundle generation;
-- organization/ownership context templates; and
-- deterministic remediation planning.
+### Runtime fixes
 
-### Reliability corrections
+- Fixes the `analyze-everything` lifecycle-cache command variable.
+- Fixes the v2.14 overlay indentation incompatibility on the attached v2.8.2 tree.
+- Integrates missing guided routes into the actual Workbench server.
+- Fixes optional report variants not appearing in the evidence archive.
+- Defines the Makefile Python interpreter so demo and runtime helper targets execute instead of being treated as ignored `-m` recipes.
+- Keeps report generation after deterministic evidence creation.
 
-- Corrected the GUI release-assurance form to match the backend normalized-findings contract.
-- Added HTTP 409 handling when a job exists but its evidence bundle is not yet ready.
-- Added live route tests for primary and advanced Workbench pages.
-- Added an explicit GUI feature-coverage matrix.
+### Documentation
+
+- Replaces contradictory README version declarations with one v2.14.2 declaration.
+- Adds a clean quick start, upgrade guide, automatic-report guide, guided-workflow/demo guide, release-assurance guide, reconciliation notes, and validation record.
+- Updates changelog, roadmap, version metadata, policies, examples, schemas, and release packaging guidance.
 
 ### Compatibility
 
-Existing CLI commands, policies, connector files, project records, findings, reports, and evidence directories remain compatible. External connector calls and writes remain opt-in.
+Existing SBOM analysis, repository intake, supplier review, dependency health, lifecycle intelligence, Snyk workflows, findings/remediation, production integrations, project history, report viewing, fuzzing, and enterprise/cloud scaffolding remain available.
 
-### Validation
+### Validation summary
 
 - Python compilation passed.
-- All 66 tests passed in bounded deterministic groups.
-- Coverage includes core SBOM operations, repository intake, dependency health, release assurance, connectors, Workbench routes, cloud mode, AI providers, packaging, and fuzzing modules.
-- Connector offline smoke and legacy integration dry-run smoke passed.
-- Live third-party writes were not performed because credentials were not supplied.
+- Targeted v2.14/v2.14.2 unit tests passed.
+- Live demo completed using the normal job runner.
+- Automatic engineering reporting completed.
+- Executive and developer report variants were generated without rescanning.
+- Variant reports were confirmed inside the refreshed evidence archive.
+- Guided release review completed and produced deterministic release-assurance evidence.
+- Workbench guided routes were exercised over HTTP.
 
-See `VALIDATION.md` for details.
+See `VALIDATION.md` for exact commands and limitations.
 
-## Upgrade
-
-Apply the archive contents to the repository root, preserving `.git`, then reinstall:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-sst version
-sst workbench
-```
-
-Open <http://127.0.0.1:8080/dashboard>.
+---
 
 ## Previous major releases
 
-### v2.10.0 — Connector Platform
-
-Introduced the connector SDK and first-class Snyk, Dependency-Track, DefectDojo, GitHub, and webhook adapters, with safe defaults, status artifacts, retries, pagination, and unified CLI/GUI operations.
-
-### v2.9.0 — Release Assurance and Governance
-
-Introduced deterministic release decisions, policy-as-code gates, risk exceptions, VEX-aware evaluation, provenance checks, organization context, and signed evidence helpers.
-
-### v2.8.x — Productization and Snyk integration
-
-Added product QA/release workflows, demo readiness, GitHub project scaffolding, and the original Snyk SBOM connector.
-
-For older feature history, consult Git tags and the repository changelog.
+- **v2.13.0 — Actionable Workflows:** guided outcome selection, workflow previews, project setup, connector onboarding, sample workspace, and improved job details.
+- **v2.12.0 — Guided Experience:** first-run wizard, scan profiles, policy simulator, personas, saved views, notifications, activity history, support bundle, and help/feedback experience.
+- **v2.11.0 — User Experience:** navigation, onboarding, result presentation, and documentation improvements.
+- **v2.10.0 — Connector Platform:** normalized connector configuration, discovery/sync contracts, and dry-run-first onboarding.
+- **v2.9.0 — Release Assurance and Governance:** release decisions, risk exceptions, VEX/reachability, provenance, release evidence, and organizational context.
+- **v2.8.x — Productization and Automatic Reports:** QA tiers, demo/productization helpers, Snyk connector, upload UX, and automatic reporting foundations.
+- **v2.7.x — Reports, Lifecycle, and Remediation:** report viewer, lifecycle intelligence, AI report writer, and findings/remediation operations.
+- **v2.6 and earlier:** live integrations, cloud/enterprise scaffolding, project operations, repository intake, and the SBOM fuzzing platform.

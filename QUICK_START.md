@@ -1,114 +1,89 @@
-# Quick Start — v2.13.0
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-sst workbench
-```
-
-Open `http://127.0.0.1:8080/welcome`, or start with `/workflows` to choose a task-based flow. Use `Cmd/Ctrl+K` for the command palette. The default experience is guided and local-first.
-
-
 # Quick Start
 
-Launch `sst workbench` and open `http://127.0.0.1:8080/welcome` for the guided setup wizard.
+## Supported environment
 
-# Quick Start — SBOM Security Toolkit v2.12.0
+- Python 3.9 or newer
+- macOS, Linux, or a compatible container environment
+- Network access is needed only to install Python dependencies or use live connectors
 
-## Install locally
+## Install on macOS or Linux
+
+The bootstrap script upgrades the virtual environment's packaging tools before installing the toolkit. It does not modify the system Python installation.
 
 ```bash
-git clone https://github.com/hellnbak/sbom_security_toolkit.git
-cd sbom_security_toolkit
+python3 --version
+./scripts/bootstrap-macos.sh
+source .venv/bin/activate
+sst version
+```
+
+Expected version: `2.14.2`.
+
+Equivalent manual commands:
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
-pip install -e ".[dev]"
-```
-
-Verify the installation:
-
-```bash
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e ".[dev]"
 sst version
-sst doctor
-sst --help
 ```
 
-## Start the Workbench
+A compatibility `setup.py` is included so Apple environments still using pip 21.2.x can perform an editable install. Upgrading pip inside the virtual environment remains recommended.
+
+## Run the offline live demo
 
 ```bash
-sst workbench
+make doctor
+make demo-live
+make ui-server
 ```
 
-Open <http://127.0.0.1:8080/dashboard>.
+Open `http://127.0.0.1:8080`, then select **Demo** or **Jobs**. The demo uses a clearly marked synthetic CycloneDX SBOM and the normal job runner. It creates real status transitions, logs, analysis artifacts, an automatic engineering report, and an evidence archive.
 
-Recommended first workflow:
+## Analyze your own SBOM
 
-1. Open **Scans** or **Repository Intake**.
-2. Upload an SBOM, select a local repository/archive, or provide a GitHub repository.
-3. Run analysis.
-4. Review **Findings** and **Release Decisions**.
-5. Use **Security Controls** for VEX, provenance, evidence, organization context, or remediation.
-6. Generate a report or evidence bundle.
-
-## Analyze an existing SBOM
+Use **Quick Start**, **Guided Workflows**, or the upload page. For the CLI:
 
 ```bash
-sst analyze --help
-sst score --help
-sst minimum-elements --help
-sst dependency-health --help
+make sbom-score SBOM=/path/to/bom.json
+make dependency-health SBOM=/path/to/bom.json
 ```
-
-Test files are available under `test-sboms/`.
 
 ## Analyze a repository
 
 ```bash
-sst repo-intake --help
+make repo-intake REPO_SOURCE=/path/to/repository
 ```
 
-Repository intake can detect ecosystems, use installed generators/scanners, compare generated SBOMs, evaluate dependency health, optionally fuzz results, and package evidence.
-
-## Configure connectors
+For a private GitHub repository, keep the token in an environment variable:
 
 ```bash
-cp configs/connectors.example.yml configs/connectors.yml
-sst connectors list
-sst connectors smoke
+export GITHUB_TOKEN=github_pat_xxx
+make repo-intake \
+  REPO_SOURCE=https://github.com/org/private-repo.git \
+  ALLOW_REMOTE=1 \
+  GITHUB_TOKEN_ENV=GITHUB_TOKEN
 ```
 
-Live network calls require explicit `--send`; write operations additionally require write enablement in connector configuration. Store tokens in the referenced environment variables.
+## Generate another report version
 
-## Release assurance and governance
+Every completed Workbench run receives a default engineering report. Generate an executive version from the same evidence without rerunning the scan:
 
 ```bash
-sst release-assurance --help
-sst risk-exceptions --help
-sst vex --help
-sst provenance --help
-sst evidence-bundle --help
-sst org-model --help
-sst remediation --help
+make report-variant \
+  JOB_DIR=ui/storage/jobs/<job-id> \
+  REPORT_VARIANT=executive
 ```
 
-The Workbench exposes these functions under **Release Decisions**, **Exceptions**, **Evidence**, and **Security Controls**.
+The job evidence ZIP is refreshed automatically.
 
-## Reports
+## Validate the installation
 
 ```bash
-sst ai-report --help
-sst reports index
+make reconciled-test
+make preflight-release
+make demo-live
 ```
 
-AI providers are optional. Prompt-only/local operation remains available, and generated narrative is always advisory.
-
-## Validate the package
-
-```bash
-python3 -m compileall sbomops ai_fuzz fuzzing
-pytest -q
-```
-
-See `VALIDATION.md` for bounded test groups and known behavior of subprocess-heavy legacy tests.
+`preflight-release` ignores local, untracked demo output. It fails only when generated runtime data is tracked by Git or included in the release manifest.

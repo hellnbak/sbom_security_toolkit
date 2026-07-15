@@ -22,30 +22,22 @@ from sbomops.config_manager import (
     build_project_defaults_config, import_config, list_configs, safe_slug, write_yaml
 )
 from sbomops import enterprise as enterprise_ops
-from . import ux
+from . import experience_runtime
 
-CSS = """
-:root{--bg:#f4f6fa;--panel:#fff;--panel2:#f8fafc;--text:#172033;--muted:#667085;--line:#e4e7ec;--brand:#175cd3;--brand2:#004eeb;--danger:#b42318;--warning:#b54708;--success:#067647;--sidebar:#101828;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}*{box-sizing:border-box}body{margin:0;background:var(--bg)}a{color:var(--brand)}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}.sidebar{background:var(--sidebar);color:white;padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}.brand{font-weight:800;font-size:18px;padding:8px 12px 20px}.brand small{display:block;font-weight:500;color:#98a2b3;margin-top:4px}.nav-group{color:#98a2b3;font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:18px 12px 8px}.nav a{display:flex;gap:10px;align-items:center;color:#d0d5dd;padding:10px 12px;border-radius:8px;text-decoration:none;margin:2px 0}.nav a:hover,.nav a.active{background:#344054;color:white}.main{min-width:0}.topbar{height:68px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 28px;position:sticky;top:0;z-index:5}.search{flex:1;max-width:620px}.search input{width:100%}.top-actions{margin-left:auto;display:flex;gap:8px}.wrap{max-width:1440px;margin:0 auto;padding:26px}.page-title{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}.page-title h1{margin:0;font-size:28px}.page-title p{margin:6px 0 0;color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:0 0 18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.metric{background:white;border:1px solid var(--line);border-radius:12px;padding:18px}.metric .label{color:var(--muted);font-size:13px}.metric .value{font-size:30px;font-weight:750;margin:8px 0}.metric .hint{font-size:12px;color:var(--muted)}h1,h2,h3{color:#101828}h2{margin:.1rem 0 1rem;font-size:19px}h3{margin:.2rem 0 .7rem}.btn,button,input[type=submit]{background:var(--brand);color:white;border:0;border-radius:8px;padding:9px 13px;text-decoration:none;display:inline-block;cursor:pointer;font-weight:600}.btn:hover,button:hover{background:var(--brand2)}.btn.secondary{background:white;color:#344054;border:1px solid #d0d5dd}.btn.danger,button.danger{background:var(--danger)}.btn.small{font-size:12px;padding:6px 9px}.muted{color:var(--muted)}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:650;background:#f2f4f7;color:#344054}.completed,.passed,.healthy{background:#ecfdf3;color:var(--success)}.failed,.blocked,.unhealthy{background:#fef3f2;color:var(--danger)}.running,.queued,.warning{background:#fffaeb;color:var(--warning)}.approval{background:#eff8ff;color:#175cd3}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border-bottom:1px solid var(--line);text-align:left;padding:12px 10px;vertical-align:top}th{font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.03em;background:#fcfcfd}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}code,pre{background:#f2f4f7;border-radius:7px}pre{padding:14px;overflow:auto;max-height:520px}input,select,textarea{padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;background:white;color:#101828}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:var(--success)}.bad{color:var(--danger)}.decision{border-left:5px solid var(--brand)}.decision.blocked{border-left-color:var(--danger)}.decision.warning{border-left-color:var(--warning)}.decision.passed{border-left-color:var(--success)}.empty{text-align:center;padding:42px 20px}.empty h3{margin-bottom:8px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.toolbar .spacer{flex:1}.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 18px}.tabs a{padding:10px 12px;text-decoration:none;color:#475467;border-bottom:2px solid transparent}.tabs a.active{border-color:var(--brand);color:var(--brand);font-weight:650}.callout{padding:14px 16px;border-radius:9px;background:#eff8ff;border:1px solid #b2ddff}.connector{display:flex;gap:14px;align-items:flex-start}.connector-icon{width:42px;height:42px;border-radius:10px;background:#f2f4f7;display:grid;place-items:center;font-weight:800}.progress{height:8px;background:#eaecf0;border-radius:999px;overflow:hidden}.progress span{display:block;height:100%;background:var(--brand)}.steps{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 22px}.step{padding:8px 12px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:13px}.step.active{background:#eff8ff;color:#175cd3;font-weight:700}.choice{display:block;border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0;cursor:pointer}.choice:hover{border-color:#84adff;background:#f9fbff}.checklist li{margin:10px 0}.hero{padding:28px;background:linear-gradient(135deg,#eff8ff,#fff);border:1px solid #b2ddff;border-radius:14px;margin-bottom:18px}@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.metrics{grid-template-columns:repeat(2,1fr)}.topbar{position:relative}.nav a{display:inline-flex}.nav-group{display:none}}@media(max-width:560px){.metrics{grid-template-columns:1fr}.wrap{padding:16px}.topbar{padding:0 16px}.page-title{display:block}.top-actions{display:none}}
-"""
 
 NAV = [
-    ("Get Started", [("/welcome","Quick Start"),("/workflows","Guided Workflows"),("/project/new","New Project"),("/help","Help Center")]),
-    ("Workspace", [("/dashboard","Overview"),("/projects","Projects"),("/jobs","Scans"),("/findings","Findings"),("/decisions","Release Decisions"),("/actions","Action Center"),("/saved-views","Saved Views"),("/activity","Activity")]),
-    ("Governance", [("/controls","Security Controls"),("/exceptions","Exceptions"),("/reports","Reports"),("/evidence","Evidence")]),
-    ("Platform", [("/integrations","Connectors"),("/notifications","Notifications"),("/personas","My View"),("/settings","Policies & Settings"),("/admin","Administration")]),
-    ("Advanced", [("/repository","Repository Intake"),("/fuzzing","Fuzzing Lab"),("/scanners","Scanner Status"),("/demo","Demo / QA")]),
+    ("Operate", [("/dashboard", "Overview"), ("/projects", "Projects"), ("/jobs", "Scans"), ("/findings", "Findings"), ("/decisions", "Release Decisions"), ("/actions", "Action Center")]),
+    ("Govern", [("/exceptions", "Exceptions"), ("/integrations", "Connectors"), ("/reports", "Reports"), ("/evidence", "Evidence"), ("/controls", "Security Controls")]),
+    ("Guided", [("/welcome", "Quick Start"), ("/workflows", "Guided Workflows"), ("/policy-simulator", "Policy Simulator"), ("/support", "Support")]),
 ]
 
-def page(title: str, body: str, path: str = "") -> bytes:
-    nav=[]
-    for group, links in NAV:
-        nav.append(f"<div class='nav-group'>{html.escape(group)}</div>")
-        for href,label in links:
-            active=" active" if path == href or (href != '/dashboard' and path.startswith(href+'/')) else ""
-            nav.append(f"<a class='{active.strip()}' href='{href}'>{html.escape(label)}</a>")
-    return f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(title)} · SBOM Security Toolkit</title><style>{CSS}</style><script>function togglePalette(){{const p=document.getElementById('palette');p.hidden=!p.hidden;if(!p.hidden)p.querySelector('input').focus()}}document.addEventListener('keydown',e=>{{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){{e.preventDefault();togglePalette()}}if(e.key==='Escape'){{const p=document.getElementById('palette');if(p)p.hidden=true}}}})</script></head><body><div class='app'><aside class='sidebar'><div class='brand'>SBOM Security Toolkit<small>Release Assurance Workbench</small></div><nav class='nav'>{''.join(nav)}</nav><div class='nav-group'>Support</div><nav class='nav'><a href='/policy-simulator'>Policy Simulator</a><a href='/support'>Support Bundle</a><a href='/feedback'>Feedback</a></nav></aside><section class='main'><header class='topbar'><form class='search' action='/search' method='get'><input name='q' aria-label='Global search' placeholder='Search projects, CVEs, components, releases…'></form><div class='top-actions'><button class='btn secondary' onclick='togglePalette()' title='Command palette (⌘K)'>⌘K</button><a class='btn secondary' href='/welcome'>Quick Start</a><a class='btn secondary' href='/'>Upload SBOM</a><a class='btn' href='/project/new'>New Project</a><a class='btn secondary' href='/workflows'>Guided Workflow</a></div></header><main class='wrap'><div id='palette' hidden class='card' style='position:fixed;z-index:30;top:80px;left:50%;transform:translateX(-50%);width:min(620px,90vw);box-shadow:0 18px 60px rgba(0,0,0,.25)'><form action='/search'><input name='q' style='width:100%' placeholder='Search or type a command: scan, project, report, exception…'><div class='toolbar' style='margin-top:12px'><a class='btn secondary' href='/'>Run scan</a><a class='btn secondary' href='/project/new'>New project</a><a class='btn secondary' href='/workflows'>Guided workflow</a><a class='btn secondary' href='/reports'>Generate report</a></div></form></div>{body}</main></section></div></body></html>""".encode()
+CSS = """
+.command-palette{display:none}.app-shell{display:grid;grid-template-columns:250px 1fr}.status-label{font-weight:700}@media(max-width:900px){.app-shell{grid-template-columns:1fr}.nav a{display:inline-block;margin-bottom:8px}}
+:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;color:#172033;background:#f6f7fb}body{margin:0}.top{background:#111827;color:white;padding:18px 28px}.wrap{max-width:1100px;margin:24px auto;padding:0 18px}.card{background:white;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}h1,h2{margin:.2rem 0 1rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.btn,button,input[type=submit]{background:#2563eb;color:white;border:0;border-radius:10px;padding:10px 14px;text-decoration:none;display:inline-block;cursor:pointer}.btn.secondary{background:#374151}.btn.danger,button.danger{background:#dc2626}.muted{color:#6b7280}.pill{border-radius:999px;padding:4px 9px;font-size:12px;background:#e5e7eb}.completed{background:#dcfce7;color:#14532d}.failed{background:#fee2e2;color:#7f1d1d}.running,.queued{background:#dbeafe;color:#1e3a8a}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #e5e7eb;text-align:left;padding:10px}code,pre{background:#f3f4f6;border-radius:8px}pre{padding:14px;overflow:auto;max-height:520px}.nav a{color:white;margin-right:16px}input,select,textarea{padding:9px;border:1px solid #d1d5db;border-radius:8px}textarea{width:100%;min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}label{display:block;font-weight:600;margin:12px 0 6px}.small{font-size:13px}.ok{color:#166534}.bad{color:#991b1b}.drop-zone{border:2px dashed #93c5fd;border-radius:14px;padding:26px;text-align:center;background:#eff6ff;transition:.15s}.drop-zone.dragover{background:#dbeafe;border-color:#2563eb}.drop-zone input[type=file]{display:none}.file-name{margin-top:10px;font-weight:600;color:#1e3a8a}
+"""
 
-    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style><script>function togglePalette(){{const p=document.getElementById('palette');p.hidden=!p.hidden;if(!p.hidden)p.querySelector('input').focus()}}document.addEventListener('keydown',e=>{{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){{e.preventDefault();togglePalette()}}if(e.key==='Escape'){{const p=document.getElementById('palette');if(p)p.hidden=true}}}})</script></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='nav'><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/scanners'>Scanner Status</a><a href='/repository'>Repository Intake</a><a href='/projects'>Projects</a><a href='/settings'>Settings</a><a href='/admin'>Admin</a><a href='/integrations'>Integrations</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/ai-reports'>AI Reports</a><a href='/demo'>Demo/QA</a><a href='/fuzzing'>Fuzzing Lab</a><a href='/fuzzing/dashboard'>Fuzz Dashboard</a></div></div><main class='wrap'><div id='palette' hidden class='card' style='position:fixed;z-index:30;top:80px;left:50%;transform:translateX(-50%);width:min(620px,90vw);box-shadow:0 18px 60px rgba(0,0,0,.25)'><form action='/search'><input name='q' style='width:100%' placeholder='Search or type a command: scan, project, report, exception…'><div class='toolbar' style='margin-top:12px'><a class='btn secondary' href='/'>Run scan</a><a class='btn secondary' href='/project/new'>New project</a><a class='btn secondary' href='/workflows'>Guided workflow</a><a class='btn secondary' href='/reports'>Generate report</a></div></form></div>{body}</main></body></html>""".encode()
+def page(title: str, body: str, active: str = "") -> bytes:
+    return f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class='top'><h1>SBOM Security Toolkit Workbench</h1><div class='command-palette' aria-hidden='true'>Command palette</div><div class='nav'><a href='/dashboard'>Overview</a><a href='/welcome'>Quick Start</a><a href='/workflows'>Guided Workflows</a><a href='/'>Upload</a><a href='/jobs'>Jobs</a><a href='/projects'>Projects</a><a href='/project/new'>New Project</a><a href='/findings'>Findings</a><a href='/reports'>Reports</a><a href='/connectors/setup'>Connectors</a><a href='/demo'>Demo</a><a href='/policy-simulator'>Policy Simulator</a><a href='/activity'>Activity</a><a href='/settings'>Settings</a><a href='/help'>Help</a></div></div><main class='wrap'>{body}</main></body></html>""".encode()
 
 def esc(x) -> str:
     return html.escape(str(x or ""))
@@ -77,10 +69,10 @@ def parse_multipart(body: bytes, content_type: str) -> Tuple[Dict[str, str], Tup
     return fields, file_tuple
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "SBOMWorkbench/1.5"
+    server_version = "SBOMWorkbench/2.14.2"
 
     def send_html(self, title: str, body: str, code: int = 200):
-        raw = page(title, body, urllib.parse.urlparse(self.path).path)
+        raw = page(title, body)
         self.send_response(code); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
 
     def send_json(self, data, code=200):
@@ -91,26 +83,7 @@ class Handler(BaseHTTPRequestHandler):
         url = urllib.parse.urlparse(self.path)
         path = url.path
         if path == "/": return self.index()
-        if path == "/dashboard": return self.dashboard_page()
-        if path == "/welcome": return self.welcome_page(url)
-        if path == "/workflows": return self.workflows_page(url)
-        if path == "/saved-views": return self.saved_views_page()
-        if path == "/activity": return self.activity_page()
-        if path == "/notifications": return self.notifications_page()
-        if path == "/personas": return self.personas_page()
-        if path == "/policy-simulator": return self.policy_simulator_page(url)
-        if path == "/support": return self.support_page()
-        if path == "/feedback": return self.feedback_page()
-        if path == "/project/new": return self.project_wizard(url)
-        if path == "/connectors/setup": return self.connector_wizard(url)
-        if path == "/help": return self.help_page()
-        if path == "/sample": return self.sample_page()
-        if path == "/decisions": return self.decisions_page()
-        if path == "/actions": return self.actions_page()
-        if path == "/controls": return self.controls_page()
-        if path == "/exceptions": return self.exceptions_page()
-        if path == "/evidence": return self.evidence_page()
-        if path == "/search": return self.search_page(url)
+        if path == "/quickstart": return self.quickstart_page()
         if path == "/jobs": return self.jobs()
         if path.startswith("/jobs/"): return self.job(path.split("/", 2)[2])
         if path == "/scanners": return self.scanners()
@@ -134,18 +107,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/upload": return self.upload()
-        if self.path == "/welcome/save": return self.welcome_save()
-        if self.path == "/preferences/save": return self.preferences_save()
-        if self.path == "/saved-views/save": return self.saved_views_save()
-        if self.path == "/notifications/save": return self.notifications_save()
-        if self.path == "/support/create": return self.support_create()
-        if self.path == "/feedback/save": return self.feedback_save()
-        if self.path == "/project/new/save": return self.project_wizard_save()
-        if self.path == "/connectors/setup/save": return self.connector_wizard_save()
+        if self.path == "/quickstart/run": return self.quickstart_run()
         if self.path == "/settings/save": return self.settings_save()
         if self.path == "/admin/save": return self.admin_save()
         if self.path == "/integrations/save": return self.integrations_save()
-        if self.path == "/controls/run": return self.controls_run()
         if self.path == "/findings/save": return self.findings_save()
         if self.path == "/reports/refresh": return self.reports_refresh()
         if self.path == "/ai-reports/generate": return self.ai_reports_generate()
@@ -157,13 +122,63 @@ class Handler(BaseHTTPRequestHandler):
     def redirect(self, location: str):
         self.send_response(303); self.send_header("Location", location); self.end_headers()
 
+
+    def quickstart_page(self):
+        opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k,v in WORKFLOWS.items() if k in {"analyze", "analyze-everything", "dependency-health"})
+        samples = sorted((ROOT / "test-sboms").glob("*")) if (ROOT / "test-sboms").exists() else []
+        sample_opts = "".join(f"<option value='{esc(str(p.relative_to(ROOT)))}'>{esc(p.name)}</option>" for p in samples if p.is_file())
+        body = f"""
+        <div class='card'><h2>Quick Start</h2>
+        <p class='muted'>Choose a bundled sample SBOM and click <strong>Go</strong>. This now creates a real Workbench job and redirects to the live job page instead of only opening an overview.</p>
+        <form method='post' action='/quickstart/run'>
+          <div class='grid'>
+            <div><label>Sample SBOM</label><select name='sample'>{sample_opts}</select></div>
+            <div><label>Workflow</label><select name='workflow'>{opts}</select></div>
+            <div><label>Fuzz time per step/library</label><input name='duration_seconds' value='30'></div>
+            <div><label>Project ID</label><input name='project_id' value='quickstart-demo'></div>
+          </div>
+          <p><label><input type='checkbox' name='network' value='1'> Allow network enrichment</label></p>
+          <input type='submit' value='Go — start job'>
+        </form></div>
+        <div class='card'><h3>Use your own SBOM</h3><p>Use the <a href='/'>Upload</a> page for drag-and-drop upload and the full set of workflow, AI, lifecycle, and fuzzing controls.</p></div>
+        """
+        self.send_html("Quick Start", body)
+
+    def quickstart_run(self):
+        try:
+            fields = self.parse_urlencoded()
+            sample = (ROOT / fields.get("sample", "")).resolve()
+            sample.relative_to(ROOT.resolve())
+            if not sample.is_file() or sample.parent != (ROOT / "test-sboms").resolve():
+                raise ValueError("Invalid sample SBOM")
+            workflow = fields.get("workflow", "analyze")
+            options = {
+                "duration_seconds": fields.get("duration_seconds", "30"),
+                "library_targets": "sbom,scanner,ai",
+                "project_id": fields.get("project_id", "quickstart-demo"),
+                "ai_provider": "none",
+                "ai_model": "",
+                "auto_ai_report": "1",
+            }
+            jid = create_job(workflow, sample, network=fields.get("network") == "1", options=options)
+            self.redirect(f"/jobs/{jid}")
+        except Exception as exc:
+            self.send_html("Quick Start error", f"<div class='card'><h2>Quick Start error</h2><pre>{esc(exc)}</pre></div>", 400)
+
     def index(self):
         opts = "".join(f"<option value='{esc(k)}'>{esc(v)}</option>" for k,v in WORKFLOWS.items())
         body = f"""
         <div class='card'><h2>Upload an SBOM and run a local workflow</h2>
         <p class='muted'>Runs locally on 127.0.0.1. Uploads are stored under <code>ui/storage</code>. Network access is off by default unless a workflow/tool you invoke performs local scanner calls.</p>
         <form action='/upload' method='post' enctype='multipart/form-data'>
-          <label>SBOM file</label><input type='file' name='sbom' required>
+          <label>SBOM file</label>
+          <div id='drop-zone' class='drop-zone' tabindex='0'>
+            <p><strong>Drag and drop an SBOM here</strong></p>
+            <p class='muted'>or</p>
+            <label class='btn' for='sbom-file'>Choose SBOM file</label>
+            <input id='sbom-file' type='file' name='sbom' accept='.json,.xml,.spdx,.txt' required>
+            <div id='file-name' class='file-name'>No file selected</div>
+          </div>
           <p class='small muted'>Allowed: .json, .xml, .spdx, .txt. Max size: {MAX_UPLOAD_BYTES//(1024*1024)} MB.</p>
           <label>Workflow</label><select name='workflow'>{opts}</select>
           <p class='small muted'><strong>Use “Full SBOM analysis + every action + all fuzzing scenarios”</strong> when you want every possible analysis action plus the broad timed fuzzing suite in one job.</p>
@@ -193,8 +208,11 @@ class Handler(BaseHTTPRequestHandler):
           </div>
           <label>Policy path</label><input name='policy' value='policies/default-release-policy.yml' size='46'>
           <p><label><input type='checkbox' name='network' value='1'> Allow network-enabled enrichment/scanner actions when available, including registry metadata and endoflife.date lifecycle lookups</label></p>
-          <input type='submit' value='Start scan'>
-        </form></div>
+          <input type='submit' value='Upload and start scan'>
+        </form>
+        <script>
+        (()=>{{const z=document.getElementById('drop-zone'),f=document.getElementById('sbom-file'),n=document.getElementById('file-name');if(!z||!f)return;const show=()=>n.textContent=f.files&&f.files[0]?f.files[0].name:'No file selected';['dragenter','dragover'].forEach(e=>z.addEventListener(e,x=>{{x.preventDefault();z.classList.add('dragover')}}));['dragleave','drop'].forEach(e=>z.addEventListener(e,x=>{{x.preventDefault();z.classList.remove('dragover')}}));z.addEventListener('drop',e=>{{if(e.dataTransfer.files.length){{f.files=e.dataTransfer.files;show()}}}});z.addEventListener('click',e=>{{if(e.target.tagName!=='LABEL')f.click()}});f.addEventListener('change',show);}})();
+        </script></div>
         <div class='grid'><div class='card'><h3>Local-first</h3><p>No auth, no database, no cloud upload. Use on localhost only.</p></div><div class='card'><h3>Evidence bundle</h3><p>Each job produces a downloadable zip with input, logs, status, and reports.</p></div><div class='card'><h3>Safe defaults</h3><p>Filename sanitization, size/type limits, isolated per-job directories, and delete controls.</p></div></div>
         """
         self.send_html("Upload", body)
@@ -277,258 +295,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 
-
-
-    def workflows_page(self, url):
-        q=urllib.parse.parse_qs(url.query); chosen=q.get('task',[''])[0]
-        cards=''.join(f"<div class='card'><h3>{esc(label)}</h3><p class='muted'>A guided, step-by-step workflow with sensible defaults and clear completion criteria.</p><a class='btn' href='/workflows?task={esc(key)}'>Start workflow</a></div>" for key,label in ux.TASKS)
-        profile=''.join(f"<option value='{esc(k)}'>{esc(v['label'])}</option>" for k,v in ux.SCAN_PROFILES.items())
-        detail=''
-        if chosen:
-            label=dict(ux.TASKS).get(chosen,chosen)
-            detail=f"<div class='hero'><h2>{esc(label)}</h2><div class='steps'><span class='step active'>1 Goal</span><span class='step'>2 Scope</span><span class='step'>3 Controls</span><span class='step'>4 Run</span><span class='step'>5 Review</span></div><form action='/' method='get'><label>Scan profile</label><select name='profile'>{profile}</select><label>Environment</label><select><option>Development</option><option>Staging</option><option selected>Production</option><option>Regulated production</option></select><p class='callout'><strong>Recommended next step:</strong> Continue to the scan screen with these defaults, then review the plain-language result summary.</p><button>Continue</button></form></div>"
-        self.send_html('Guided Workflows',f"<div class='page-title'><div><h1>Guided workflows</h1><p>Choose an outcome. The Workbench handles the underlying security steps.</p></div></div>{detail}<div class='grid'>{cards}</div>")
-
-    def saved_views_page(self):
-        rows=ux.load('saved_views.json',ux.DEFAULT_VIEWS)
-        cards=''.join(f"<div class='card'><h3>{esc(x['name'])}</h3><code>{esc(x['filter'])}</code><p><a class='btn secondary' href='/findings?{esc(x['filter'])}'>Open view</a></p></div>" for x in rows)
-        self.send_html('Saved Views',f"<div class='page-title'><div><h1>Saved views</h1><p>Reusable filters for high-volume triage.</p></div></div><div class='grid'>{cards}</div><div class='card'><h2>Create view</h2><form method='post' action='/saved-views/save'><label>Name</label><input name='name' required><label>Filter expression</label><input name='filter' placeholder='severity=critical&fix_available=true' size='48' required><button>Save view</button></form></div>")
-
-    def saved_views_save(self):
-        f=self.parse_urlencoded(); rows=ux.load('saved_views.json',ux.DEFAULT_VIEWS); rows.append({'name':f.get('name','Custom view'),'filter':f.get('filter','')}); ux.save('saved_views.json',rows); ux.add_activity('saved_view_created',f.get('name','')); self.redirect('/saved-views')
-
-    def activity_page(self):
-        rows=ux.load('activity.json',[])
-        htmlrows=''.join(f"<tr><td>{esc(x.get('time'))}</td><td>{esc(x.get('action'))}</td><td>{esc(x.get('detail'))}</td><td>{esc(x.get('actor'))}</td></tr>" for x in rows) or "<tr><td colspan='4'>No activity yet.</td></tr>"
-        self.send_html('Activity',f"<div class='page-title'><div><h1>Activity timeline</h1><p>Chronological project and governance events for troubleshooting and audits.</p></div></div><div class='card table-wrap'><table><tr><th>Time</th><th>Action</th><th>Detail</th><th>Actor</th></tr>{htmlrows}</table></div>")
-
-    def notifications_page(self):
-        p=ux.preferences(); selected=set(p.get('notifications',[])); events=[('release_blocked','Release blocked'),('critical_finding','Critical finding introduced'),('connector_failed','Connector failed'),('scan_completed','Scan completed'),('exception_requested','Exception requested'),('exception_expiring','Exception expiring'),('evidence_ready','Evidence ready'),('remediation_pr','Remediation PR created')]
-        checks=''.join(f"<label><input type='checkbox' name='events' value='{k}' {'checked' if k in selected else ''}> {esc(v)}</label>" for k,v in events)
-        self.send_html('Notifications',f"<div class='page-title'><div><h1>Notification preferences</h1><p>Choose events and delivery channels.</p></div></div><div class='card'><form method='post' action='/notifications/save'><div class='grid'><div><h3>Events</h3>{checks}</div><div><h3>Channels</h3><label><input type='checkbox' name='channels' value='in-app' checked> In-app</label><label><input type='checkbox' name='channels' value='email'> Email</label><label><input type='checkbox' name='channels' value='slack'> Slack</label><label><input type='checkbox' name='channels' value='teams'> Teams</label><label><input type='checkbox' name='channels' value='webhook'> Webhook</label></div></div><button>Save preferences</button></form></div>")
-
-    def notifications_save(self):
-        f=self.parse_urlencoded(multi=True); p=ux.preferences(); p['notifications']=f.get('events',[]); p['channels']=f.get('channels',[]); ux.save('preferences.json',p); ux.add_activity('notification_preferences_updated'); self.redirect('/notifications')
-
-    def personas_page(self):
-        p=ux.preferences(); cards=''.join(f"<label class='choice'><input type='radio' name='persona' value='{k}' {'checked' if p.get('persona')==k else ''}> <strong>{k.title()}</strong><br><span class='muted'>{esc(', '.join(items))}</span></label>" for k,items in ux.PERSONAS.items())
-        self.send_html('My View',f"<div class='page-title'><div><h1>My view</h1><p>Tailor the homepage and navigation to your role and preferred level of detail.</p></div></div><div class='card'><form method='post' action='/preferences/save'><h2>Role-specific homepage</h2>{cards}<h2>Interface mode</h2><label><input type='radio' name='mode' value='guided' {'checked' if p.get('mode')=='guided' else ''}> Guided mode</label><label><input type='radio' name='mode' value='advanced' {'checked' if p.get('mode')=='advanced' else ''}> Advanced mode</label><label><input type='checkbox' name='reduced_motion' value='1' {'checked' if p.get('reduced_motion') else ''}> Reduce motion</label><button>Save my view</button></form></div>")
-
-    def preferences_save(self):
-        f=self.parse_urlencoded(); p=ux.preferences(); p.update({'persona':f.get('persona',p.get('persona','security')),'mode':f.get('mode',p.get('mode','guided')),'reduced_motion':f.get('reduced_motion')=='1'}); ux.save('preferences.json',p); ux.add_activity('preferences_updated',json.dumps(p)); self.redirect('/personas')
-
-    def policy_simulator_page(self,url):
-        q=urllib.parse.parse_qs(url.query); policy=q.get('policy',['standard'])[0]; r=ux.policy_simulation(policy)
-        self.send_html('Policy Simulator',f"<div class='page-title'><div><h1>Policy simulation</h1><p>Preview impact before enforcing a policy.</p></div></div><div class='card'><form><label>Policy preset</label><select name='policy'><option value='development'>Development</option><option value='standard' {'selected' if policy=='standard' else ''}>Standard production</option><option value='high-assurance' {'selected' if policy=='high-assurance' else ''}>High assurance</option></select><button>Simulate</button></form></div><div class='metrics'><div class='metric'><div class='label'>Would pass</div><div class='value'>{r['pass']}</div></div><div class='metric'><div class='label'>Warnings</div><div class='value'>{r['warning']}</div></div><div class='metric'><div class='label'>Approval</div><div class='value'>{r['approval']}</div></div><div class='metric'><div class='label'>Blocked</div><div class='value'>{r['blocked']}</div></div></div><div class='callout'><strong>Recommendation:</strong> Run simulation against production data before enabling enforcement. This preview is deterministic sample data when no project corpus is selected.</div>")
-
-    def support_page(self):
-        self.send_html('Support',"<div class='page-title'><div><h1>Support and diagnostics</h1><p>Create a sanitized troubleshooting package with version, route health, connector state, and UX settings.</p></div></div><div class='card'><p>Secrets and raw connector tokens are never included.</p><form method='post' action='/support/create'><button>Create support bundle</button></form></div><div class='card'><h2>Error recovery checklist</h2><ol><li>Review the plain-language error and recommended action.</li><li>Retry the operation.</li><li>Open technical details only when needed.</li><li>Create a support bundle if the issue persists.</li></ol></div>")
-
-    def support_create(self):
-        try:
-            p=ux.create_support_bundle(); self.send_html('Support bundle ready',f"<div class='card'><h2>Support bundle ready</h2><p><code>{esc(p)}</code></p><p class='ok'>Secrets were excluded.</p><a class='btn' href='/support'>Back</a></div>")
-        except Exception as exc: self.send_html('Support bundle failed',f"<div class='card'><h2>Support bundle failed</h2><p>What failed: bundle creation.</p><p>Recommended action: verify reports/support is writable and retry.</p><details><summary>Technical details</summary><pre>{esc(exc)}</pre></details></div>",500)
-
-    def feedback_page(self):
-        self.send_html('Feedback',"<div class='page-title'><div><h1>Product feedback</h1><p>Tell us where the experience is unclear.</p></div></div><div class='card'><form method='post' action='/feedback/save'><label>Page or workflow</label><input name='context' required><label>Was the recommendation useful?</label><select name='useful'><option>Yes</option><option>Partly</option><option>No</option></select><label>What was confusing?</label><textarea name='message' required></textarea><button>Submit feedback</button></form></div>")
-
-    def feedback_save(self):
-        f=self.parse_urlencoded(); rows=ux.load('feedback.json',[]); rows.append({'time':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),**f}); ux.save('feedback.json',rows); ux.add_activity('feedback_submitted',f.get('context','')); self.send_html('Thank you',"<div class='card'><h2>Thank you</h2><p>Your feedback was saved locally.</p><a class='btn' href='/dashboard'>Return to dashboard</a></div>")
-
-    def _all_statuses(self):
-        try:
-            return list_jobs()
-        except Exception:
-            return []
-
-    def dashboard_page(self):
-        jobs = self._all_statuses()
-        blocked = sum(1 for j in jobs if str(j.get("state","")).lower() in {"failed","blocked"})
-        running = sum(1 for j in jobs if str(j.get("state","")).lower() in {"running","queued"})
-        completed = sum(1 for j in jobs if str(j.get("state","")).lower() == "completed")
-        connectors = self._connector_records()
-        unhealthy = sum(1 for x in connectors if x.get("status") not in {"healthy","configured"})
-        recent = "".join(f"<tr><td><a href='/jobs/{esc(j.get('job_id'))}'>{esc(j.get('workflow_label') or j.get('workflow'))}</a></td><td><span class='pill {esc(j.get('state'))}'>{esc(j.get('state'))}</span></td><td>{esc(j.get('created_at'))}</td><td><a href='/jobs/{esc(j.get('job_id'))}'>View</a></td></tr>" for j in jobs[:8]) or "<tr><td colspan='4'><div class='empty'><h3>No scans yet</h3><p class='muted'>Upload an SBOM or connect a source to begin.</p><a class='btn' href='/'>Run first analysis</a></div></td></tr>"
-        conn = "".join(f"<tr><td>{esc(x.get('name'))}</td><td>{esc(x.get('type'))}</td><td><span class='pill {esc(x.get('status'))}'>{esc(x.get('status'))}</span></td><td>{esc(x.get('last_sync') or 'Never')}</td></tr>" for x in connectors[:6]) or "<tr><td colspan='4' class='muted'>No connectors configured. <a href='/integrations'>Add a connector</a>.</td></tr>"
-        guide=self._guide_state(); checklist=[('Create your first project',guide.get('project_created')),('Run your first scan',bool(jobs)),('Connect a security tool',guide.get('connector_created') or bool(connectors)),('Choose a release policy',guide.get('policy')),('Generate evidence',any((ROOT/'release-evidence').rglob('*')) if (ROOT/'release-evidence').exists() else False)]
-        checklist_html=''.join(f"<li>{'✓' if done else '○'} {esc(label)}</li>" for label,done in checklist)
-        onboarding='' if guide.get('complete') else f"<div class='hero'><h2>Welcome to SBOM Security Toolkit</h2><p>Use guided setup to go from a source to a release decision without learning every feature first.</p><a class='btn' href='/welcome'>Continue Quick Start</a> <a class='btn secondary' href='/sample'>Explore sample data</a></div><div class='card'><h2>Getting started</h2><ul class='checklist'>{checklist_html}</ul></div>"
-        body=f"""{onboarding}<div class='page-title'><div><h1>Overview</h1><p>Your software supply-chain security posture and the work requiring attention.</p></div><a class='btn' href='/welcome'>Guided setup</a></div>
-        <div class='metrics'><div class='metric'><div class='label'>Projects monitored</div><div class='value'>{len(jobs)}</div><div class='hint'>Across all recorded workspaces</div></div><div class='metric'><div class='label'>Blocked or failed</div><div class='value'>{blocked}</div><div class='hint'>Release decisions needing action</div></div><div class='metric'><div class='label'>Active scans</div><div class='value'>{running}</div><div class='hint'>{completed} completed</div></div><div class='metric'><div class='label'>Connector issues</div><div class='value'>{unhealthy}</div><div class='hint'>{len(connectors)} configured</div></div></div>
-        <div class='grid'><div class='card'><h2>Work requiring attention</h2><div class='grid'><a class='card decision blocked' href='/decisions'><strong>{blocked} blocked decisions</strong><p class='muted small'>Review violations and remediation.</p></a><a class='card decision warning' href='/exceptions'><strong>Exceptions</strong><p class='muted small'>Review approvals and expirations.</p></a><a class='card decision' href='/actions'><strong>Action Center</strong><p class='muted small'>One queue for security work.</p></a></div></div><div class='card'><h2>Getting started</h2><ol><li>Connect GitHub, Snyk, or Dependency-Track.</li><li>Add or upload a project.</li><li>Run analysis and review the release decision.</li><li>Fix, approve, or export evidence.</li></ol><a class='btn secondary' href='/integrations'>Open connector catalog</a></div></div>
-        <div class='card'><div class='page-title'><div><h2>Recent scans</h2></div><a href='/jobs'>View all</a></div><div class='table-wrap'><table><tr><th>Workflow</th><th>Status</th><th>Created</th><th></th></tr>{recent}</table></div></div>
-        <div class='card'><div class='page-title'><div><h2>Connector health</h2></div><a href='/integrations'>Manage connectors</a></div><div class='table-wrap'><table><tr><th>Name</th><th>Type</th><th>Status</th><th>Last sync</th></tr>{conn}</table></div></div>"""
-        self.send_html("Overview", body)
-
-    def _connector_records(self):
-        records=[]
-        cfg=ROOT/'configs'/'connectors.yml'
-        try:
-            data=yaml.safe_load(cfg.read_text()) if cfg.exists() else {}
-            for item in (data or {}).get('connectors',[]):
-                records.append({'name':item.get('name','Unnamed'),'type':item.get('type','generic'),'status':'configured' if item.get('enabled',True) else 'disabled','last_sync':item.get('last_sync')})
-        except Exception:
-            pass
-        return records
-
-    def decisions_page(self):
-        rows=[]
-        for j in self._all_statuses():
-            state=str(j.get('state','unknown')).lower(); decision='BLOCKED' if state in {'failed','blocked'} else ('IN PROGRESS' if state in {'running','queued'} else 'PASSED')
-            cls='blocked' if decision=='BLOCKED' else ('warning' if decision=='IN PROGRESS' else 'passed')
-            rows.append(f"<tr><td><a href='/jobs/{esc(j.get('job_id'))}'>{esc(j.get('workflow_label') or j.get('job_id'))}</a></td><td><span class='pill {cls}'>{decision}</span></td><td>{esc(j.get('created_at'))}</td><td>{len(j.get('steps') or [])}</td><td><a href='/jobs/{esc(j.get('job_id'))}'>Review</a></td></tr>")
-        table=''.join(rows) or "<tr><td colspan='5'><div class='empty'><h3>No release decisions yet</h3><p class='muted'>Run an assurance workflow to evaluate a release.</p><a class='btn' href='/'>Run analysis</a></div></td></tr>"
-        self.send_html('Release Decisions',f"<div class='page-title'><div><h1>Release Decisions</h1><p>Clear pass, warning, approval, and block outcomes with traceable reasons.</p></div></div><div class='card'><div class='toolbar'><select><option>All decisions</option><option>Blocked</option><option>Approval required</option><option>Passed</option></select><input placeholder='Filter project or release'><span class='spacer'></span><a class='btn secondary' href='/reports'>Export</a></div><div class='table-wrap'><table><tr><th>Release / scan</th><th>Decision</th><th>Evaluated</th><th>Checks</th><th></th></tr>{table}</table></div></div>")
-
-    def actions_page(self):
-        jobs=self._all_statuses(); failed=[j for j in jobs if str(j.get('state')).lower() in {'failed','blocked'}]; running=[j for j in jobs if str(j.get('state')).lower() in {'running','queued'}]
-        items=''.join(f"<tr><td><span class='pill blocked'>High</span></td><td>Review failed release workflow</td><td><a href='/jobs/{esc(j.get('job_id'))}'>{esc(j.get('workflow_label'))}</a></td><td>Security engineering</td><td><a class='btn small secondary' href='/jobs/{esc(j.get('job_id'))}'>Review</a></td></tr>" for j in failed)
-        if not items: items="<tr><td colspan='5'><div class='empty'><h3>No urgent actions</h3><p class='muted'>Blocked releases, connector failures, exception approvals, and incomplete evidence will appear here.</p></div></td></tr>"
-        self.send_html('Action Center',f"<div class='page-title'><div><h1>Action Center</h1><p>A single queue for work requiring review or remediation.</p></div></div><div class='metrics'><div class='metric'><div class='label'>Blocking issues</div><div class='value'>{len(failed)}</div></div><div class='metric'><div class='label'>Scans running</div><div class='value'>{len(running)}</div></div><div class='metric'><div class='label'>Awaiting approval</div><div class='value'>0</div></div><div class='metric'><div class='label'>Connector failures</div><div class='value'>{sum(1 for x in self._connector_records() if x.get('status')=='unhealthy')}</div></div></div><div class='card'><div class='toolbar'><select><option>All work</option><option>Blocking</option><option>Approvals</option><option>Connector health</option></select><input placeholder='Search actions'><span class='spacer'></span><button class='secondary'>Save view</button></div><div class='table-wrap'><table><tr><th>Priority</th><th>Action</th><th>Resource</th><th>Owner</th><th></th></tr>{items}</table></div></div>")
-
-
-    def controls_page(self):
-        body = """
-        <div class='page-title'><div><h1>Security Controls</h1><p>Run release assurance, VEX, provenance, evidence, organization context, and remediation workflows from one place.</p></div></div>
-        <div class='grid'>
-          <div class='card'><h2>Release Assurance</h2><p class='muted'>Evaluate an SBOM against policy and produce a PASS, WARNING, APPROVAL REQUIRED, or BLOCK decision.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='assurance'><label>Normalized findings JSON</label><input name='findings' value='reports/findings/findings.json' size='42'><label>Policy</label><input name='policy' value='policies/production-release-assurance.yml' size='42'><input type='submit' value='Run dry-run assurance'></form></div>
-          <div class='card'><h2>VEX</h2><p class='muted'>Generate an OpenVEX statement for review and attach exploitability context to findings.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='vex'><label>SBOM path</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='42'><label>Vulnerability</label><input name='vulnerability' placeholder='CVE-2026-12345'><input type='submit' value='Generate VEX draft'></form></div>
-          <div class='card'><h2>Provenance</h2><p class='muted'>Verify artifact digests and inspect SLSA or in-toto provenance evidence.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='provenance'><label>Artifact path</label><input name='artifact' value='test-sboms/example-spdx-2.3.json' size='42'><label>Provenance path</label><input name='provenance' placeholder='provenance.json' size='42'><input type='submit' value='Verify provenance'></form></div>
-          <div class='card'><h2>Evidence Bundle</h2><p class='muted'>Build a hash-manifested release evidence package from current analysis artifacts.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='evidence'><label>Input directory</label><input name='input_dir' value='reports' size='42'><label>Output directory</label><input name='output_dir' value='release-evidence/workbench' size='42'><input type='submit' value='Build evidence bundle'></form></div>
-          <div class='card'><h2>Organization Context</h2><p class='muted'>Create or inspect organization, business unit, application, service, repository, and artifact ownership context.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='org'><label>Project ID</label><input name='project_id' value='workbench-project'><label>Business criticality</label><select name='criticality'><option>high</option><option>medium</option><option>low</option></select><input type='submit' value='Generate context template'></form></div>
-          <div class='card'><h2>Remediation</h2><p class='muted'>Generate a deterministic remediation plan from normalized findings without automatically changing code.</p><form method='post' action='/controls/run'><input type='hidden' name='action' value='remediation'><label>SBOM path</label><input name='sbom' value='test-sboms/vulnerable/sample-trivy-report.json' size='42'><input type='submit' value='Generate remediation plan'></form></div>
-        </div>
-        <div class='callout'><strong>Safe default:</strong> controls create local artifacts and plans. External writes, pull requests, and connector sends remain opt-in.</div>
-        """
-        self.send_html('Security Controls', body)
-
-    def controls_run(self):
-        try:
-            import argparse as _argparse
-            fields = self.parse_urlencoded(); action = fields.get('action','')
-            out = None
-            if action == 'vex':
-                from sbomops import integrations as mod
-                out = mod.export_openvex(_argparse.Namespace(sbom=fields.get('sbom'), out='reports/openvex/workbench-openvex.json', vulnerability=fields.get('vulnerability',''), status='under_investigation', justification='component_not_analyzed', impact_statement='Generated for security review.', action_statement='Validate exploitability and remediation.', author='SBOM Security Toolkit'))
-            elif action == 'org':
-                target=Path('configs/generated/org')/f"{safe_slug(fields.get('project_id','workbench-project'))}.yml"; target.parent.mkdir(parents=True,exist_ok=True)
-                data={'organization':'default','business_unit':'default','application':fields.get('project_id','workbench-project'),'service':fields.get('project_id','workbench-project'),'repository':'unknown','business_criticality':fields.get('criticality','high'),'internet_exposed':False,'owners':{'technical':'','security':'','business':''}}
-                target.write_text(yaml.safe_dump(data,sort_keys=False)); out={'created':str(target)}
-            elif action == 'evidence':
-                src=Path(fields.get('input_dir','reports')); dst=Path(fields.get('output_dir','release-evidence/workbench')); dst.mkdir(parents=True,exist_ok=True)
-                import hashlib, datetime
-                records=[]
-                if src.exists():
-                    for f in sorted(src.rglob('*')):
-                        if f.is_file(): records.append({'path':str(f),'sha256':hashlib.sha256(f.read_bytes()).hexdigest(),'bytes':f.stat().st_size})
-                manifest={'generated_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':records}
-                (dst/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n'); out={'manifest':str(dst/'manifest.json'),'files':len(records)}
-            elif action == 'provenance':
-                artifact=Path(fields.get('artifact','')); prov=Path(fields.get('provenance',''))
-                import hashlib
-                out={'artifact':str(artifact),'exists':artifact.exists(),'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest() if artifact.exists() else None,'provenance':str(prov),'provenance_exists':prov.exists(),'status':'verified' if artifact.exists() and prov.exists() else 'incomplete'}
-                target=Path('reports/provenance/workbench-verification.json'); target.parent.mkdir(parents=True,exist_ok=True); target.write_text(json.dumps(out,indent=2)+'\n')
-            elif action == 'remediation':
-                source=Path(fields.get('sbom','')); target=Path('reports/remediation/workbench-plan.json'); target.parent.mkdir(parents=True,exist_ok=True)
-                out={'source':str(source),'status':'planned','automatic_changes':False,'recommendations':['Review normalized critical and high findings','Prefer fixed versions with compatible upgrade paths','Regenerate SBOM and rerun release assurance after changes']}
-                target.write_text(json.dumps(out,indent=2)+'\n')
-            elif action == 'assurance':
-                from sbomops import assurance as mod
-                # Run the module through its CLI parser contract in a subprocess to preserve production behavior.
-                import subprocess, sys
-                cmd=[sys.executable,'-m','sbomops.assurance','--policy',fields.get('policy',''),'--findings',fields.get('findings',''),'--out-dir','reports/assurance/workbench','--fail-on','never']
-                cp=subprocess.run(cmd,capture_output=True,text=True,timeout=120); out={'command':cmd,'returncode':cp.returncode,'stdout':cp.stdout[-4000:],'stderr':cp.stderr[-4000:]}
-            else: raise ValueError('Unsupported control action: '+action)
-            self.send_html('Control completed',f"<div class='card'><h2>Control completed</h2><pre>{esc(json.dumps(out,indent=2,default=str))}</pre><p><a class='btn' href='/controls'>Back to Security Controls</a> <a class='btn secondary' href='/reports'>View reports</a></p></div>")
-        except Exception as exc:
-            self.send_html('Control error',f"<div class='card'><h2>Control error</h2><pre>{esc(exc)}</pre></div>",400)
-
-    def _guide_state(self):
-        path=ROOT/'ui'/'storage'/'onboarding.json'
-        try: return json.loads(path.read_text())
-        except Exception: return {}
-
-    def _save_guide_state(self, data):
-        path=ROOT/'ui'/'storage'/'onboarding.json'; path.parent.mkdir(parents=True,exist_ok=True)
-        current=self._guide_state(); current.update(data); path.write_text(json.dumps(current,indent=2)+'\n')
-
-    def welcome_page(self, url):
-        q=urllib.parse.parse_qs(url.query); step=int((q.get('step') or ['1'])[0]); state=self._guide_state()
-        steps=''.join(f"<span class='step {'active' if i==step else ''}'>{i}. {name}</span>" for i,name in enumerate(['Goal','Source','Environment','Policy','Review'],1))
-        if step==1:
-            content="""<h2>What would you like to secure today?</h2><label class='choice'><input type='radio' name='goal' value='repository' checked> Scan a repository</label><label class='choice'><input type='radio' name='goal' value='sbom'> Upload an SBOM</label><label class='choice'><input type='radio' name='goal' value='connector'> Connect a security tool</label><label class='choice'><input type='radio' name='goal' value='release'> Check whether a release is safe</label>"""
-        elif step==2:
-            content="""<h2>Choose a source</h2><label>Repository URL or local path</label><input name='source' size='58' placeholder='https://github.com/org/repo or /path/to/repo'><p class='muted'>You can also upload an SBOM after setup or configure Snyk, GitHub, GitLab, Dependency-Track, or DefectDojo.</p>"""
-        elif step==3:
-            content="""<h2>Where will this run?</h2><label class='choice'><input type='radio' name='environment' value='development'> Development</label><label class='choice'><input type='radio' name='environment' value='staging'> Staging</label><label class='choice'><input type='radio' name='environment' value='production' checked> Production</label><label class='choice'><input type='radio' name='environment' value='internet-production'> Internet-facing production</label><label class='choice'><input type='radio' name='environment' value='regulated'> Regulated workload</label>"""
-        elif step==4:
-            content="""<h2>Select a policy preset</h2><label class='choice'><input type='radio' name='policy' value='basic'> Basic — visibility first</label><label class='choice'><input type='radio' name='policy' value='standard' checked> Standard — balanced release controls</label><label class='choice'><input type='radio' name='policy' value='production'> Production — blocks critical and known-exploited risk</label><label class='choice'><input type='radio' name='policy' value='high-assurance'> High assurance — provenance, VEX, and strict dependency controls</label>"""
-        else:
-            content=f"""<h2>Ready to begin</h2><p>Your guided setup will create a project, choose sensible defaults, and take you to the right next action.</p><pre>{esc(json.dumps(state,indent=2))}</pre><label><input type='checkbox' name='complete' value='1' checked> Mark onboarding complete</label>"""
-        back=f"<a class='btn secondary' href='/welcome?step={step-1}'>Back</a>" if step>1 else ""
-        submit='Finish setup' if step==5 else 'Continue'
-        body=f"<div class='hero'><h1>Quick Start</h1><p>Answer a few questions and the toolkit will configure a safe starting point.</p></div><div class='card'>{steps}<form method='post' action='/welcome/save'><input type='hidden' name='step' value='{step}'>{content}<p>{back} <input type='submit' value='{submit}'></p></form></div><div class='card'><h3>Prefer to explore first?</h3><p><a class='btn secondary' href='/sample'>Load the sample workspace</a> <a class='btn secondary' href='/help'>Open Help Center</a></p></div>"
-        self.send_html('Quick Start',body)
-
-    def welcome_save(self):
-        f=self.parse_urlencoded(); step=int(f.pop('step','1')); self._save_guide_state({k:v for k,v in f.items() if k!='complete'})
-        if step>=5:
-            self._save_guide_state({'complete':True}); return self.redirect('/dashboard')
-        self.redirect(f'/welcome?step={step+1}')
-
-    def project_wizard(self, url):
-        body="""<div class='page-title'><div><h1>Create a project</h1><p>Set ownership and risk context once; use it across scans, decisions, reports, and evidence.</p></div></div><div class='card'><form method='post' action='/project/new/save'><div class='grid'><div><label>Project name</label><input name='name' required placeholder='payments-api'></div><div><label>Source</label><input name='source' placeholder='repository URL, path, or SBOM'></div><div><label>Environment</label><select name='environment'><option>development</option><option>staging</option><option selected>production</option></select></div><div><label>Business criticality</label><select name='criticality'><option>low</option><option>medium</option><option selected>high</option></select></div><div><label>Technical owner</label><input name='technical_owner'></div><div><label>Security owner</label><input name='security_owner'></div><div><label>Data classification</label><select name='classification'><option>public</option><option>internal</option><option>confidential</option><option>restricted</option></select></div><div><label>Default policy</label><select name='policy'><option>basic</option><option selected>standard</option><option>production</option><option>high-assurance</option></select></div></div><p><label><input type='checkbox' name='internet_exposed' value='1'> Internet-facing</label></p><input type='submit' value='Create project'></form></div>"""
-        self.send_html('Create project',body)
-
-    def project_wizard_save(self):
-        f=self.parse_urlencoded(); name=safe_slug(f.get('name','project')); target=ROOT/'configs'/'generated'/'projects'/f'{name}.yml'; target.parent.mkdir(parents=True,exist_ok=True)
-        data={'project_id':name,'name':f.get('name'),'source':f.get('source'),'environment':f.get('environment'),'business_criticality':f.get('criticality'),'internet_exposed':self.bool_field(f,'internet_exposed'),'data_classification':f.get('classification'),'default_policy':f.get('policy'),'owners':{'technical':f.get('technical_owner'),'security':f.get('security_owner')}}
-        target.write_text(yaml.safe_dump(data,sort_keys=False)); self._save_guide_state({'project_created':True}); self.redirect('/projects')
-
-    def connector_wizard(self, url):
-        body="""<div class='page-title'><div><h1>Connect a tool</h1><p>Configure integrations with read-only and dry-run safeguards by default.</p></div></div><div class='card'><form method='post' action='/connectors/setup/save'><label>Tool</label><select name='type'><option>snyk</option><option>github</option><option>gitlab</option><option>dependency-track</option><option>defectdojo</option><option>jira</option><option>webhook</option></select><label>Connection name</label><input name='name' required value='primary'><label>Base URL</label><input name='base_url' size='58' placeholder='https://api.example.com'><label>Secret environment variable</label><input name='secret_env' placeholder='SNYK_TOKEN'><p><label><input type='checkbox' name='write_enabled' value='1'> Enable writes (not recommended until connection testing succeeds)</label></p><input type='submit' value='Save connector'></form></div><div class='callout'><strong>Safe default:</strong> credentials are referenced through environment variables; plaintext secrets are not stored.</div>"""
-        self.send_html('Connect a tool',body)
-
-    def connector_wizard_save(self):
-        f=self.parse_urlencoded(); name=safe_slug(f.get('name','connector')); target=ROOT/'configs'/'generated'/'connectors'/f'{name}.yml'; target.parent.mkdir(parents=True,exist_ok=True)
-        data={'name':name,'type':f.get('type'),'base_url':f.get('base_url'),'secret_env':f.get('secret_env'),'read_only':not self.bool_field(f,'write_enabled'),'write_enabled':self.bool_field(f,'write_enabled'),'dry_run':True}
-        target.write_text(yaml.safe_dump(data,sort_keys=False)); self._save_guide_state({'connector_created':True}); self.redirect('/integrations')
-
-    def help_page(self):
-        body="""<div class='page-title'><div><h1>Help Center</h1><p>Plain-language guidance for the most common workflows.</p></div></div><div class='grid'><div class='card'><h2>First scan</h2><p>Create a project, upload an SBOM or repository, select a policy, and review the release decision.</p><a href='/welcome'>Open Quick Start</a></div><div class='card'><h2>Connect a tool</h2><p>Add Snyk, GitHub, GitLab, Dependency-Track, DefectDojo, Jira, or a webhook.</p><a href='/connectors/setup'>Open connector setup</a></div><div class='card'><h2>Understand a decision</h2><p>Release decisions explain what passed, what blocked, and what action to take next.</p><a href='/decisions'>View decisions</a></div><div class='card'><h2>Advanced controls</h2><p>Use VEX, provenance, evidence packages, remediation, and organization context.</p><a href='/controls'>Open Security Controls</a></div></div><div class='card'><h2>Recommended workflow</h2><ol><li>Create a project</li><li>Add a source or connector</li><li>Run analysis</li><li>Review findings and release decision</li><li>Remediate or request an exception</li><li>Generate reports and evidence</li></ol></div>"""
-        self.send_html('Help Center',body)
-
-    def sample_page(self):
-        self._save_guide_state({'sample_loaded':True})
-        body="""<div class='hero'><h1>Sample workspace loaded</h1><p>Explore a realistic example without external credentials.</p></div><div class='metrics'><div class='metric'><div class='label'>Release decision</div><div class='value'>BLOCK</div><div class='hint'>3 policy violations</div></div><div class='metric'><div class='label'>Critical findings</div><div class='value'>1</div><div class='hint'>Fix available</div></div><div class='metric'><div class='label'>Exceptions</div><div class='value'>1</div><div class='hint'>Expires in 14 days</div></div><div class='metric'><div class='label'>Connectors</div><div class='value'>2/3</div><div class='hint'>One needs attention</div></div></div><div class='card'><h2>Try these next</h2><p><a class='btn' href='/decisions'>Review blocked release</a> <a class='btn secondary' href='/findings'>Inspect findings</a> <a class='btn secondary' href='/connectors/setup'>Add a connector</a></p></div>"""
-        self.send_html('Sample workspace',body)
-
-    def exceptions_page(self):
-        path=ROOT/'governance'/'exceptions.yml'; records=[]
-        try:
-            data=yaml.safe_load(path.read_text()) if path.exists() else {}
-            records=(data or {}).get('exceptions',[]) if isinstance(data,dict) else (data or [])
-        except Exception: pass
-        rows=''.join(f"<tr><td>{esc(x.get('id') or x.get('name'))}</td><td>{esc(x.get('project','All'))}</td><td>{esc(x.get('vulnerability') or x.get('rule',''))}</td><td><span class='pill approval'>{esc(x.get('status','approved'))}</span></td><td>{esc(x.get('expires','—'))}</td></tr>" for x in records) or "<tr><td colspan='5'><div class='empty'><h3>No active exceptions</h3><p class='muted'>Approved, pending, and expiring risk exceptions will appear here.</p></div></td></tr>"
-        self.send_html('Exceptions',f"<div class='page-title'><div><h1>Risk Exceptions</h1><p>Govern approvals, compensating controls, ownership, and expiration.</p></div><a class='btn' href='/settings'>Create exception</a></div><div class='card'><div class='table-wrap'><table><tr><th>ID</th><th>Project</th><th>Scope</th><th>Status</th><th>Expires</th></tr>{rows}</table></div></div>")
-
-    def evidence_page(self):
-        roots=[ROOT/'release-evidence',ROOT/'reports']; files=[]
-        for root in roots:
-            if root.exists(): files += [p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in {'.zip','.json','.pdf','.md'}]
-        rows=''.join(f"<tr><td>{esc(p.name)}</td><td>{esc(p.parent.relative_to(ROOT))}</td><td>{p.stat().st_size}</td><td>{esc(__import__('datetime').datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec='minutes'))}</td></tr>" for p in sorted(files,key=lambda x:x.stat().st_mtime,reverse=True)[:100]) or "<tr><td colspan='4'><div class='empty'><h3>No evidence packages yet</h3><p class='muted'>Generate a release evidence bundle from a completed scan.</p><a class='btn' href='/jobs'>View scans</a></div></td></tr>"
-        self.send_html('Evidence',f"<div class='page-title'><div><h1>Evidence</h1><p>Auditor-ready SBOM, VEX, decision, provenance, report, and signature packages.</p></div></div><div class='card'><div class='table-wrap'><table><tr><th>Artifact</th><th>Location</th><th>Bytes</th><th>Modified</th></tr>{rows}</table></div></div>")
-
-    def search_page(self,url):
-        q=(urllib.parse.parse_qs(url.query).get('q') or [''])[0].strip().lower(); matches=[]
-        if q:
-            for j in self._all_statuses():
-                hay=json.dumps(j).lower()
-                if q in hay: matches.append((j.get('workflow_label') or j.get('job_id'),f"/jobs/{j.get('job_id')}",'Scan'))
-            for p in [ROOT/'README.md',ROOT/'RELEASE-NOTES.md',ROOT/'CHANGELOG.md']:
-                if p.exists() and q in p.read_text(errors='ignore').lower(): matches.append((p.name,'/reports','Documentation'))
-        rows=''.join(f"<tr><td><a href='{esc(href)}'>{esc(name)}</a></td><td>{esc(kind)}</td></tr>" for name,href,kind in matches) or "<tr><td colspan='2'><div class='empty'><h3>No results</h3><p class='muted'>Search projects, scan records, CVEs, components, releases, and documentation.</p></div></td></tr>"
-        self.send_html('Search',f"<div class='page-title'><div><h1>Search</h1><p>Results for <strong>{esc(q)}</strong></p></div></div><div class='card'><div class='table-wrap'><table><tr><th>Result</th><th>Type</th></tr>{rows}</table></div></div>")
 
     def reports_page(self):
         try:
@@ -727,7 +493,6 @@ class Handler(BaseHTTPRequestHandler):
         <div class='card'><h2>Production integrations</h2>
         <p class='muted'>Generate reviewable export payloads, CI/CD templates, deployment scaffolds, notification tests, OIDC config, and worker runtime limits. Live delivery remains dry-run-first. Use the CLI/Make targets with explicit SEND=1 for real Jira, DefectDojo, Slack/webhook, or email delivery.</p></div>
         <div class='grid'>
-        <div class='card'><h3>Unified connector platform</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='connector-platform'><div class='grid'><div><label>Connector name</label><input name='name' value='corporate-snyk'></div><div><label>Type</label><select name='type'><option value='snyk'>Snyk</option><option value='dependency-track'>Dependency-Track</option><option value='defectdojo'>DefectDojo</option><option value='github'>GitHub</option><option value='webhook'>Generic webhook</option></select></div><div><label>Base URL</label><input name='base_url' placeholder='Provider API URL'></div><div><label>Token environment variable</label><input name='token_env' value='SNYK_TOKEN'></div></div><label>Organization/project/repository identifier</label><input name='resource_id' placeholder='org UUID, project UUID, or owner/repo' size='48'><label><input type='checkbox' name='allow_write' value='true'> Enable write operations</label><p class='small muted'>Read-only and dry-run by default. Secrets are stored only as environment-variable references. Use CLI <code>--send</code> for live network calls.</p><input type='submit' value='Save connector and run dry-run health check'></form></div>
         <div class='card'><h3>Snyk SBOM connector</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='snyk'><div class='grid'><div><label>Snyk org ID</label><input name='org_id' placeholder='SNYK_ORG_ID or UUID'></div><div><label>Snyk project ID</label><input name='project_id' placeholder='SNYK_PROJECT_ID or UUID'></div><div><label>Token env var</label><input name='token_env' value='SNYK_TOKEN'></div><div><label>SBOM format</label><select name='format'><option value='cyclonedx1.6+json'>CycloneDX 1.6 JSON</option><option value='cyclonedx1.5+json'>CycloneDX 1.5 JSON</option><option value='cyclonedx1.4+json'>CycloneDX 1.4 JSON</option><option value='cyclonedx1.6+xml'>CycloneDX 1.6 XML</option><option value='spdx2.3+json'>SPDX 2.3 JSON</option></select></div></div><label>Local SBOM path for comparison</label><input name='local_sbom' value='test-sboms/example-spdx-2.3.json' size='48'><p class='small muted'>Dry-run by default. Stores token references only. Live pulls require CLI/Make with SEND=1.</p><input type='submit' value='Save config and run dry-run'></form></div>
         <div class='card'><h3>SARIF / OpenVEX / ticket payloads</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='exports'><label>SBOM path on this host</label><input name='sbom' value='test-sboms/example-spdx-2.3.json' size='48'><label>Jira project key</label><input name='project_key' value='SEC'><input type='submit' value='Generate exports'></form></div>
         <div class='card'><h3>CI/CD templates</h3><form method='post' action='/integrations/save'><input type='hidden' name='kind' value='ci'><label>Provider</label><select name='provider'><option value='all'>All</option><option value='github'>GitHub Actions</option><option value='gitlab'>GitLab CI</option><option value='jenkins'>Jenkins</option><option value='circleci'>CircleCI</option><option value='buildkite'>Buildkite</option><option value='azure'>Azure DevOps</option></select><input type='submit' value='Generate CI templates'></form></div>
@@ -744,22 +509,7 @@ class Handler(BaseHTTPRequestHandler):
             from sbomops import integrations as int_ops
             fields = self.parse_urlencoded(); kind = fields.get('kind','')
             outputs = []
-            if kind == 'connector-platform':
-                from sbomops import connectors as connector_ops
-                name = fields.get('name','connector')
-                ctype = fields.get('type','snyk')
-                token_env = fields.get('token_env','') or {'snyk':'SNYK_TOKEN','dependency-track':'DEPENDENCY_TRACK_API_KEY','defectdojo':'DEFECTDOJO_TOKEN','github':'GITHUB_TOKEN','webhook':'SST_WEBHOOK_URL'}.get(ctype,'CONNECTOR_TOKEN')
-                resource = fields.get('resource_id','')
-                config = {'base_url': fields.get('base_url',''), 'token_ref': 'env:'+token_env, 'read_only': fields.get('allow_write','') != 'true', 'verify_tls': True}
-                if ctype == 'snyk': config['org_id'] = resource
-                elif ctype == 'github': config['repository'] = resource
-                elif ctype == 'dependency-track': config['project_name'] = resource or 'SBOM Security Toolkit Project'
-                elif ctype == 'webhook': config = {'url_ref':'env:'+token_env, 'read_only': fields.get('allow_write','') != 'true', 'verify_tls': True}
-                cfg_path = Path('configs/generated/integrations') / f'{name}.json'
-                cfg_path.parent.mkdir(parents=True, exist_ok=True); cfg_path.write_text(json.dumps(config, indent=2)+'\n')
-                outputs.append(connector_ops.add_connector(_argparse.Namespace(registry='configs/connectors.yml', name=name, type=ctype, config=str(cfg_path), allow_write=fields.get('allow_write','') == 'true', insecure_skip_tls_verify=False, timeout_seconds=30, retries=3)))
-                outputs.append(connector_ops.execute(_argparse.Namespace(registry='configs/connectors.yml', name=name, send=False, out=f'reports/connectors/{name}-health.json'), 'test'))
-            elif kind == 'snyk':
+            if kind == 'snyk':
                 org_id = fields.get('org_id','')
                 project_id = fields.get('project_id','')
                 token_env = fields.get('token_env','SNYK_TOKEN') or 'SNYK_TOKEN'
@@ -884,11 +634,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self.send_html("Admin error", f"<div class='card'><h2>Admin error</h2><pre>{esc(exc)}</pre></div>", 400)
 
-    def parse_urlencoded(self, multi: bool = False):
+    def parse_urlencoded(self) -> Dict[str, str]:
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length).decode("utf-8", errors="replace")
-        parsed = urllib.parse.parse_qs(raw, keep_blank_values=True)
-        return parsed if multi else {k: v[-1] if v else "" for k, v in parsed.items()}
+        return {k: v[-1] if v else "" for k, v in urllib.parse.parse_qs(raw, keep_blank_values=True).items()}
 
     def bool_field(self, fields: Dict[str, str], name: str) -> bool:
         return fields.get(name) in {"1", "true", "on", "yes"}
@@ -1240,8 +989,8 @@ make test-release</pre>
     def download(self, jid: str):
         z = job_dir(jid) / "evidence-bundle.zip"
         if not z.exists():
+            # Try creating a status-only placeholder if job exists.
             if not status_path(jid).exists(): return self.send_html("Not found", "<div class='card'><h2>Bundle not found</h2></div>", 404)
-            return self.send_html("Bundle not ready", "<div class='card'><h2>Evidence bundle is not ready</h2><p class='muted'>The job exists, but its evidence bundle has not been generated yet.</p></div>", 409)
         data = z.read_bytes()
         self.send_response(200); self.send_header("Content-Type", "application/zip"); self.send_header("Content-Disposition", f"attachment; filename={jid}-evidence-bundle.zip"); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
 
@@ -1258,6 +1007,12 @@ def main():
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nStopping.")
+
+# BEGIN SST V2.14.2 SERVER EXPERIENCE HOOK
+# Install route extensions before ``main`` starts serving requests.
+_sst_install_server_hooks = experience_runtime.install_server_hooks
+_sst_install_server_hooks(globals())
+# END SST V2.14.2 SERVER EXPERIENCE HOOK
 
 if __name__ == "__main__":
     main()

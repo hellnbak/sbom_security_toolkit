@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json
+import argparse,json
 from pathlib import Path
-import yaml
-
+from .release_common import load_data, now, write_yaml
+TEMPLATE={'version':1,'organization':{'id':'example-org','name':'Example Organization'},'business_units':[{'id':'engineering','name':'Engineering'}],'applications':[{'id':'payments','name':'Payments','business_unit':'engineering','owners':{'technical':'team@example.invalid','security':'security@example.invalid'},'business_criticality':'high','data_classification':'confidential','regulatory_scope':[]}],'services':[{'id':'payments-api','application':'payments','repository':'org/payments-api','environment':'production','internet_exposed':True,'support_tier':'tier-1'}]}
+def validate(d):
+    errors=[]; ids={}
+    for section in ('business_units','applications','services','artifacts'):
+        for x in d.get(section,[]) or []:
+            if not x.get('id'): errors.append(f'{section}: missing id')
+            elif x['id'] in ids: errors.append(f'duplicate id: {x["id"]}')
+            else: ids[x['id']]=section
+    for a in d.get('applications',[]) or []:
+        if a.get('business_unit') and a['business_unit'] not in ids: errors.append(f"application {a.get('id')}: unknown business_unit {a['business_unit']}")
+    for s in d.get('services',[]) or []:
+        if s.get('application') and s['application'] not in ids: errors.append(f"service {s.get('id')}: unknown application {s['application']}")
+    return {'valid':not errors,'errors':errors,'counts':{k:len(d.get(k,[]) or []) for k in ('business_units','applications','services','artifacts')}}
 def main(argv=None):
- ap=argparse.ArgumentParser(description='Manage organization/application/service/repository/artifact security context.'); sub=ap.add_subparsers(dest='cmd',required=True)
- p=sub.add_parser('validate'); p.add_argument('file')
- p=sub.add_parser('context'); p.add_argument('file'); p.add_argument('--repository',required=True); p.add_argument('--out',default='reports/context.json')
- a=ap.parse_args(argv); d=yaml.safe_load(Path(a.file).read_text()) or {}; errors=[]
- for k in ('organization','businessUnits'):
-  if k not in d: errors.append(f'missing {k}')
- if a.cmd=='validate': print(json.dumps({'valid':not errors,'errors':errors},indent=2)); return 0 if not errors else 4
- found=None
- for bu in d.get('businessUnits',[]):
-  for app in bu.get('applications',[]):
-   for svc in app.get('services',[]):
-    for repo in svc.get('repositories',[]):
-     if repo.get('name')==a.repository or repo.get('url')==a.repository:
-      found={**d.get('defaults',{}),**bu.get('context',{}),**app.get('context',{}),**svc.get('context',{}),**repo.get('context',{}),'organization':d.get('organization'),'business_unit':bu.get('name'),'application':app.get('name'),'service':svc.get('name'),'repository':repo.get('name')}
- if not found: raise SystemExit('repository not found')
- Path(a.out).parent.mkdir(parents=True,exist_ok=True); Path(a.out).write_text(json.dumps(found,indent=2)+'\n'); print(a.out); return 0
+    ap=argparse.ArgumentParser(description='Manage organization and ownership context')
+    ap.add_argument('--file',default='governance/context.yml');ap.add_argument('--init',action='store_true');ap.add_argument('--validate',action='store_true');ap.add_argument('--print',dest='show',action='store_true')
+    a=ap.parse_args(argv);p=Path(a.file)
+    if a.init: write_yaml(p,{**TEMPLATE,'generated_at':now()})
+    d=load_data(p,{}) or {};r=validate(d)
+    if a.show: r['model']=d
+    print(json.dumps(r,indent=2));return 0 if r['valid'] else 3
 if __name__=='__main__': raise SystemExit(main())

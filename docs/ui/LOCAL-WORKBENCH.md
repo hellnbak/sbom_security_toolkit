@@ -135,3 +135,12 @@ Repository Intake workflows can generate SBOMs, compare SBOM generator output, r
 ## AI-assisted fuzz cases for Full SBOM Analysis
 
 The upload workflow can optionally enable AI-assisted fuzz case generation for Full SBOM Analysis. Modes are `suggest` and `generate-run`. Provider choices include prompt-only, AWS Bedrock, GLM, Ollama, and OpenAI-compatible endpoints. AI output is advisory; generated cases are validated before execution and are not promoted automatically.
+
+
+## Quick Start, guided workflows, and upload behavior (v2.14.2)
+
+The v2.14.2 guided routes queue real Workbench jobs, write execution contracts, and use the normal automatic-report completion path. The final Quick Start step starts the selected task and redirects to the active job. Guided Workflow cards map to concrete analysis, repository, release, supplier, dependency, fuzzing, and scanner-comparison workflows.
+
+The main **Upload** page supports drag-and-drop and a standard file-selection button. Demo mode executes the normal local job runner against explicitly synthetic evidence rather than rendering static dashboard values.
+
+Every Workbench run automatically attempts to generate a detailed Full Security Engineering Report after deterministic processing finishes. Automatic report generation is evidence-bound and non-blocking. Executive, developer, compliance, supplier, customer-facing, release, fuzzing, and lifecycle versions can be generated from the same run evidence. The evidence archive is refreshed after each report.

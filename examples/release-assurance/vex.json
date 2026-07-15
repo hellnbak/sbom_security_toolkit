@@ -1,0 +1,9 @@
+{
+  "statements": [
+    {
+      "vulnerability": "CVE-2026-DEMO-0001",
+      "status": "not_affected",
+      "justification": "component_not_present_at_runtime"
+    }
+  ]
+}

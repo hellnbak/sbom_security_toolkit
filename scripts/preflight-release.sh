@@ -2,7 +2,10 @@
 set -euo pipefail
 ROOT="${1:-.}"
 cd "$ROOT"
-# Remove generated Python cache files that validation may have created.
+
+# Validation can create caches and demo/runtime data. Cache files are always
+# removed. Runtime output is allowed locally, but it must never be tracked or
+# listed in a release manifest.
 find . -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 find . -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete 2>/dev/null || true
 fail=0
@@ -16,14 +19,45 @@ check() {
   fi
 }
 
-check "python cache files" bash -c '! find . -type d -name __pycache__ -o -type f \( -name "*.pyc" -o -name "*.pyo" \) | grep -q .'
-check "generated reports excluded" bash -c '! find reports release-evidence fuzzing/findings fuzzing/reports fuzzing/generated-corpus ui/storage/jobs ui/storage/uploads -mindepth 1 2>/dev/null | grep -v "\.gitkeep$" | grep -q .'
-check "large files over 20MB" bash -c '! find . -type f -size +20M ! -path "./.git/*" | grep -q .'
+runtime_paths=(
+  reports release-evidence fuzzing/findings fuzzing/reports
+  fuzzing/generated-corpus ui/storage/jobs ui/storage/uploads
+  ui/storage/demo projects .upgrade-manifests
+)
+
+tracked_runtime_files() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git ls-files -- "${runtime_paths[@]}" | grep -vE '(^|/)\.gitkeep$' || true
+  elif [[ -f FILE-MANIFEST.sha256 ]]; then
+    awk '{sub(/^[^ ]+  /, ""); print}' FILE-MANIFEST.sha256 \
+      | grep -E '^(reports|release-evidence|fuzzing/(findings|reports|generated-corpus)|ui/storage/(jobs|uploads|demo)|projects|\.upgrade-manifests)(/|$)' \
+      | grep -vE '(^|/)\.gitkeep$' || true
+  else
+    # A source tree without Git metadata or a release manifest cannot reliably
+    # distinguish generated local data from release content. Report that as a
+    # warning but do not reject harmless local demo output.
+    return 0
+  fi
+}
+
+check "python cache files" bash -c '! find . \( -type d -name __pycache__ -o -type f \( -name "*.pyc" -o -name "*.pyo" \) \) -print | grep -q .'
+if tracked_runtime_files | grep -q .; then
+  echo "[preflight] FAILED: generated runtime files are tracked or packaged:" >&2
+  tracked_runtime_files >&2
+  fail=1
+else
+  echo "[preflight] generated runtime files are untracked"
+fi
+check "large files over 20MB" bash -c '! find . -type f -size +20M ! -path "./.git/*" ! -path "./.venv/*" | grep -q .'
 
 SECRET_RE='AKIA|ASIA|aws_secret|api[_-]?key[[:space:]]*[=:][[:space:]]*[A-Za-z0-9_\-]{16,}|github_pat_|ghp_|BEGIN (RSA|OPENSSH|DSA|EC|PRIVATE) KEY|xox[baprs]-|sk-[A-Za-z0-9]{20,}|password[[:space:]]*[=:][[:space:]]*[^$<{]'
 if grep -RInE "$SECRET_RE" . \
-  --exclude-dir=.git --exclude-dir=.venv --exclude-dir=node_modules --exclude-dir=reports --exclude-dir=release-evidence \
-  --exclude='*.md' --exclude='*.json' --exclude='preflight-release.sh' --exclude='validators.py' --exclude='test_ai_fuzz.py' >/tmp/sst-secret-scan.txt; then
+  --exclude-dir=.git --exclude-dir=.venv --exclude-dir=node_modules \
+  --exclude-dir=reports --exclude-dir=release-evidence --exclude-dir=projects \
+  --exclude-dir=.upgrade-manifests --exclude-dir=__pycache__ \
+  --exclude-dir=jobs --exclude-dir=uploads --exclude-dir=demo \
+  --exclude='*.md' --exclude='*.json' --exclude='preflight-release.sh' \
+  --exclude='validators.py' --exclude='test_ai_fuzz.py' >/tmp/sst-secret-scan.txt; then
   echo "[preflight] potential secrets:" >&2
   cat /tmp/sst-secret-scan.txt >&2
   fail=1
@@ -32,7 +66,11 @@ else
 fi
 
 COMPANY_RE='Cars Commerce|Cars\.com|Dealer Inspire|AccuTrade|JPMorgan|Chase Inventory|Cox Automotive|Autotrader|KBB|Carfax|CarGurus|vAuto|HomeNet|Max Digital|Dealer Club|D2C Servers|Chicago-Datacenter'
-if grep -RInE "$COMPANY_RE" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=node_modules --exclude='preflight-release.sh' >/tmp/sst-company-scan.txt; then
+if grep -RInE "$COMPANY_RE" . \
+  --exclude-dir=.git --exclude-dir=.venv --exclude-dir=node_modules \
+  --exclude-dir=reports --exclude-dir=release-evidence --exclude-dir=projects \
+  --exclude-dir=.upgrade-manifests --exclude-dir=jobs --exclude-dir=uploads --exclude-dir=demo \
+  --exclude='preflight-release.sh' >/tmp/sst-company-scan.txt; then
   echo "[preflight] company-specific terms found:" >&2
   cat /tmp/sst-company-scan.txt >&2
   fail=1

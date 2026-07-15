@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "sbom-security-toolkit"
-version = "2.13.0"
+version = "2.14.2"
 description = "Local-first SBOM security operations, fuzzing, intake, evidence, and workbench toolkit."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 license = { text = "FSL-1.1-ALv2" }
 authors = [{ name = "SBOM Security Toolkit Contributors" }]
 keywords = ["sbom", "cyclonedx", "spdx", "supply-chain", "fuzzing", "vex", "security"]
@@ -21,6 +21,12 @@ dependencies = [
   "uvicorn[standard]>=0.30.0",
   "python-multipart>=0.0.9",
   "PyYAML>=6.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "coverage>=7.5.0",
+  "pytest>=8.0.0",
 ]
 
 [project.scripts]

@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "builder_identity": "https://github.com/example/demo/.github/workflows/release.yml@refs/heads/main",
+  "artifact_match": true,
+  "sbom_match": true
+}

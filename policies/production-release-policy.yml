@@ -1,0 +1,10 @@
+version: 1
+name: Production release assurance
+release_assurance:
+  block_severity: critical
+  approval_severity: high
+  warn_severity: medium
+  block_kev: true
+  require_vex: true
+  require_provenance: true
+  require_context: true
