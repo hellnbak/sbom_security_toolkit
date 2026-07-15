@@ -189,11 +189,20 @@ def collect_artifact_facts(extra_roots: List[str] | None = None) -> Dict[str, An
         "projects/**/*.json", "projects/**/*.md",
         "fuzzing/reports/**/*.json", "fuzzing/reports/**/*.md",
     ]
+    absolute_extra_files = []
     for root in extra_roots or []:
         root = root.strip()
-        if root:
-            patterns.extend([f"{root}/**/*.json", f"{root}/**/*.md", f"{root}/**/*.sarif"])
+        if not root:
+            continue
+        root_path = Path(root)
+        if root_path.is_absolute():
+            if root_path.exists():
+                for suffix in ("*.json", "*.md", "*.sarif", "*.txt", "*.log"):
+                    absolute_extra_files.extend(root_path.rglob(suffix))
+        else:
+            patterns.extend([f"{root}/**/*.json", f"{root}/**/*.md", f"{root}/**/*.sarif", f"{root}/**/*.txt", f"{root}/**/*.log"])
     files = latest_files(patterns, limit=35)
+    files = sorted({p.resolve(): p for p in [*files, *absolute_extra_files]}.values(), key=lambda p: p.stat().st_mtime, reverse=True)[:35]
     artifacts = []
     for p in files:
         suffix = p.suffix.lower()

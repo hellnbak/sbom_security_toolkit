@@ -1,0 +1,25 @@
+version: 1
+organization:
+  id: example-org
+  name: Example Organization
+business_units:
+  - id: engineering
+    name: Engineering
+applications:
+  - id: demo-app
+    name: Demo Application
+    business_unit: engineering
+    owners:
+      technical: engineering@example.invalid
+      security: security@example.invalid
+    business_criticality: high
+    data_classification: internal
+    regulatory_scope: []
+services:
+  - id: demo-service
+    application: demo-app
+    repository: example/demo-service
+    environment: production
+    internet_exposed: false
+    support_tier: tier-2
+artifacts: []

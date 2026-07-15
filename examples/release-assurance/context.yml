@@ -1,0 +1,6 @@
+project: demo-service
+organization: example-org
+environment: production
+business_criticality: high
+internet_exposed: false
+data_classification: internal

@@ -34,6 +34,7 @@ WORKFLOWS = {
     "redact": "Redact SBOM",
     "scanner-compare": "Scanner comparison",
     "release-evidence": "Release evidence bundle",
+    "release-review": "Release assurance review",
     "dependency-health": "Unsupported / out-of-date dependency analysis",
     "repo-analyze": "Repository intake: full analysis",
     "repo-sbom": "Repository intake: generate and compare SBOMs",
@@ -290,12 +291,13 @@ def run_job(job_id: str) -> None:
 
         if workflow in {"repo-analyze", "repo-sbom", "repo-scan", "repo-fuzz", "repo-evidence", "repo-dependency-health"}:
             repo_out = out / "repo-intake"
-            repo_cmd = [sys.executable, "-m", "sbomops.repo_intake", "analyze", str(sbom), "--out-dir", str(repo_out), "--generators", repo_generators, "--policy", policy]
+            repo_source = option(status, "repo_source", str(sbom))
+            repo_cmd = [sys.executable, "-m", "sbomops.repo_intake", "analyze", repo_source, "--out-dir", str(repo_out), "--generators", repo_generators, "--policy", policy]
             if repo_source_type == "github" or repo_allow_remote:
                 repo_cmd.append("--allow-remote")
             if workflow in {"repo-sbom", "repo-dependency-health"}:
                 repo_cmd.append("--no-scan")
-            if workflow in {"repo-fuzz", "repo-evidence", "repo-analyze"} or repo_fuzz:
+            if workflow in {"repo-fuzz", "repo-evidence"} or repo_fuzz:
                 repo_cmd.append("--fuzz")
             if workflow in {"repo-dependency-health", "repo-evidence", "repo-analyze"} or repo_dependency_health:
                 repo_cmd.extend(["--dependency-health", "--stale-days", str(stale_days), "--lifecycle-sources", lifecycle_sources])
@@ -309,18 +311,30 @@ def run_job(job_id: str) -> None:
             if _JOB_SECRETS.get(job_id, {}).get("GITHUB_TOKEN"):
                 env["GITHUB_TOKEN"] = _JOB_SECRETS[job_id]["GITHUB_TOKEN"]
             steps.append(run_step(job_id, "Repository intake pipeline", repo_cmd, timeout=1800, env=env))
-        if workflow in {"analyze", "analyze-everything", "score"}:
+        if workflow in {"analyze", "analyze-everything", "release-review", "score"}:
             steps.append(run_step(job_id, "SBOM quality", module_cmd("sbomops.score_sbom", sbom, "--out-dir", out / "sbom-quality")))
-        if workflow in {"analyze", "analyze-everything", "minimum-elements"}:
+        if workflow in {"analyze", "analyze-everything", "release-review", "minimum-elements"}:
             steps.append(run_step(job_id, "Minimum elements", module_cmd("sbomops.minimum_elements", sbom, "--out-dir", out / "minimum-elements")))
-        if workflow in {"analyze", "analyze-everything", "policy"}:
+        if workflow in {"analyze", "analyze-everything", "release-review", "policy"}:
             steps.append(run_step(job_id, "Policy check", module_cmd("sbomops.policy_check", sbom, "--policy", policy, "--out-dir", out / "policy")))
-        if workflow in {"analyze", "analyze-everything", "supplier-intake"}:
+        if workflow in {"analyze", "analyze-everything", "release-review", "supplier-intake"}:
             steps.append(run_step(job_id, "Supplier intake", module_cmd("sbomops.supplier_intake", sbom, "--out-dir", out / "supplier-intake")))
-        if workflow in {"analyze", "analyze-everything", "supplier-questions"}:
+        if workflow in {"analyze", "analyze-everything", "release-review", "supplier-questions"}:
             steps.append(run_step(job_id, "Supplier questions", module_cmd("sbomops.supplier_questions", sbom, "--out-dir", out / "supplier-questions")))
-        if workflow in {"analyze", "analyze-everything", "report"}:
+        if workflow in {"analyze", "analyze-everything", "release-review", "report"}:
             steps.append(run_step(job_id, "Report bundle", module_cmd("sbomops.report", sbom, "--out-dir", out / "bundle")))
+        if workflow == "release-review":
+            assurance_cmd = module_cmd(
+                "sbomops.assurance",
+                "--policy", policy,
+                "--findings", sbom,
+                "--exceptions", ROOT / "governance" / "exceptions.yml",
+                "--context", ROOT / "governance" / "context.yml",
+                "--out-dir", out / "release-assurance",
+                "--fail-on", "never",
+            )
+            steps.append(run_step(job_id, "Deterministic release assurance", assurance_cmd, timeout=120))
+
         if workflow == "redact":
             steps.append(run_step(job_id, "Redact SBOM", module_cmd("sbomops.redact", sbom, "--out", out / "redacted-sbom.json", "--hash-internal-names")))
         if workflow == "scanner-compare":
@@ -338,9 +352,9 @@ def run_job(job_id: str) -> None:
         if workflow == "analyze-everything":
             dep_cmd = module_cmd("sbomops.dependency_health", sbom, "--out-dir", out / "dependency-health", "--stale-days", str(stale_days), "--lifecycle-sources", lifecycle_sources)
             if lifecycle_cache:
-                cmd.extend(["--lifecycle-cache", lifecycle_cache])
+                dep_cmd.extend(["--lifecycle-cache", lifecycle_cache])
             if offline_cache_only:
-                cmd.append("--offline-cache-only")
+                dep_cmd.append("--offline-cache-only")
             if status.get("network_enabled"):
                 dep_cmd.append("--network")
             steps.append(run_step(job_id, "Dependency health / unsupported dependency analysis", dep_cmd, timeout=900))
@@ -520,13 +534,15 @@ def run_job(job_id: str) -> None:
             proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=900, env=env)
             steps.append({"name":"Release evidence", "cmd":cmd, "returncode":proc.returncode})
             append_log(job_id, proc.stdout[-12000:] + proc.stderr[-12000:])
+        # The runtime completion hook generates the automatic detailed report after all scan evidence is complete.
+
         # Always generate a UI bundle from available outputs.
         steps.append(run_step(job_id, "UI bundle", module_cmd("sbomops.ui_bundle", "--reports-dir", out, "--out-dir", out / "ui")))
         project_id = option(status, "project_id", "")
         if project_id:
             steps.append(run_step(job_id, "Project history record", module_cmd("sbomops.project_ops", "record", project_id, "--sbom", sbom, "--run-dir", out, "--note", status.get("workflow_label", workflow))))
 
-        failed = [s for s in steps if s.get("returncode") not in (0, None)]
+        failed = [s for s in steps if s.get("returncode") not in (0, None) and not s.get("non_blocking")]
         status.update({"state": "failed" if failed else "completed", "exit_code": 1 if failed else 0, "steps": steps, "completed_at": now()})
         if failed:
             status["error"] = f"{len(failed)} step(s) failed. See logs."
@@ -626,3 +642,8 @@ def scanner_status() -> List[Dict[str, Any]]:
         path = shutil.which(tool)
         rows.append({"tool": tool, "available": bool(path), "path": path or "", "note": "optional" if tool != "git" else "recommended"})
     return rows
+
+# BEGIN SST V2.14 RUNTIME EXPERIENCE HOOK
+from .runtime_hooks import install_runtime_hooks as _sst_install_runtime_hooks
+_sst_install_runtime_hooks(globals())
+# END SST V2.14 RUNTIME EXPERIENCE HOOK

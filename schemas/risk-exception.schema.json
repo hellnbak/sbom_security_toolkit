@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sst/risk-exception.schema.json",
+  "title": "SBOM Security Toolkit Risk Exception",
+  "type": "object",
+  "required": ["id", "status", "justification", "requestor", "expires"],
+  "properties": {
+    "id": {"type": "string"},
+    "status": {"enum": ["requested", "approved", "rejected", "revoked", "expired"]},
+    "project": {"type": "string"},
+    "vulnerability": {"type": "string"},
+    "component": {"type": "string"},
+    "purl": {"type": "string"},
+    "policy_rule": {"type": "string"},
+    "justification": {"type": "string", "minLength": 1},
+    "compensating_controls": {"type": "array", "items": {"type": "string"}},
+    "requestor": {"type": "string"},
+    "expires": {"type": "string"}
+  },
+  "additionalProperties": true
+}

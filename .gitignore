@@ -77,3 +77,11 @@ ai_fuzz/review/incoming/*
 !ai_fuzz/review/incoming/.gitkeep
 .venv/
 *.egg-info/
+
+# Workbench/demo runtime state
+ui/storage/demo/*
+!ui/storage/demo/.gitkeep
+projects/*
+!projects/.gitkeep
+.upgrade-manifests/
+configs/generated/

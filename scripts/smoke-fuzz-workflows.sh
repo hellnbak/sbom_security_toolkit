@@ -4,6 +4,7 @@ SBOM="${SBOM:-test-sboms/clean/minimal-cyclonedx.json}"
 XML_SBOM="${XML_SBOM:-vuln-scan/cyclonedx-sbom.xml}"
 COUNT="${COUNT:-2}"
 TIME_BUDGET="${TIME_BUDGET:-5}"
+SMOKE_STEP_TIMEOUT="${SMOKE_STEP_TIMEOUT:-90}"
 
 echo "[smoke] SBOM fuzz workflow smoke test"
 echo "[smoke] JSON seed: $SBOM"
@@ -12,7 +13,11 @@ echo "[smoke] XML seed:  $XML_SBOM"
 run() {
   echo
   echo "=== $* ==="
-  "$@"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$SMOKE_STEP_TIMEOUT" "$@"
+  else
+    "$@"
+  fi
 }
 
 # Format-sensitive semantic workflows against JSON and CycloneDX XML.

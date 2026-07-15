@@ -1,0 +1,17 @@
+{
+  "findings": [
+    {
+      "id": "CVE-2026-DEMO-0001",
+      "severity": "critical",
+      "component": "demo-parser",
+      "purl": "pkg:npm/demo-parser@1.0.0",
+      "known_exploited": false
+    },
+    {
+      "id": "CVE-2026-DEMO-0002",
+      "severity": "medium",
+      "component": "demo-helper",
+      "purl": "pkg:pypi/demo-helper@2.0.0"
+    }
+  ]
+}

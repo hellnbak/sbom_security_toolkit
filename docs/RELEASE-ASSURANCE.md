@@ -1,46 +1,42 @@
-# Release Assurance and Supply-Chain Governance
+# Release Assurance and Governance
 
-Version 2.9 introduces a deterministic control plane that turns scan evidence into an explicit release decision.
+The release assurance command combines findings, VEX, approved exceptions, provenance status, organizational context, and policy thresholds into a deterministic release decision.
 
-## Decision states
+## Decisions and exit codes
 
-- `PASS` (exit 0)
-- `PASS_WITH_WARNINGS` (exit 2)
-- `APPROVAL_REQUIRED` (exit 3)
-- `BLOCK` (exit 4)
-- `INCOMPLETE_EVIDENCE` (exit 5)
-- `ERROR` (exit 10)
+| Decision | Exit code | Meaning |
+|---|---:|---|
+| `PASS` | 0 | No applicable finding meets a warning threshold. |
+| `PASS_WITH_WARNINGS` | 2 | Reviewable findings remain below the approval threshold. |
+| `APPROVAL_REQUIRED` | 3 | A finding meets the approval threshold. |
+| `BLOCK` | 4 | A blocking severity or known-exploited finding is applicable. |
+| `INCOMPLETE_EVIDENCE` | 5 | Policy-required evidence is missing. |
+| `ERROR` | 10 | Evaluation could not complete. |
 
-## End-to-end flow
+Use `--fail-on block|approval|warning|never` to select CI behavior without changing the recorded decision.
+
+## Example
 
 ```bash
-sst org-model context examples/org/enterprise.yml --repository customer-api --out reports/context.json
-sst provenance --artifact dist/app.tar --sbom reports/sbom.cdx.json --provenance reports/slsa.json
-sst assurance --policy policies/production-release-assurance.yml --findings reports/findings.json --vex reports/vex.json --exceptions governance/exceptions.yml --provenance reports/provenance/provenance-verification.json --context reports/context.json
-sst evidence-bundle --release 2.11.0 --include 'reports/**/*.json' --include 'reports/**/*.md'
+sst assurance \
+  --policy policies/production-release-policy.yml \
+  --findings examples/release-assurance/findings.json \
+  --vex examples/release-assurance/vex.json \
+  --exceptions governance/exceptions.yml \
+  --provenance examples/release-assurance/provenance-verification.json \
+  --context examples/release-assurance/context.yml \
+  --out-dir reports/release-assurance \
+  --fail-on never
 ```
 
 ## Exceptions
 
-Exceptions are explicit, scoped, expiring, and auditable. They do not remove findings; they convert a matched policy action into a warning while active.
+Exceptions must be approved, scoped, justified, and unexpired before they can exclude a matching finding. Supported scope fields include project, vulnerability, component, package URL, policy rule, and environment.
 
-```bash
-sst exceptions create --project customer-api --vulnerability CVE-2026-12345 --rule critical-fix-available --justification 'Upgrade requires vendor release' --compensating-control 'WAF blocks vulnerable route' --requestor alice@example.com --expires 2026-08-31
-sst exceptions approve RISK-... --approver security@example.com
-```
+## Provenance
 
-## VEX and reachability
-
-The assurance engine consumes CycloneDX/OpenVEX-like status statements. `not_affected`, `false_positive`, `resolved`, and `fixed` suppress policy matching for the exact vulnerability/component pair. Reachability can be supplied on normalized findings and used directly in policy.
-
-## Provenance and signatures
-
-`sst provenance` validates the artifact digest against a SLSA/in-toto subject and optionally invokes `cosign verify-blob` when cosign, a public key, and sidecar `.sig` files are available.
-
-## Organization context
-
-The organizational model enriches decisions with business unit, application, service, repository, criticality, exposure, ownership, data classification, and regulatory scope.
+`sst provenance` correlates artifact and SBOM hashes with provenance subjects, extracts builder identity, and can invoke `cosign verify-blob` when a signature and key are supplied.
 
 ## Evidence bundles
 
-`sst evidence-bundle` copies selected evidence, creates a hash manifest and checksum file, and can sign the manifest with keyless cosign where supported.
+`sst evidence-bundle` creates a release evidence directory with file records, sizes, SHA-256 values, a checksum file, and an archive. Optional manifest signing can be requested with a cosign key.

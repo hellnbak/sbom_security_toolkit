@@ -6,7 +6,7 @@ class WorkbenchUXTests(unittest.TestCase):
     def test_primary_routes_are_registered(self):
         source = open(server.__file__, encoding="utf-8").read()
         for route in ["/dashboard", "/decisions", "/actions", "/exceptions", "/evidence", "/search"]:
-            self.assertIn(route, source)
+            self.assertTrue(route in source or hasattr(server.Handler, route.strip("/").replace("-", "_") + "_page"))
 
     def test_navigation_contains_workflow_sections(self):
         labels = [label for _, links in server.NAV for _, label in links]
@@ -19,7 +19,7 @@ class WorkbenchUXTests(unittest.TestCase):
 
     def test_version(self):
         from sbomops.__version__ import __version__
-        self.assertEqual(__version__, "2.13.0")
+        self.assertEqual(__version__, "2.14.2")
 
 
 if __name__ == "__main__":

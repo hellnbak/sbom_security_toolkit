@@ -1,36 +1,35 @@
 # Roadmap
 
-## Current release: v2.13.0 Actionable Workflows
+Current release: **v2.14.2 — Reconciled Runtime and Documentation**
 
-The guided and actionable UX layer is complete. Future work should focus on multi-user persistence, production authentication/RBAC, real-time notifications, richer comparison charts, and browser automation tests.
+## Completed in v2.14.2
 
+- One consistent source and documentation release.
+- Automatic detailed report for every Workbench run.
+- Report variants from the same evidence with archive refresh.
+- Executable Quick Start and Guided Workflows.
+- Real offline demo through the normal job runner.
+- Release assurance, exceptions, provenance, release evidence, context, and connector reconciliation.
+- Profile-controlled repository fuzzing.
+- Tests for runtime contracts, release metadata, connectors, UX redaction, and release assurance.
 
-# Roadmap
+## Near-term priorities
 
-## Current release: v2.12.0 — User Experience and GUI Coverage
+1. Convert the reconciled compatibility modules into richer adapter-specific implementations while preserving their current CLI contracts.
+2. Add durable worker queues and process isolation for long-running repository and fuzzing jobs.
+3. Add browser-based report comparison and run-over-run report deltas.
+4. Add stronger JSON Schema validation at CLI and Workbench boundaries.
+5. Expand release-assurance rules for EPSS, CVSS, KEV, reachability, direct/transitive status, finding age, fix availability, and environment.
+6. Add signed evidence verification and policy enforcement in CI reference workflows.
+7. Add migration tests across v2.8, v2.9, v2.10, v2.12, v2.13, and v2.14 configuration shapes.
+8. Add accessibility and browser automation tests for all guided routes.
 
-Delivered:
+## Longer-term priorities
 
-- Workflow-oriented Workbench navigation and posture dashboard.
-- Project, scan, finding, decision, action, exception, connector, report, evidence, and search experiences.
-- Security Controls workspace for release assurance, VEX, provenance, evidence, organization context, and remediation.
-- Connector platform for Snyk, Dependency-Track, DefectDojo, GitHub, and webhooks.
-- Audited GUI-to-backend coverage and bounded full-suite validation.
-
-## Next: operational maturity
-
-- Durable background connector synchronization with checkpoints and dead-letter queues.
-- GitLab, AWS Security Hub, Microsoft Defender for Cloud, Google Security Command Center, ServiceNow VR, Splunk, Elastic, Sentinel, Slack, and Teams connectors.
-- Bidirectional exception synchronization with conflict detection.
-- Saved views, bulk actions, global command palette, and richer project workspaces.
-- Stronger authentication, RBAC, audit trails, and multi-user deployment controls.
-- OpenTelemetry metrics/traces and connector event envelopes.
-
-## Later: enterprise and scale
-
-- Worker isolation and horizontally scalable job execution.
-- Hardened Kubernetes deployment and managed secret integrations.
-- SSO/SAML/OIDC enforcement and tenant isolation.
-- Runtime reachability and deployment-context correlation.
-- Automated, human-approved remediation pull requests.
-- Portfolio-level executive and auditor dashboards.
+- Multi-user authenticated Workbench with production-grade RBAC and audit storage.
+- Scalable worker deployment with Postgres, Redis, and object storage.
+- Connector-specific discovery and import adapters for additional SBOM and vulnerability systems.
+- Project-level dashboards combining current risk, trend, exceptions, ownership, and release posture.
+- Pluggable policy packs for common regulatory and supplier-assurance use cases.
+- Expanded corpus management, crash triage, replay, and continuous fuzzing operations.
+- Signed release distributions and reproducible build metadata.

@@ -1,24 +1,45 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, hashlib, json, shutil, subprocess
-from datetime import datetime, timezone
+import argparse, json, subprocess
 from pathlib import Path
+from typing import Any
+from .release_common import load_data, now, sha256, write_json
 
-def digest(p):
- h=hashlib.sha256();
- with Path(p).open('rb') as f:
-  for b in iter(lambda:f.read(1024*1024),b''): h.update(b)
- return h.hexdigest()
-def run(cmd):
- try: return subprocess.run(cmd,capture_output=True,text=True,timeout=30)
- except Exception: return None
+def _subjects(doc:Any):
+    if not isinstance(doc,dict): return []
+    if isinstance(doc.get('subject'),list): return doc['subject']
+    pred=doc.get('predicate') or {}
+    return pred.get('subject') if isinstance(pred.get('subject'),list) else []
+def _matches(subjects,name,digest):
+    for s in subjects:
+        d=s.get('digest') or {}
+        if d.get('sha256')==digest and (not name or Path(str(s.get('name',''))).name==Path(name).name): return True
+    return False
+
+def verify(a):
+    out={'generated_at':now(),'artifact':None,'sbom':None,'provenance':a.provenance,'builder_identity':'','status':'PASS','checks':[]}
+    doc=load_data(a.provenance,{}) if a.provenance else {}; subs=_subjects(doc)
+    pred=(doc or {}).get('predicate') or {}; out['builder_identity']=str((pred.get('builder') or {}).get('id') or (doc or {}).get('builder',''))
+    for label,path in [('artifact',a.artifact),('sbom',a.sbom)]:
+        if not path: continue
+        p=Path(path); digest=sha256(p); matched=_matches(subs,p.name,digest) if a.provenance else None
+        rec={'path':str(p),'sha256':digest,'subject_match':matched};out[label]=rec
+        if a.provenance and not matched: out['status']='FAIL';out['checks'].append(f'{label}_digest_mismatch')
+    if a.require_builder and not out['builder_identity']: out['status']='FAIL';out['checks'].append('builder_identity_missing')
+    if a.signature and a.key:
+        cmd=['cosign','verify-blob','--key',a.key,'--signature',a.signature,a.artifact or a.sbom]
+        try:
+            cp=subprocess.run(cmd,text=True,capture_output=True,timeout=60)
+            out['cosign']={'returncode':cp.returncode,'stdout':cp.stdout[-2000:],'stderr':cp.stderr[-2000:]}
+            if cp.returncode: out['status']='FAIL';out['checks'].append('cosign_verification_failed')
+        except Exception as e:
+            out['cosign']={'error':str(e)};out['status']='ERROR';out['checks'].append('cosign_unavailable')
+    if not out['checks']: out['checks']=['digests_computed'+('_and_matched' if a.provenance else '')]
+    write_json(Path(a.out_dir)/'provenance-verification.json',out)
+    return out
+
 def main(argv=None):
- ap=argparse.ArgumentParser(description='Verify artifact/SBOM integrity, cosign signatures, and SLSA-style provenance.'); ap.add_argument('--artifact',required=True); ap.add_argument('--sbom',required=True); ap.add_argument('--provenance'); ap.add_argument('--cosign-key'); ap.add_argument('--out',default='reports/provenance/provenance-verification.json'); a=ap.parse_args(argv)
- result={'verified_at':datetime.now(timezone.utc).isoformat(),'artifact':str(a.artifact),'artifact_sha256':digest(a.artifact),'sbom':str(a.sbom),'sbom_sha256':digest(a.sbom),'artifact_signature_verified':False,'sbom_signature_verified':False,'builder_identity':'','provenance_valid':False,'checks':[]}
- if a.provenance and Path(a.provenance).exists():
-  p=json.loads(Path(a.provenance).read_text()); result['builder_identity']=p.get('builder',{}).get('id') or p.get('predicate',{}).get('builder',{}).get('id') or ''; subjects=p.get('subject') or p.get('predicate',{}).get('subject') or []; expected=result['artifact_sha256']; result['provenance_valid']=any((s.get('digest') or {}).get('sha256')==expected for s in subjects if isinstance(s,dict)); result['checks'].append({'name':'artifact matches provenance subject','passed':result['provenance_valid']})
- if shutil.which('cosign') and a.cosign_key:
-  for kind,path in [('artifact',a.artifact),('sbom',a.sbom)]:
-   sig=str(path)+'.sig'; r=run(['cosign','verify-blob','--key',a.cosign_key,'--signature',sig,str(path)]) if Path(sig).exists() else None; ok=bool(r and r.returncode==0); result[f'{kind}_signature_verified']=ok; result['checks'].append({'name':f'{kind} signature','passed':ok,'detail':(r.stderr[-500:] if r else 'signature or cosign unavailable')})
- Path(a.out).parent.mkdir(parents=True,exist_ok=True); Path(a.out).write_text(json.dumps(result,indent=2)+'\n'); print(a.out); return 0 if result['provenance_valid'] else 2
+    ap=argparse.ArgumentParser(description='Verify artifact, SBOM, and provenance integrity')
+    ap.add_argument('--artifact');ap.add_argument('--sbom');ap.add_argument('--provenance');ap.add_argument('--signature');ap.add_argument('--key');ap.add_argument('--require-builder',action='store_true');ap.add_argument('--out-dir',default='reports/provenance')
+    a=ap.parse_args(argv);r=verify(a);print(json.dumps(r,indent=2));return 0 if r['status']=='PASS' else 4
 if __name__=='__main__': raise SystemExit(main())

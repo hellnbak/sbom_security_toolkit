@@ -1,0 +1,10 @@
+version: 1
+name: Basic release assurance
+release_assurance:
+  block_severity: critical
+  approval_severity: high
+  warn_severity: medium
+  block_kev: true
+  require_vex: false
+  require_provenance: false
+  require_context: false

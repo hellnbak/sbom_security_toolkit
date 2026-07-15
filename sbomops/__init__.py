@@ -1,2 +1,2 @@
 """SBOM Security Toolkit operations helpers."""
-__version__ = "1.6.0"
+__version__ = "2.14.2"

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sst/release-decision.schema.json",
+  "title": "SBOM Security Toolkit Release Decision",
+  "type": "object",
+  "required": ["schema", "generated_at", "decision", "exit_code", "summary"],
+  "properties": {
+    "schema": {"const": "sst-release-assurance/v1"},
+    "generated_at": {"type": "string"},
+    "decision": {"enum": ["PASS", "PASS_WITH_WARNINGS", "APPROVAL_REQUIRED", "BLOCK", "INCOMPLETE_EVIDENCE", "ERROR"]},
+    "exit_code": {"type": "integer"},
+    "summary": {"type": "object"},
+    "reasons": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "applicable": {"type": "array"},
+    "excluded": {"type": "array"}
+  },
+  "additionalProperties": true
+}

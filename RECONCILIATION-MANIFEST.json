@@ -1,0 +1,35 @@
+{
+  "release": "v2.14.2",
+  "reconciliation_scope": {
+    "restored_repository_layers": [
+      "v2.9 release assurance and governance",
+      "v2.10 connector platform",
+      "v2.11 Workbench UX and GUI coverage",
+      "v2.12 guided experience",
+      "v2.13 actionable workflows"
+    ],
+    "retained_v2_14_layers": [
+      "automatic full security engineering report",
+      "optional report variants from the same evidence",
+      "executable Quick Start and guided workflows",
+      "normal-pipeline synthetic demo mode",
+      "evidence archive refresh after report generation"
+    ],
+    "restored_file_groups": [
+      "GitHub and CI workflows",
+      "release-assurance CI templates",
+      "connector and organization examples",
+      "production policies and decision schemas",
+      "guided and Workbench UX documentation",
+      "historical regression tests",
+      "onboarding state template"
+    ]
+  },
+  "upgrade_policy": {
+    "destructive_mirroring": false,
+    "destination_only_files_preserved": true,
+    "pre_application_git_diff_recorded": true,
+    "runtime_data_preserved": true
+  },
+  "notes": "This is a functionally reconciled source release and should be reviewed as a new v2.14.2 release. It is not represented as byte-for-byte identical to a prior Git tag."
+}

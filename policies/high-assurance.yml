@@ -1,0 +1,10 @@
+version: 1
+name: High assurance release policy
+release_assurance:
+  block_severity: high
+  approval_severity: medium
+  warn_severity: low
+  block_kev: true
+  require_vex: true
+  require_provenance: true
+  require_context: true

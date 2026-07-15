@@ -1,0 +1,28 @@
+{
+  "release": "v2.14.2",
+  "release_date": "2026-07-15",
+  "name": "GitHub Reconciliation Hotfix",
+  "supersedes": ["v2.14.0 runtime overlay", "v2.14.1 reconciled archive"],
+  "source_inputs": [
+    "public GitHub repository capability surface through v2.13.0",
+    "attached v2.8.2 quick-start/upload/automatic-report package",
+    "corrected v2.14 automatic-reporting, wizard, and demo runtime work"
+  ],
+  "primary_fixes": [
+    "legacy editable-install compatibility for pip 21.2.x",
+    "complete v2.9-v2.13 regression and capability restoration",
+    "non-destructive Git checkout update process",
+    "preflight handling for untracked demo/runtime artifacts",
+    "clear missing-PyYAML error handling"
+  ],
+  "validation": {
+    "python_tests_passed": 91,
+    "targeted_hotfix_tests_passed": 19,
+    "offline_demo_steps": 9,
+    "automatic_engineering_report": true,
+    "executive_variant_in_evidence_archive": true,
+    "preflight_before_demo": "passed",
+    "preflight_after_demo": "passed",
+    "safe_updater_integration": "passed"
+  }
+}

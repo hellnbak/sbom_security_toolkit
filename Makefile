@@ -1,4 +1,5 @@
 SHELL := /usr/bin/env bash
+PYTHON ?= python3
 FUZZ_FINDINGS ?= $(PWD)/fuzzing/findings
 TIME_BUDGET ?= 60
 TARGET ?=
@@ -997,7 +998,7 @@ security-checklist:
 install-notes:
 	python3 -m sbomops.productization install-notes
 
-# v2.8.1 Snyk SBOM connector
+# v2.8.2 Snyk SBOM connector
 .PHONY: snyk-config snyk-test snyk-pull-sbom snyk-compare snyk-smoke
 SNYK_API_BASE_URL ?= https://api.snyk.io
 SNYK_API_VERSION ?= 2024-10-15
@@ -1022,12 +1023,51 @@ snyk-compare:
 snyk-smoke:
 	python3 -m sbomops.integrations snyk-smoke
 
-# v2.10 unified connector platform
+# BEGIN SST V2.14 RUNTIME TARGETS
+.PHONY: demo-live report-variant runtime-experience-smoke
+
+demo-live:
+	$(PYTHON) -m sbomops.demo_runtime start --wait
+
+report-variant:
+	@test -n "$(JOB_DIR)" || (echo "JOB_DIR is required" && exit 2)
+	@test -n "$(REPORT_VARIANT)" || (echo "REPORT_VARIANT is required" && exit 2)
+	$(PYTHON) -m sbomops.reporting_runtime variant --job-dir "$(JOB_DIR)" --type "$(REPORT_VARIANT)"
+
+runtime-experience-smoke:
+	$(PYTHON) -m unittest -v tests.test_v214_runtime_experience
+# END SST V2.14 RUNTIME TARGETS
+
+# v2.14.2 reconciled release helpers
+.PHONY: reconciled-test check-runtime-deps clean-runtime release-assurance risk-exceptions-list provenance-verify release-evidence-bundle connectors-list
+
+check-runtime-deps:
+	$(PYTHON) -c "import yaml, fastapi, uvicorn; print('runtime dependencies available')"
+
+reconciled-test: check-runtime-deps
+	$(PYTHON) -m compileall -q sbomops tests
+	$(PYTHON) -m pytest -vv --tb=short
+
+clean-runtime:
+	$(MAKE) clean-generated
+	rm -rf projects .upgrade-manifests ui/storage/demo .pytest_cache .coverage htmlcov
+	rm -rf *.egg-info build dist
+	mkdir -p ui/storage/jobs ui/storage/uploads
+	touch ui/storage/jobs/.gitkeep ui/storage/uploads/.gitkeep
+
+release-assurance:
+	@test -n "$(FINDINGS)" || (echo "FINDINGS is required" && exit 2)
+	$(PYTHON) -m sbomops.assurance --policy "$(or $(POLICY),policies/default-release-policy.yml)" --findings "$(FINDINGS)" $(if $(VEX),--vex "$(VEX)",) $(if $(EXCEPTIONS),--exceptions "$(EXCEPTIONS)",) $(if $(PROVENANCE),--provenance "$(PROVENANCE)",) $(if $(CONTEXT),--context "$(CONTEXT)",) --fail-on "$(or $(FAIL_ON),never)"
+
+risk-exceptions-list:
+	$(PYTHON) -m sbomops.risk_exceptions --store "$(or $(EXCEPTIONS),governance/exceptions.yml)" list
+
+provenance-verify:
+	$(PYTHON) -m sbomops.provenance $(if $(ARTIFACT),--artifact "$(ARTIFACT)",) $(if $(SBOM),--sbom "$(SBOM)",) $(if $(PROVENANCE),--provenance "$(PROVENANCE)",) $(if $(SIGNATURE),--signature "$(SIGNATURE)",) $(if $(KEY),--key "$(KEY)",)
+
+release-evidence-bundle:
+	@test -n "$(VERSION)" || (echo "VERSION is required" && exit 2)
+	$(PYTHON) -m sbomops.evidence_bundle --release "$(VERSION)" $(foreach path,$(INCLUDE),--include "$(path)")
+
 connectors-list:
-	python3 -m sbomops.connectors --registry configs/connectors.yml list
-
-connectors-smoke:
-	python3 -m sbomops.connectors smoke --out-dir reports/connector-smoke
-
-connectors-ui: connectors-smoke
-	python3 -m sbomops.ui_bundle --reports-dir reports --out-dir reports/ui
+	$(PYTHON) -m sbomops.connectors --config "$(or $(CONNECTOR_CONFIG),configs/connectors.yml)" list
