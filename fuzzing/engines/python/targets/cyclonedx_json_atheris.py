@@ -24,6 +24,7 @@ def _walk_dependencies(doc):
                     refs.add(item[:512])
     sorted(refs)
 
+@atheris.instrument_func
 def TestOneInput(data: bytes) -> None:
     if len(data) > MAX_BYTES:
         return

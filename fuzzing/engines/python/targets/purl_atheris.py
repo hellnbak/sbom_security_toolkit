@@ -20,6 +20,7 @@ def parse_purl_like(value: str):
     parts = [unquote(p) for p in body.split("/")]
     return {"scheme": split.scheme, "type": parts[0] if parts else "", "namespace": parts[1:-1], "name_version": parts[-1] if parts else "", "qualifiers": qualifiers, "subpath": subpath}
 
+@atheris.instrument_func
 def TestOneInput(data: bytes) -> None:
     if len(data) > MAX_BYTES:
         return

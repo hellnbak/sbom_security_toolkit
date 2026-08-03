@@ -17,6 +17,7 @@ with atheris.instrument_imports():
     from jinja2.sandbox import SandboxedEnvironment
 
 
+@atheris.instrument_func
 def TestOneInput(data):
     """Atheris entry point."""
     try:

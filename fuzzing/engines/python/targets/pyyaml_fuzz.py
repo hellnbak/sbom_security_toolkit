@@ -18,6 +18,7 @@ with atheris.instrument_imports():
     import yaml
 
 
+@atheris.instrument_func
 def TestOneInput(data):
     """Atheris entry point - called with each fuzzed input."""
     try:

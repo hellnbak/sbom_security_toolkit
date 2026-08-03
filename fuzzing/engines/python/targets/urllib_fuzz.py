@@ -16,6 +16,7 @@ with atheris.instrument_imports():
     from urllib3.exceptions import LocationParseError
 
 
+@atheris.instrument_func
 def TestOneInput(data):
     """Atheris entry point."""
     try:

@@ -4,15 +4,31 @@ on:
     paths:
       - 'fuzzing/**'
       - 'sbomops/**'
+      - '.clusterfuzzlite/**'
       - '.fuzz/**'
       - '.github/workflows/clusterfuzzlite-pr.yml'
+
+permissions: read-all
+
 jobs:
   fuzz:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-      - uses: google/clusterfuzzlite/actions/run_fuzzers@v1
+      - name: Build Python fuzzers
+        uses: google/clusterfuzzlite/actions/build_fuzzers@v1
         with:
+          language: python
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          sanitizer: address
+      - name: Run Python fuzzers
+        uses: google/clusterfuzzlite/actions/run_fuzzers@v1
+        with:
+          language: python
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           fuzz-seconds: 60
           mode: 'code-change'
+          sanitizer: address

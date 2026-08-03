@@ -6,6 +6,7 @@ import sys
 MAX_BYTES = 250_000
 MAX_PACKAGES = 5_000
 
+@atheris.instrument_func
 def TestOneInput(data: bytes) -> None:
     if len(data) > MAX_BYTES:
         return

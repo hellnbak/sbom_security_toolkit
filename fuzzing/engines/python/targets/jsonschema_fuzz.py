@@ -17,6 +17,7 @@ with atheris.instrument_imports():
     from jsonschema import Draft7Validator
 
 
+@atheris.instrument_func
 def TestOneInput(data):
     """Atheris entry point."""
     try:

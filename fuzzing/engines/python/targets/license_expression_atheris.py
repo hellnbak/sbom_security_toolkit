@@ -17,6 +17,7 @@ def validate_balance(tokens):
             break
     return depth, max_depth
 
+@atheris.instrument_func
 def TestOneInput(data: bytes) -> None:
     if len(data) > MAX_BYTES:
         return
